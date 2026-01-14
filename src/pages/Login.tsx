@@ -82,40 +82,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = () => {
-    // Demo login for testing
-    setUser({
-      id: 'demo-user',
-      name: 'Demo User',
-      email: 'demo@example.com',
-      plan: 'free',
-      role: 'user',
-      searchesUsed: 0,
-      leadsUsed: 0,
-      isActive: true,
-      createdAt: new Date(),
-      lastLogin: new Date(),
-    });
-    navigate('/dashboard');
-  };
-
-  const handleAdminDemoLogin = () => {
-    // Admin demo login for testing
-    setUser({
-      id: 'admin-demo',
-      name: 'Admin User',
-      email: 'admin@leadflow.com',
-      plan: 'paid',
-      role: 'admin',
-      searchesUsed: 0,
-      leadsUsed: 0,
-      isActive: true,
-      createdAt: new Date(),
-      lastLogin: new Date(),
-    });
-    toast.success('Modo Admin ativado! Acesso ilimitado.');
-    navigate('/dashboard');
-  };
 
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
@@ -213,28 +179,6 @@ export const Login: React.FC = () => {
           </CardFooter>
         </Card>
 
-        {/* Demo buttons */}
-        <div className="flex flex-col gap-2 mt-4">
-          <Button 
-            variant="outline" 
-            onClick={handleDemoLogin}
-            className="w-full bg-background/50 backdrop-blur-sm"
-          >
-            Entrar como Demo User
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleAdminDemoLogin}
-            className="w-full bg-background/50 backdrop-blur-sm border-primary/50"
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Entrar como Admin (Sem Limites)
-          </Button>
-        </div>
-
-        <p className="text-center text-primary-foreground/50 text-sm mt-4">
-          Ou faça login com email e senha cadastrados.
-        </p>
       </div>
     </div>
   );
