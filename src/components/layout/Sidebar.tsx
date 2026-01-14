@@ -14,6 +14,7 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  Bot,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,13 +25,16 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
-  const { t, user, setUser, folders } = useApp();
+  const { t, user, setUser, folders, language } = useApp();
   const location = useLocation();
+
+  const automationsLabel = language === 'pt-BR' ? 'Automações AI' : 'AI Automations';
 
   const menuItems = [
     { icon: LayoutDashboard, label: t.nav.dashboard, path: '/dashboard' },
     { icon: Search, label: t.nav.prospecting, path: '/prospecting' },
     { icon: FolderKanban, label: t.nav.crm, path: '/crm', badge: folders.length },
+    { icon: Bot, label: automationsLabel, path: '/automations' },
     { icon: Megaphone, label: t.nav.campaigns, path: '/campaigns' },
     { icon: Send, label: t.nav.messaging, path: '/messaging' },
     { icon: Settings, label: t.nav.settings, path: '/settings' },
