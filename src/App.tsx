@@ -11,6 +11,7 @@ import Plans from "./pages/Plans";
 import Dashboard from "./pages/Dashboard";
 import Prospecting from "./pages/Prospecting";
 import CRM from "./pages/CRM";
+import Automations from "./pages/Automations";
 import Campaigns from "./pages/Campaigns";
 import Messaging from "./pages/Messaging";
 import Settings from "./pages/Settings";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/prospecting" element={<Prospecting />} />
               <Route path="/crm" element={<CRM />} />
+              <Route path="/automations" element={<Automations />} />
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/messaging" element={<Messaging />} />
               <Route path="/settings" element={<Settings />} />

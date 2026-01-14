@@ -38,11 +38,14 @@ import {
   Plus,
   Zap,
   Crown,
+  Clock,
+  Hash,
+  Flag,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 // Mock lead generation
-const generateMockLeads = (niche: string): Lead[] => {
+const generateMockLeads = (niche: string, location: string): Lead[] => {
   const names = [
     'Carlos Oliveira', 'Ana Santos', 'Ricardo Mendes', 'Patricia Lima',
     'Fernando Costa', 'Juliana Almeida', 'Bruno Ferreira', 'Camila Rodrigues',
@@ -53,8 +56,6 @@ const generateMockLeads = (niche: string): Lead[] => {
     'Diretor de Marketing', 'CEO', 'Gerente de Vendas', 'Proprietário',
     'Coordenador', 'Head de Growth', 'Founder', 'Diretor Comercial'
   ];
-  
-  const cities = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba', 'Porto Alegre'];
   
   const intentSignals = [
     `Comentou em post sobre ${niche}`,
@@ -68,14 +69,14 @@ const generateMockLeads = (niche: string): Lead[] => {
     id: `lead-${Date.now()}-${i}`,
     name,
     position: positions[i % positions.length],
-    location: cities[i % cities.length],
+    location: location || 'São Paulo',
     intentSignal: intentSignals[i % intentSignals.length],
     urgency: (['low', 'medium', 'high'] as const)[i % 3],
     email: i % 2 === 0 ? `${name.toLowerCase().replace(' ', '.')}@empresa.com` : undefined,
     phone: i % 3 === 0 ? `(11) 9${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}` : undefined,
     whatsapp: i % 2 === 0 ? `5511${Math.floor(100000000 + Math.random() * 900000000)}` : undefined,
     sources: [`linkedin.com/in/${name.toLowerCase().replace(' ', '-')}`, 'google.com'],
-    isCompetitor: i === 2, // One competitor for demo
+    isCompetitor: i === 2,
     status: 'new',
     createdAt: new Date(),
   }));
@@ -103,6 +104,15 @@ const generateMockInsights = (niche: string): NicheInsights => ({
   urgencyReason: `Mercado de ${niche} em rápida expansão com muitas empresas buscando soluções imediatas.`,
 });
 
+const countries = [
+  { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
+  { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+  { code: 'ES', name: 'España', flag: '🇪🇸' },
+  { code: 'MX', name: 'México', flag: '🇲🇽' },
+  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
+];
+
 export const Prospecting: React.FC = () => {
   const {
     t,
@@ -117,10 +127,14 @@ export const Prospecting: React.FC = () => {
     remainingSearches,
     remainingLeads,
     setUser,
+    language,
   } = useApp();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [country, setCountry] = useState('BR');
+  const [city, setCity] = useState('');
+  const [postalCode, setPostalCode] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Lead[]>([]);
   const [insights, setInsights] = useState<NicheInsights | null>(null);
@@ -128,6 +142,32 @@ export const Prospecting: React.FC = () => {
   const [targetFolder, setTargetFolder] = useState<string>('');
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+
+  const translations = {
+    'pt-BR': {
+      discoverTitle: 'Descobrir Clientes Potenciais',
+      discoverDesc: 'Busque por indivíduos ou decisores interessados no seu nicho.',
+      savedSearch: 'BUSCA SALVA',
+      leadsCount: 'LEADS',
+      searchPlaceholder: 'Ex: Pisos Urutanos',
+      cityPlaceholder: 'Cidade',
+      postalPlaceholder: 'CEP / Código Postal',
+      searchButton: 'Buscar Clientes',
+    },
+    'en-US': {
+      discoverTitle: 'Discover Potential Clients',
+      discoverDesc: 'Search for individuals or decision makers interested in your niche.',
+      savedSearch: 'SAVED SEARCH',
+      leadsCount: 'LEADS',
+      searchPlaceholder: 'Ex: Industrial Flooring',
+      cityPlaceholder: 'City',
+      postalPlaceholder: 'ZIP / Postal Code',
+      searchButton: 'Search Clients',
+    },
+  };
+
+  const tt = translations[language];
+  const selectedCountry = countries.find(c => c.code === country);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -141,10 +181,9 @@ export const Prospecting: React.FC = () => {
     setInsights(null);
     setSelectedLeads(new Set());
 
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const mockLeads = generateMockLeads(searchQuery);
+    const mockLeads = generateMockLeads(searchQuery, city);
     const limitedLeads = user?.plan === 'free' ? mockLeads.slice(0, 10) : mockLeads;
     const mockInsights = generateMockInsights(searchQuery);
 
@@ -152,7 +191,6 @@ export const Prospecting: React.FC = () => {
     setInsights(mockInsights);
     setIsSearching(false);
 
-    // Update user search count
     if (user) {
       setUser({ ...user, searchesUsed: user.searchesUsed + 1 });
     }
@@ -206,14 +244,12 @@ export const Prospecting: React.FC = () => {
 
     setLeads([...leads, ...leadsToSave]);
 
-    // Update folder count
     setFolders(folders.map(f => 
       f.id === targetFolder 
         ? { ...f, leadCount: f.leadCount + leadsToSave.length }
         : f
     ));
 
-    // Save search history
     if (insights) {
       setSearchHistory(prev => [...prev, {
         id: `search-${Date.now()}`,
@@ -228,12 +264,10 @@ export const Prospecting: React.FC = () => {
       }]);
     }
 
-    // Update user leads count
     if (user) {
       setUser({ ...user, leadsUsed: user.leadsUsed + leadsToSave.length });
     }
 
-    // Reset
     setSelectedLeads(new Set());
     setSearchResults([]);
     setInsights(null);
@@ -266,40 +300,105 @@ export const Prospecting: React.FC = () => {
         )}
       </div>
 
-      {/* Search Bar */}
+      {/* Enhanced Search Card */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-lg font-semibold">{tt.discoverTitle}</h2>
+              <p className="text-sm text-muted-foreground">{tt.discoverDesc}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {tt.savedSearch}
+              </Badge>
+              <Badge variant="success" className="font-bold">
+                9999 {tt.leadsCount}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Niche Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder={t.prospecting.searchPlaceholder}
+                placeholder={tt.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-10 text-lg h-12"
+                className="pl-10 h-12 text-base"
                 disabled={!canSearch}
               />
             </div>
-            <Button
-              variant="gradient"
-              size="lg"
-              onClick={handleSearch}
-              disabled={isSearching || !searchQuery.trim() || !canSearch}
-              className="min-w-[150px]"
-            >
-              {isSearching ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  {t.prospecting.searching}
-                </>
-              ) : (
-                <>
-                  <Zap className="w-5 h-5" />
-                  {t.prospecting.search}
-                </>
-              )}
-            </Button>
+
+            {/* Country Select */}
+            <div className="relative">
+              <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger className="pl-10 h-12">
+                  <SelectValue>
+                    {selectedCountry && (
+                      <span className="flex items-center gap-2">
+                        <span>{selectedCountry.flag}</span>
+                        {selectedCountry.name}
+                      </span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {countries.map(c => (
+                    <SelectItem key={c.code} value={c.code}>
+                      <span className="flex items-center gap-2">
+                        <span>{c.flag}</span>
+                        {c.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* City */}
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={tt.cityPlaceholder}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="pl-10 h-12"
+              />
+            </div>
+
+            {/* Postal Code + Search Button */}
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={tt.postalPlaceholder}
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                  className="pl-10 h-12"
+                />
+              </div>
+              <Button
+                variant="gradient"
+                size="lg"
+                onClick={handleSearch}
+                disabled={isSearching || !searchQuery.trim() || !canSearch}
+                className="h-12 px-6 whitespace-nowrap"
+              >
+                {isSearching ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {t.prospecting.searching}
+                  </>
+                ) : (
+                  tt.searchButton
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -340,7 +439,6 @@ export const Prospecting: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Urgency */}
                   <div className="p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="w-4 h-4" />
@@ -352,7 +450,6 @@ export const Prospecting: React.FC = () => {
                     <p className="text-sm text-muted-foreground">{insights.urgencyReason}</p>
                   </div>
 
-                  {/* Pains */}
                   <div>
                     <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-warning" />
@@ -368,7 +465,6 @@ export const Prospecting: React.FC = () => {
                     </ul>
                   </div>
 
-                  {/* Questions */}
                   <div>
                     <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
                       <HelpCircle className="w-4 h-4 text-info" />
@@ -486,49 +582,65 @@ export const Prospecting: React.FC = () => {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-medium">{lead.name}</h4>
-                            {lead.isCompetitor && (
-                              <Badge variant="destructive">{t.prospecting.competitor}</Badge>
-                            )}
-                            <Badge variant={urgencyVariant[lead.urgency]}>{t.common[lead.urgency]}</Badge>
-                          </div>
-                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                            <User className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">{lead.name}</span>
                             {lead.position && (
-                              <span className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
+                              <Badge variant="secondary" className="text-xs">
                                 {lead.position}
-                              </span>
+                              </Badge>
                             )}
-                            {lead.location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {lead.location}
-                              </span>
+                            {lead.isCompetitor && (
+                              <Badge variant="destructive" className="text-xs">
+                                {t.prospecting.competitor}
+                              </Badge>
                             )}
+                            <Badge variant={urgencyVariant[lead.urgency]} className="text-xs">
+                              {t.common[lead.urgency]}
+                            </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
-                            <Target className="w-3 h-3 text-primary" />
+
+                          {/* Intent Signal */}
+                          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-primary" />
                             {lead.intentSignal}
                           </p>
-                          <div className="flex items-center gap-3 mt-3">
+
+                          {/* Location */}
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {lead.location}
+                          </p>
+
+                          {/* Contacts */}
+                          <div className="flex flex-wrap items-center gap-3 mt-2">
                             {lead.email && (
-                              <Badge variant="outline" className="text-xs">
-                                <Mail className="w-3 h-3 mr-1" />
-                                Email
-                              </Badge>
+                              <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                                <Mail className="w-3 h-3" />
+                                {lead.email}
+                              </span>
                             )}
                             {lead.phone && (
-                              <Badge variant="outline" className="text-xs">
-                                <Phone className="w-3 h-3 mr-1" />
-                                Telefone
-                              </Badge>
+                              <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                                <Phone className="w-3 h-3" />
+                                {lead.phone}
+                              </span>
                             )}
                             {lead.whatsapp && (
-                              <Badge variant="outline" className="text-xs">
-                                <MessageCircle className="w-3 h-3 mr-1" />
+                              <span className="text-xs flex items-center gap-1 text-success">
+                                <MessageCircle className="w-3 h-3" />
                                 WhatsApp
-                              </Badge>
+                              </span>
                             )}
+                          </div>
+
+                          {/* Sources */}
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            {lead.sources.map((source, i) => (
+                              <Badge key={i} variant="outline" className="text-xs">
+                                <LinkIcon className="w-3 h-3 mr-1" />
+                                {source}
+                              </Badge>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -542,15 +654,15 @@ export const Prospecting: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!isSearching && searchResults.length === 0 && !insights && canSearch && (
+      {!isSearching && searchResults.length === 0 && canSearch && (
         <Card className="py-16">
           <CardContent className="text-center">
             <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
               <Search className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Pronto para prospectar?</h3>
+            <h3 className="text-xl font-semibold mb-2">{tt.discoverTitle}</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Digite um nicho ou interesse no campo acima para descobrir leads qualificados com IA.
+              {tt.discoverDesc}
             </p>
           </CardContent>
         </Card>
