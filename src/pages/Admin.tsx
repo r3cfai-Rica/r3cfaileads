@@ -47,8 +47,6 @@ import {
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   BarChart,
@@ -63,31 +61,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-
-// Mock data for charts
-const revenueData = [
-  { month: 'Jan', revenue: 4500, users: 12 },
-  { month: 'Fev', revenue: 6200, users: 18 },
-  { month: 'Mar', revenue: 8100, users: 24 },
-  { month: 'Abr', revenue: 9800, users: 31 },
-  { month: 'Mai', revenue: 12500, users: 42 },
-  { month: 'Jun', revenue: 15200, users: 55 },
-];
-
-const newUsersData = [
-  { day: 'Seg', free: 8, paid: 3 },
-  { day: 'Ter', free: 12, paid: 5 },
-  { day: 'Qua', free: 6, paid: 2 },
-  { day: 'Qui', free: 15, paid: 7 },
-  { day: 'Sex', free: 10, paid: 4 },
-  { day: 'Sáb', free: 4, paid: 1 },
-  { day: 'Dom', free: 3, paid: 1 },
-];
-
-const conversionData = [
-  { name: 'Free', value: 68, color: 'hsl(var(--muted-foreground))' },
-  { name: 'Convertidos', value: 32, color: 'hsl(var(--primary))' },
-];
+import { AdminNotifications } from '@/components/admin/AdminNotifications';
+import { useAdminStats } from '@/hooks/useAdminStats';
 
 // Mock users for demo
 const mockUsers: User[] = [
@@ -139,30 +114,6 @@ const mockUsers: User[] = [
     createdAt: new Date('2024-03-01'),
     lastLogin: new Date('2024-03-10'),
   },
-  {
-    id: '5',
-    name: 'Pedro Mendes',
-    email: 'pedro@agencia.com',
-    plan: 'paid',
-    role: 'user',
-    searchesUsed: 92,
-    leadsUsed: 1580,
-    isActive: true,
-    createdAt: new Date('2023-09-12'),
-    lastLogin: new Date('2024-03-10'),
-  },
-  {
-    id: '6',
-    name: 'Lucia Ferreira',
-    email: 'lucia@vendas.net',
-    plan: 'free',
-    role: 'user',
-    searchesUsed: 1,
-    leadsUsed: 5,
-    isActive: false,
-    createdAt: new Date('2024-02-28'),
-    lastLogin: new Date('2024-03-02'),
-  },
 ];
 
 const topNiches = [
@@ -184,7 +135,10 @@ export const Admin: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [dbUsers, setDbUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  
+  // Use the custom hook for real stats
+  const adminStats = useAdminStats();
 
   // Fetch real users from database
   useEffect(() => {
@@ -197,7 +151,6 @@ export const Admin: React.FC = () => {
 
         if (error) {
           console.error('Error fetching profiles:', error);
-          // Fall back to mock users
           if (allUsers.length === 0) {
             setAllUsers(mockUsers);
           }
@@ -216,7 +169,6 @@ export const Admin: React.FC = () => {
             lastLogin: p.last_login ? new Date(p.last_login) : new Date(p.created_at),
           }));
           
-          // Combine real users with mock users for demo
           const combinedUsers = [...mappedUsers, ...mockUsers.filter(m => !mappedUsers.some(r => r.email === m.email))];
           setDbUsers(combinedUsers);
           setAllUsers(combinedUsers);
@@ -228,7 +180,7 @@ export const Admin: React.FC = () => {
         }
         setDbUsers(allUsers.length > 0 ? allUsers : mockUsers);
       } finally {
-        setIsLoading(false);
+        setIsLoadingUsers(false);
       }
     };
 
@@ -242,37 +194,40 @@ export const Admin: React.FC = () => {
 
   const usersToShow = dbUsers.length > 0 ? dbUsers : allUsers;
 
+  // Use real stats from hook, fall back to calculated from users
   const stats = {
-    totalUsers: usersToShow.length,
-    paidUsers: usersToShow.filter(u => u.plan === 'paid').length,
-    freeUsers: usersToShow.filter(u => u.plan === 'free').length,
-    activeUsers: usersToShow.filter(u => u.isActive).length,
+    totalUsers: adminStats.totalUsers || usersToShow.length,
+    paidUsers: adminStats.paidUsers || usersToShow.filter(u => u.plan === 'paid').length,
+    freeUsers: adminStats.freeUsers || usersToShow.filter(u => u.plan === 'free').length,
+    activeUsers: adminStats.activeUsers || usersToShow.filter(u => u.isActive).length,
     inactiveUsers: usersToShow.filter(u => !u.isActive).length,
-    revenue: usersToShow.filter(u => u.plan === 'paid').length * 150,
-    totalSearches: usersToShow.reduce((acc, u) => acc + u.searchesUsed, 0),
-    totalLeads: usersToShow.reduce((acc, u) => acc + u.leadsUsed, 0),
-    conversionRate: usersToShow.length > 0 
+    revenue: adminStats.totalRevenue || usersToShow.filter(u => u.plan === 'paid').length * 150,
+    totalSearches: adminStats.totalSearches || usersToShow.reduce((acc, u) => acc + u.searchesUsed, 0),
+    totalLeads: adminStats.totalLeads || usersToShow.reduce((acc, u) => acc + u.leadsUsed, 0),
+    conversionRate: adminStats.conversionRate || (usersToShow.length > 0 
       ? Math.round((usersToShow.filter(u => u.plan === 'paid').length / usersToShow.length) * 100)
-      : 0,
+      : 0),
   };
+
+  // Conversion data for pie chart
+  const conversionData = [
+    { name: 'Free', value: 100 - stats.conversionRate, color: 'hsl(var(--muted-foreground))' },
+    { name: 'Convertidos', value: stats.conversionRate, color: 'hsl(var(--primary))' },
+  ];
 
   // Apply filters
   const filteredUsers = usersToShow.filter(u => {
-    // Search query
     const matchesSearch = 
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Plan filter
     const matchesPlan = planFilter === 'all' || u.plan === planFilter;
     
-    // Status filter
     const matchesStatus = 
       statusFilter === 'all' || 
       (statusFilter === 'active' && u.isActive) ||
       (statusFilter === 'inactive' && !u.isActive);
     
-    // Date filter
     let matchesDate = true;
     if (dateFilter !== 'all') {
       const now = new Date();
@@ -320,9 +275,12 @@ export const Admin: React.FC = () => {
           </h1>
           <p className="text-muted-foreground mt-1">Gerencie usuários, métricas e configurações</p>
         </div>
-        <Badge variant="gradient" className="w-fit">
-          Admin Dashboard
-        </Badge>
+        <div className="flex items-center gap-3">
+          <AdminNotifications />
+          <Badge variant="gradient" className="w-fit">
+            Admin Dashboard
+          </Badge>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -413,34 +371,40 @@ export const Admin: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => `R$${value / 1000}k`} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                    formatter={(value: number) => [`R$ ${value.toLocaleString()}`, 'Receita']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    fill="url(#colorRevenue)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {adminStats.isLoading ? (
+                <div className="h-full flex items-center justify-center">
+                  <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={adminStats.revenueData}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                    <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => `R$${value / 1000}k`} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      formatter={(value: number) => [`R$ ${value.toLocaleString()}`, 'Receita']}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      fill="url(#colorRevenue)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -507,23 +471,29 @@ export const Admin: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={newUsersData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="free" name="Free" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="paid" name="Pro" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {adminStats.isLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={adminStats.newUsersData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="free" name="Free" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="paid" name="Pro" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -612,7 +582,7 @@ export const Admin: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? (
+                  {isLoadingUsers ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8">
                         <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-muted-foreground" />
