@@ -3,6 +3,7 @@ import { useApp, MessageLog } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -29,16 +30,31 @@ import {
   MessageSquare,
   Users,
   Clock,
+  Sparkles,
+  Wand2,
+  Copy,
+  RefreshCw,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { generateEmailWithAI, GeneratedEmail } from '@/lib/ai-api';
 
 export const Messaging: React.FC = () => {
-  const { t, leads, folders, messageLogs, setMessageLogs, ctas } = useApp();
+  const { t, leads, folders, messageLogs, setMessageLogs, ctas, language } = useApp();
+  const { toast } = useToast();
   
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
-  const [channel, setChannel] = useState<'whatsapp' | 'sms' | 'email'>('whatsapp');
+  const [channel, setChannel] = useState<'whatsapp' | 'sms' | 'email'>('email');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  
+  // AI Email Generation States
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
+  const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
+  const [senderName, setSenderName] = useState('');
+  const [senderCompany, setSenderCompany] = useState('');
+  const [emailTone, setEmailTone] = useState<'formal' | 'casual' | 'persuasive' | 'friendly'>('persuasive');
+  const [selectedCTAId, setSelectedCTAId] = useState<string>('');
 
   const folderLeads = leads.filter(l => l.folderId === selectedFolderId);
   const eligibleLeads = folderLeads.filter(l => {
@@ -49,6 +65,8 @@ export const Messaging: React.FC = () => {
   });
 
   const folderCTAs = ctas.filter(c => c.folderId === selectedFolderId);
+  const selectedFolder = folders.find(f => f.id === selectedFolderId);
+  const selectedCTA = folderCTAs.find(c => c.id === selectedCTAId);
 
   const handleSelectLead = (leadId: string) => {
     const newSelected = new Set(selectedLeadIds);
@@ -70,6 +88,78 @@ export const Messaging: React.FC = () => {
 
   const handleUseCTA = (text: string) => {
     setMessage(text);
+  };
+
+  const handleGenerateEmail = async () => {
+    if (!selectedFolderId || selectedLeadIds.size === 0) {
+      toast({
+        title: "Selecione um lead",
+        description: "Escolha pelo menos um lead para gerar o email personalizado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!senderName || !senderCompany) {
+      toast({
+        title: "Dados do remetente",
+        description: "Preencha seu nome e empresa para gerar o email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const firstLeadId = Array.from(selectedLeadIds)[0];
+    const lead = leads.find(l => l.id === firstLeadId);
+    
+    if (!lead) return;
+
+    setIsGeneratingEmail(true);
+
+    try {
+      const email = await generateEmailWithAI({
+        niche: selectedFolder?.name || 'Produtos/Serviços',
+        leadName: lead.name,
+        leadPosition: lead.position,
+        leadCompany: lead.name.split(' ')[0],
+        cta: selectedCTA ? { title: selectedCTA.title, text: selectedCTA.text } : undefined,
+        senderName,
+        senderCompany,
+        tone: emailTone,
+        language,
+      });
+
+      setGeneratedEmail(email);
+      
+      // Set the message with the full email content
+      const fullEmail = `${email.greeting}\n\n${email.body.replace(/<[^>]*>/g, '')}\n\n${email.signature.replace(/<[^>]*>/g, '')}`;
+      setMessage(fullEmail);
+
+      toast({
+        title: "Email gerado com sucesso! ✨",
+        description: "O email está pronto para envio. Revise e clique em Enviar.",
+      });
+    } catch (error) {
+      console.error('Error generating email:', error);
+      toast({
+        title: "Erro ao gerar email",
+        description: error instanceof Error ? error.message : "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingEmail(false);
+    }
+  };
+
+  const handleCopyEmail = () => {
+    if (generatedEmail) {
+      const fullEmail = `Assunto: ${generatedEmail.subject}\n\n${generatedEmail.greeting}\n\n${generatedEmail.body.replace(/<[^>]*>/g, '')}\n\n${generatedEmail.signature.replace(/<[^>]*>/g, '')}`;
+      navigator.clipboard.writeText(fullEmail);
+      toast({
+        title: "Email copiado!",
+        description: "O email foi copiado para a área de transferência",
+      });
+    }
   };
 
   const handleSend = async () => {
@@ -97,6 +187,12 @@ export const Messaging: React.FC = () => {
     setIsSending(false);
     setSelectedLeadIds(new Set());
     setMessage('');
+    setGeneratedEmail(null);
+
+    toast({
+      title: "Mensagens enviadas!",
+      description: `${newLogs.filter(l => l.status === 'sent').length} mensagens enviadas com sucesso`,
+    });
   };
 
   const channelIcon = {
@@ -133,8 +229,12 @@ export const Messaging: React.FC = () => {
       <Tabs defaultValue="compose" className="space-y-6">
         <TabsList>
           <TabsTrigger value="compose" className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            Email com IA
+          </TabsTrigger>
+          <TabsTrigger value="manual" className="gap-2">
             <Send className="w-4 h-4" />
-            Compor
+            Compor Manual
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <Clock className="w-4 h-4" />
@@ -142,7 +242,312 @@ export const Messaging: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
+        {/* AI Email Generation Tab */}
         <TabsContent value="compose" className="space-y-6">
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* AI Email Generator Panel */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Step 1: Select Niche and Lead */}
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">1</div>
+                    <div>
+                      <CardTitle className="text-lg">Selecione o Nicho e Lead</CardTitle>
+                      <CardDescription>Escolha para quem você quer enviar</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Nicho</label>
+                      <Select value={selectedFolderId} onValueChange={(v) => {
+                        setSelectedFolderId(v);
+                        setSelectedLeadIds(new Set());
+                        setSelectedCTAId('');
+                        setGeneratedEmail(null);
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Escolha um nicho" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {folders.map(folder => (
+                            <SelectItem key={folder.id} value={folder.id}>
+                              {folder.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">CTA Base (opcional)</label>
+                      <Select value={selectedCTAId} onValueChange={setSelectedCTAId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Usar CTA existente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Gerar CTA automático</SelectItem>
+                          {folderCTAs.map(cta => (
+                            <SelectItem key={cta.id} value={cta.id}>
+                              {cta.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {selectedFolderId && eligibleLeads.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">Leads com email ({eligibleLeads.length})</label>
+                        <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                          {selectedLeadIds.size === eligibleLeads.length ? 'Desmarcar todos' : 'Selecionar todos'}
+                        </Button>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                        {eligibleLeads.map((lead) => (
+                          <div
+                            key={lead.id}
+                            className={`flex items-center gap-2 p-2 rounded-lg border text-sm transition-colors cursor-pointer ${
+                              selectedLeadIds.has(lead.id) ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/50'
+                            }`}
+                            onClick={() => handleSelectLead(lead.id)}
+                          >
+                            <Checkbox
+                              checked={selectedLeadIds.has(lead.id)}
+                              onCheckedChange={() => handleSelectLead(lead.id)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{lead.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{lead.email}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Step 2: Sender Info and Tone */}
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">2</div>
+                    <div>
+                      <CardTitle className="text-lg">Seus Dados e Tom</CardTitle>
+                      <CardDescription>Configure como você quer se apresentar</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Seu Nome</label>
+                      <Input 
+                        value={senderName} 
+                        onChange={(e) => setSenderName(e.target.value)}
+                        placeholder="João Silva"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Sua Empresa</label>
+                      <Input 
+                        value={senderCompany} 
+                        onChange={(e) => setSenderCompany(e.target.value)}
+                        placeholder="LeadFlow Solutions"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Tom da Mensagem</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { value: 'formal', label: '🎩 Formal', desc: 'Corporativo' },
+                        { value: 'casual', label: '😊 Casual', desc: 'Descontraído' },
+                        { value: 'persuasive', label: '🎯 Persuasivo', desc: 'Gatilhos mentais' },
+                        { value: 'friendly', label: '🤝 Amigável', desc: 'Empático' },
+                      ].map((tone) => (
+                        <Button
+                          key={tone.value}
+                          variant={emailTone === tone.value ? 'default' : 'outline'}
+                          className="h-auto flex-col py-3"
+                          onClick={() => setEmailTone(tone.value as any)}
+                        >
+                          <span className="text-lg">{tone.label.split(' ')[0]}</span>
+                          <span className="text-xs">{tone.label.split(' ')[1]}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Step 3: Generate and Preview */}
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">3</div>
+                      <div>
+                        <CardTitle className="text-lg">Gerar Email com IA</CardTitle>
+                        <CardDescription>A IA criará um email personalizado e persuasivo</CardDescription>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="gradient" 
+                      onClick={handleGenerateEmail}
+                      disabled={isGeneratingEmail || selectedLeadIds.size === 0 || !senderName || !senderCompany}
+                    >
+                      {isGeneratingEmail ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Gerando...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-4 h-4" />
+                          Gerar Email
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {generatedEmail ? (
+                    <div className="space-y-4">
+                      {/* Email Preview */}
+                      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="gap-1">
+                            <Mail className="w-3 h-3" />
+                            Preview do Email
+                          </Badge>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={handleCopyEmail}>
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handleGenerateEmail}>
+                              <RefreshCw className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-background rounded-lg p-4 border space-y-3">
+                          <div className="border-b pb-2">
+                            <p className="text-xs text-muted-foreground">Assunto:</p>
+                            <p className="font-semibold">{generatedEmail.subject}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium">{generatedEmail.greeting}</p>
+                          </div>
+                          <div 
+                            className="prose prose-sm max-w-none text-foreground"
+                            dangerouslySetInnerHTML={{ __html: generatedEmail.body }}
+                          />
+                          <div 
+                            className="pt-2 border-t text-sm"
+                            dangerouslySetInnerHTML={{ __html: generatedEmail.signature }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Send Button */}
+                      <div className="flex justify-between items-center pt-4 border-t">
+                        <p className="text-sm text-muted-foreground">
+                          <Users className="w-4 h-4 inline mr-1" />
+                          {selectedLeadIds.size} destinatário(s) selecionado(s)
+                        </p>
+                        <Button
+                          variant="gradient"
+                          size="lg"
+                          onClick={handleSend}
+                          disabled={isSending || selectedLeadIds.size === 0}
+                        >
+                          {isSending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Enviando...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4" />
+                              Enviar para {selectedLeadIds.size} Lead(s)
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>Preencha os campos acima e clique em "Gerar Email"</p>
+                      <p className="text-sm mt-1">A IA criará um email completo e persuasivo para você</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tips Panel */}
+            <div className="space-y-4">
+              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    Dicas de IA
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex gap-2">
+                    <span className="text-primary">✓</span>
+                    <p>Selecione um CTA existente para emails ainda mais direcionados</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-primary">✓</span>
+                    <p>O tom "Persuasivo" usa gatilhos mentais como escassez e urgência</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-primary">✓</span>
+                    <p>Cada email é personalizado com o nome e cargo do lead</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-primary">✓</span>
+                    <p>Clique em ↻ para gerar uma nova versão do email</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Stats */}
+              {selectedFolderId && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Estatísticas do Nicho</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Leads com email</span>
+                      <span className="font-medium">{eligibleLeads.length}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">CTAs salvos</span>
+                      <span className="font-medium">{folderCTAs.length}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Selecionados</span>
+                      <span className="font-medium text-primary">{selectedLeadIds.size}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Manual Compose Tab */}
+        <TabsContent value="manual" className="space-y-6">
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Compose Panel */}
             <div className="lg:col-span-2 space-y-4">
