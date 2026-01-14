@@ -91,7 +91,7 @@ export const Plans: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="space-y-1">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-gradient">{t.plans.promoPrice}</span>
+                  <span className="text-4xl font-bold text-warning">{t.plans.promoPrice}</span>
                   <span className="text-lg line-through text-muted-foreground">{t.plans.regularPrice}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">Pagamento único • Acesso vitalício</p>
