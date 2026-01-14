@@ -90,3 +90,43 @@ export async function generateImageWithAI(prompt: string, format: string): Promi
 
   return data.imageUrl;
 }
+
+interface GenerateEmailParams {
+  niche: string;
+  leadName: string;
+  leadPosition?: string;
+  leadCompany?: string;
+  cta?: {
+    title: string;
+    text: string;
+  };
+  senderName: string;
+  senderCompany: string;
+  tone: 'formal' | 'casual' | 'persuasive' | 'friendly';
+  language: 'pt-BR' | 'en-US';
+}
+
+export interface GeneratedEmail {
+  subject: string;
+  greeting: string;
+  body: string;
+  signature: string;
+  previewText: string;
+}
+
+export async function generateEmailWithAI(params: GenerateEmailParams): Promise<GeneratedEmail> {
+  const { data, error } = await supabase.functions.invoke('generate-email', {
+    body: params
+  });
+
+  if (error) {
+    console.error('Error calling generate-email:', error);
+    throw new Error(error.message || 'Failed to generate email');
+  }
+
+  if (data.error) {
+    throw new Error(data.error);
+  }
+
+  return data.email;
+}
