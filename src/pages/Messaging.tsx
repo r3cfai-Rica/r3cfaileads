@@ -282,12 +282,12 @@ export const Messaging: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-2 block">CTA Base (opcional)</label>
-                      <Select value={selectedCTAId} onValueChange={setSelectedCTAId}>
+                      <Select value={selectedCTAId} onValueChange={(v) => setSelectedCTAId(v === 'auto' ? '' : v)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Usar CTA existente" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Gerar CTA automático</SelectItem>
+                          <SelectItem value="auto">Gerar CTA automático</SelectItem>
                           {folderCTAs.map(cta => (
                             <SelectItem key={cta.id} value={cta.id}>
                               {cta.title}
