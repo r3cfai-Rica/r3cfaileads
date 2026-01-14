@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Zap, Mail, Lock, User, ArrowRight, Check } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const Signup: React.FC = () => {
   const { t, setUser } = useApp();
@@ -18,27 +20,107 @@ export const Signup: React.FC = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) return;
+    if (password !== confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
     
     setIsLoading(true);
 
-    // Simulated signup
-    setTimeout(() => {
-      setUser({
-        id: '1',
-        name,
+    try {
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        plan: 'free',
-        role: 'user',
-        searchesUsed: 0,
-        leadsUsed: 0,
-        isActive: true,
-        createdAt: new Date(),
-        lastLogin: new Date(),
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            name: name,
+          }
+        }
       });
+
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          toast.error('Este email já está cadastrado. Faça login.');
+        } else {
+          toast.error(authError.message);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (authData.user) {
+        // Create profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: authData.user.id,
+            name: name,
+            email: email,
+            plan: 'free',
+            searches_used: 0,
+            leads_used: 0,
+            is_active: true,
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+
+        // Create user role (the trigger will upgrade to admin if email matches)
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: authData.user.id,
+            role: 'user',
+          });
+
+        if (roleError) {
+          console.error('Role creation error:', roleError);
+        }
+
+        // Check if user got admin role (trigger may have upgraded it)
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', authData.user.id)
+          .single();
+
+        const isAdmin = roleData?.role === 'admin';
+
+        setUser({
+          id: authData.user.id,
+          name: name,
+          email: email,
+          plan: 'free',
+          role: isAdmin ? 'admin' : 'user',
+          searchesUsed: 0,
+          leadsUsed: 0,
+          isActive: true,
+          createdAt: new Date(),
+          lastLogin: new Date(),
+        });
+
+        if (isAdmin) {
+          toast.success('Conta Admin criada com sucesso! Acesso ilimitado.');
+        } else {
+          toast.success('Conta criada com sucesso!');
+        }
+
+        navigate('/plans');
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast.error('Erro ao criar conta');
+    } finally {
       setIsLoading(false);
-      navigate('/plans');
-    }, 1000);
+    }
   };
 
   const features = t.plans.freeFeatures;
