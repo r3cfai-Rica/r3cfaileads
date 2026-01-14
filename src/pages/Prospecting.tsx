@@ -41,68 +41,11 @@ import {
   Clock,
   Hash,
   Flag,
+  Sparkles,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-
-// Mock lead generation
-const generateMockLeads = (niche: string, location: string): Lead[] => {
-  const names = [
-    'Carlos Oliveira', 'Ana Santos', 'Ricardo Mendes', 'Patricia Lima',
-    'Fernando Costa', 'Juliana Almeida', 'Bruno Ferreira', 'Camila Rodrigues',
-    'Lucas Silva', 'Mariana Souza'
-  ];
-  
-  const positions = [
-    'Diretor de Marketing', 'CEO', 'Gerente de Vendas', 'Proprietário',
-    'Coordenador', 'Head de Growth', 'Founder', 'Diretor Comercial'
-  ];
-  
-  const intentSignals = [
-    `Comentou em post sobre ${niche}`,
-    `Pesquisando soluções de ${niche}`,
-    `Mencionou dificuldades com ${niche}`,
-    `Buscando fornecedores de ${niche}`,
-    `Interesse recente em ${niche}`,
-  ];
-
-  return names.map((name, i) => ({
-    id: `lead-${Date.now()}-${i}`,
-    name,
-    position: positions[i % positions.length],
-    location: location || 'São Paulo',
-    intentSignal: intentSignals[i % intentSignals.length],
-    urgency: (['low', 'medium', 'high'] as const)[i % 3],
-    email: i % 2 === 0 ? `${name.toLowerCase().replace(' ', '.')}@empresa.com` : undefined,
-    phone: i % 3 === 0 ? `(11) 9${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}` : undefined,
-    whatsapp: i % 2 === 0 ? `5511${Math.floor(100000000 + Math.random() * 900000000)}` : undefined,
-    sources: [`linkedin.com/in/${name.toLowerCase().replace(' ', '-')}`, 'google.com'],
-    isCompetitor: i === 2,
-    status: 'new',
-    createdAt: new Date(),
-  }));
-};
-
-const generateMockInsights = (niche: string): NicheInsights => ({
-  pains: [
-    `Dificuldade em encontrar fornecedores confiáveis de ${niche}`,
-    `Alto custo de implementação de soluções de ${niche}`,
-    `Falta de conhecimento técnico sobre ${niche}`,
-    `Processos manuais e ineficientes em ${niche}`,
-  ],
-  questions: [
-    `Como escolher o melhor serviço de ${niche}?`,
-    `Qual o ROI esperado com ${niche}?`,
-    `Quanto tempo leva para implementar ${niche}?`,
-    `Quais são as tendências em ${niche} para 2024?`,
-  ],
-  trends: [
-    `Automação crescente no setor de ${niche}`,
-    `Integração com IA em soluções de ${niche}`,
-    `Aumento da demanda por ${niche} sustentável`,
-  ],
-  urgency: 'high',
-  urgencyReason: `Mercado de ${niche} em rápida expansão com muitas empresas buscando soluções imediatas.`,
-});
+import { generateLeadsWithAI } from '@/lib/ai-api';
+import { useToast } from '@/hooks/use-toast';
 
 const countries = [
   { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
@@ -112,6 +55,7 @@ const countries = [
   { code: 'MX', name: 'México', flag: '🇲🇽' },
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
 ];
+
 
 export const Prospecting: React.FC = () => {
   const {
@@ -169,6 +113,8 @@ export const Prospecting: React.FC = () => {
   const tt = translations[language];
   const selectedCountry = countries.find(c => c.code === country);
 
+  const { toast } = useToast();
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     
@@ -181,18 +127,40 @@ export const Prospecting: React.FC = () => {
     setInsights(null);
     setSelectedLeads(new Set());
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      const selectedCountryData = countries.find(c => c.code === country);
+      const result = await generateLeadsWithAI({
+        niche: searchQuery,
+        country: selectedCountryData?.name || 'Brazil',
+        city: city,
+        postalCode: postalCode,
+        language: language,
+      });
 
-    const mockLeads = generateMockLeads(searchQuery, city);
-    const limitedLeads = user?.plan === 'free' ? mockLeads.slice(0, 10) : mockLeads;
-    const mockInsights = generateMockInsights(searchQuery);
+      const limitedLeads = user?.plan === 'free' ? result.leads.slice(0, 10) : result.leads;
+      
+      setSearchResults(limitedLeads);
+      setInsights(result.insights);
 
-    setSearchResults(limitedLeads);
-    setInsights(mockInsights);
-    setIsSearching(false);
+      if (user) {
+        setUser({ ...user, searchesUsed: user.searchesUsed + 1 });
+      }
 
-    if (user) {
-      setUser({ ...user, searchesUsed: user.searchesUsed + 1 });
+      toast({
+        title: language === 'pt-BR' ? 'Leads gerados com sucesso!' : 'Leads generated successfully!',
+        description: language === 'pt-BR' 
+          ? `${limitedLeads.length} leads encontrados para "${searchQuery}"`
+          : `${limitedLeads.length} leads found for "${searchQuery}"`,
+      });
+    } catch (error) {
+      console.error('Error generating leads:', error);
+      toast({
+        title: language === 'pt-BR' ? 'Erro ao gerar leads' : 'Error generating leads',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSearching(false);
     }
   };
 

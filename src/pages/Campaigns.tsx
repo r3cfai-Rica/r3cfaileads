@@ -28,29 +28,19 @@ import {
   Square,
   Smartphone,
   Monitor,
+  RefreshCw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { generateCTAsWithAI, generateImageWithAI } from '@/lib/ai-api';
+import { useToast } from '@/hooks/use-toast';
 
-// Mock CTA generation
-const generateMockCTAs = (niche: string, format: string): Omit<CTA, 'id' | 'folderId' | 'createdAt'>[] => {
-  return [
-    {
-      title: `🚀 Transforme seu ${niche} Hoje!`,
-      text: `Você está cansado de perder tempo com soluções que não funcionam? Descubra como centenas de empresas já revolucionaram seu ${niche} e aumentaram seus resultados em até 300%. Clique agora e garanta sua consultoria GRATUITA!`,
-      imageUrl: '/placeholder.svg',
-    },
-    {
-      title: `⚡ ${niche}: O Segredo dos Líderes`,
-      text: `As maiores empresas do mercado já descobriram o poder de um ${niche} bem estruturado. Você vai ficar para trás? Acesse nosso método exclusivo e saia na frente da concorrência. Vagas limitadas!`,
-      imageUrl: '/placeholder.svg',
-    },
-    {
-      title: `💡 Solução Definitiva em ${niche}`,
-      text: `Chega de dor de cabeça com ${niche}! Nossa solução foi desenvolvida por especialistas e já transformou mais de 500 negócios. Resultado garantido ou seu dinheiro de volta. Fale conosco agora!`,
-      imageUrl: '/placeholder.svg',
-    },
-  ];
-};
+interface GeneratedCTA {
+  title: string;
+  text: string;
+  imagePrompt: string;
+  imageUrl?: string;
+  isLoadingImage?: boolean;
+}
 
 type ImageFormat = '1:1' | '9:16' | '16:9';
 
@@ -63,7 +53,7 @@ export const Campaigns: React.FC = () => {
   const [selectedSearch, setSelectedSearch] = useState<string>('');
   const [imageFormat, setImageFormat] = useState<ImageFormat>('1:1');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedCTAs, setGeneratedCTAs] = useState<Omit<CTA, 'id' | 'folderId' | 'createdAt'>[]>([]);
+  const [generatedCTAs, setGeneratedCTAs] = useState<GeneratedCTA[]>([]);
 
   const translations = {
     'pt-BR': {
@@ -114,26 +104,103 @@ export const Campaigns: React.FC = () => {
   const selectedSearchData = searchHistory.find(s => s.id === selectedSearch);
   const latestInsights = selectedSearchData?.insights;
 
+  const { toast } = useToast();
+
   const handleGenerate = async () => {
     if (!selectedSearch) return;
     
     setIsGenerating(true);
+    setGeneratedCTAs([]);
     
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    
-    const searchData = searchHistory.find(s => s.id === selectedSearch);
-    if (searchData) {
-      const mockCTAs = generateMockCTAs(searchData.niche, imageFormat);
-      setGeneratedCTAs(mockCTAs);
+    try {
+      const searchData = searchHistory.find(s => s.id === selectedSearch);
+      if (!searchData) return;
+
+      const ctas = await generateCTAsWithAI({
+        niche: searchData.niche,
+        insights: searchData.insights,
+        companyName: companyName || undefined,
+        messageTone: messageTone,
+        imageFormat: imageFormat,
+        language: language,
+      });
+
+      // Set CTAs with loading state for images
+      const ctasWithLoadingState: GeneratedCTA[] = ctas.map(cta => ({
+        ...cta,
+        isLoadingImage: true,
+      }));
+      setGeneratedCTAs(ctasWithLoadingState);
+
+      toast({
+        title: language === 'pt-BR' ? 'CTAs gerados com sucesso!' : 'CTAs generated successfully!',
+        description: language === 'pt-BR' 
+          ? 'Gerando imagens para os CTAs...'
+          : 'Generating images for CTAs...',
+      });
+
+      // Generate images for each CTA
+      for (let i = 0; i < ctas.length; i++) {
+        try {
+          const imageUrl = await generateImageWithAI(ctas[i].imagePrompt, imageFormat);
+          setGeneratedCTAs(prev => 
+            prev.map((cta, index) => 
+              index === i ? { ...cta, imageUrl, isLoadingImage: false } : cta
+            )
+          );
+        } catch (imgError) {
+          console.error(`Error generating image ${i}:`, imgError);
+          setGeneratedCTAs(prev => 
+            prev.map((cta, index) => 
+              index === i ? { ...cta, isLoadingImage: false } : cta
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error generating CTAs:', error);
+      toast({
+        title: language === 'pt-BR' ? 'Erro ao gerar CTAs' : 'Error generating CTAs',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
     }
-    setIsGenerating(false);
   };
 
-  const handleSaveCTA = (cta: Omit<CTA, 'id' | 'folderId' | 'createdAt'>, index: number) => {
+  const handleRegenerateImage = async (index: number) => {
+    const cta = generatedCTAs[index];
+    if (!cta?.imagePrompt) return;
+
+    setGeneratedCTAs(prev => 
+      prev.map((c, i) => i === index ? { ...c, isLoadingImage: true } : c)
+    );
+
+    try {
+      const imageUrl = await generateImageWithAI(cta.imagePrompt, imageFormat);
+      setGeneratedCTAs(prev => 
+        prev.map((c, i) => i === index ? { ...c, imageUrl, isLoadingImage: false } : c)
+      );
+    } catch (error) {
+      console.error('Error regenerating image:', error);
+      setGeneratedCTAs(prev => 
+        prev.map((c, i) => i === index ? { ...c, isLoadingImage: false } : c)
+      );
+      toast({
+        title: language === 'pt-BR' ? 'Erro ao gerar imagem' : 'Error generating image',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSaveCTA = (cta: GeneratedCTA, index: number) => {
     if (!selectedSearchData?.folderId) return;
     
     const newCTA: CTA = {
-      ...cta,
+      title: cta.title,
+      text: cta.text,
+      imageUrl: cta.imageUrl,
       id: `cta-${Date.now()}-${index}`,
       folderId: selectedSearchData.folderId,
       createdAt: new Date(),
@@ -142,7 +209,7 @@ export const Campaigns: React.FC = () => {
     setCTAs([...ctas, newCTA]);
   };
 
-  const handleDuplicate = (cta: Omit<CTA, 'id' | 'folderId' | 'createdAt'>) => {
+  const handleDuplicate = (cta: GeneratedCTA) => {
     setGeneratedCTAs([...generatedCTAs, { ...cta }]);
   };
 
@@ -388,16 +455,53 @@ export const Campaigns: React.FC = () => {
       {/* Generated CTAs */}
       {generatedCTAs.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">CTAs Gerados</h2>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            CTAs Gerados com IA
+          </h2>
           <div className="grid lg:grid-cols-3 gap-6">
             {generatedCTAs.map((cta, index) => (
               <Card key={index} variant="elevated" className="overflow-hidden">
-                <div className={`bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center ${
+                <div className={`bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center relative ${
                   imageFormat === '1:1' ? 'aspect-square' :
                   imageFormat === '9:16' ? 'aspect-[9/16] max-h-80' :
                   'aspect-video'
                 }`}>
-                  <ImageIcon className="w-12 h-12 text-muted-foreground/30" />
+                  {cta.isLoadingImage ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Gerando imagem...</span>
+                    </div>
+                  ) : cta.imageUrl ? (
+                    <>
+                      <img 
+                        src={cta.imageUrl} 
+                        alt={cta.title} 
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="absolute bottom-2 right-2 opacity-80 hover:opacity-100"
+                        onClick={() => handleRegenerateImage(index)}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        Nova imagem
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <ImageIcon className="w-12 h-12 text-muted-foreground/30" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRegenerateImage(index)}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        Gerar imagem
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <CardContent className="pt-4">
                   <h3 className="font-bold text-lg mb-2">{cta.title}</h3>
