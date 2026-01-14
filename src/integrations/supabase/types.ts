@@ -14,16 +14,293 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ctas: {
+        Row: {
+          created_at: string
+          folder_id: string | null
+          id: string
+          image_url: string | null
+          text: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          image_url?: string | null
+          text: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          image_url?: string | null
+          text?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ctas_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          lead_count: number
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_count?: number
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_count?: number
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          created_at: string
+          email: string | null
+          folder_id: string | null
+          id: string
+          intent_signal: string
+          is_competitor: boolean
+          location: string | null
+          name: string
+          phone: string | null
+          position: string | null
+          sources: string[] | null
+          status: string
+          urgency: string
+          user_id: string
+          whatsapp: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          folder_id?: string | null
+          id?: string
+          intent_signal: string
+          is_competitor?: boolean
+          location?: string | null
+          name: string
+          phone?: string | null
+          position?: string | null
+          sources?: string[] | null
+          status?: string
+          urgency?: string
+          user_id: string
+          whatsapp?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          folder_id?: string | null
+          id?: string
+          intent_signal?: string
+          is_competitor?: boolean
+          location?: string | null
+          name?: string
+          phone?: string | null
+          position?: string | null
+          sources?: string[] | null
+          status?: string
+          urgency?: string
+          user_id?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_logs: {
+        Row: {
+          channel: string
+          id: string
+          lead_id: string | null
+          lead_name: string
+          message: string
+          sent_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          id?: string
+          lead_id?: string | null
+          lead_name: string
+          message: string
+          sent_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          lead_id?: string | null
+          lead_name?: string
+          message?: string
+          sent_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          last_login: string | null
+          leads_used: number
+          name: string
+          plan: string
+          searches_used: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          last_login?: string | null
+          leads_used?: number
+          name: string
+          plan?: string
+          searches_used?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          last_login?: string | null
+          leads_used?: number
+          name?: string
+          plan?: string
+          searches_used?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      search_history: {
+        Row: {
+          category: string
+          created_at: string
+          folder_id: string | null
+          id: string
+          insights: Json | null
+          leads_found: number
+          leads_saved: number
+          name: string
+          niche: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          insights?: Json | null
+          leads_found?: number
+          leads_saved?: number
+          name: string
+          niche: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          insights?: Json | null
+          leads_found?: number
+          leads_saved?: number
+          name?: string
+          niche?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_history_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +427,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
