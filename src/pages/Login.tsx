@@ -70,9 +70,10 @@ export const Login: React.FC = () => {
 
         if (isAdmin) {
           toast.success('Bem-vindo, Admin! Acesso ilimitado ativado.');
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
         }
-
-        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Login error:', error);
