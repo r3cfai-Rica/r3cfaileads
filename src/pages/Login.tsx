@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, Mail, Lock, ArrowRight, Globe } from 'lucide-react';
+import { Zap, Mail, Lock, ArrowRight, Globe, Shield } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const Login: React.FC = () => {
   const { t, language, setLanguage, setUser } = useApp();
@@ -24,24 +26,95 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulated login
-    setTimeout(() => {
-      const isAdmin = email.includes('admin');
-      setUser({
-        id: '1',
-        name: isAdmin ? 'Admin User' : 'Demo User',
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
-        plan: 'free',
-        role: isAdmin ? 'admin' : 'user',
-        searchesUsed: 0,
-        leadsUsed: 0,
-        isActive: true,
-        createdAt: new Date(),
-        lastLogin: new Date(),
+        password,
       });
+
+      if (authError) {
+        toast.error(authError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (authData.user) {
+        // Check if user has admin role
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', authData.user.id)
+          .single();
+
+        // Get profile data
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', authData.user.id)
+          .single();
+
+        const isAdmin = roleData?.role === 'admin';
+
+        setUser({
+          id: authData.user.id,
+          name: profileData?.name || authData.user.email?.split('@')[0] || 'User',
+          email: authData.user.email || '',
+          plan: (profileData?.plan as 'free' | 'paid') || 'free',
+          role: isAdmin ? 'admin' : 'user',
+          searchesUsed: profileData?.searches_used || 0,
+          leadsUsed: profileData?.leads_used || 0,
+          isActive: profileData?.is_active ?? true,
+          createdAt: new Date(profileData?.created_at || Date.now()),
+          lastLogin: new Date(),
+        });
+
+        if (isAdmin) {
+          toast.success('Bem-vindo, Admin! Acesso ilimitado ativado.');
+        }
+
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Erro ao fazer login');
+    } finally {
       setIsLoading(false);
-      navigate('/dashboard');
-    }, 1000);
+    }
+  };
+
+  const handleDemoLogin = () => {
+    // Demo login for testing
+    setUser({
+      id: 'demo-user',
+      name: 'Demo User',
+      email: 'demo@example.com',
+      plan: 'free',
+      role: 'user',
+      searchesUsed: 0,
+      leadsUsed: 0,
+      isActive: true,
+      createdAt: new Date(),
+      lastLogin: new Date(),
+    });
+    navigate('/dashboard');
+  };
+
+  const handleAdminDemoLogin = () => {
+    // Admin demo login for testing
+    setUser({
+      id: 'admin-demo',
+      name: 'Admin User',
+      email: 'admin@leadflow.com',
+      plan: 'paid',
+      role: 'admin',
+      searchesUsed: 0,
+      leadsUsed: 0,
+      isActive: true,
+      createdAt: new Date(),
+      lastLogin: new Date(),
+    });
+    toast.success('Modo Admin ativado! Acesso ilimitado.');
+    navigate('/dashboard');
   };
 
   return (
@@ -140,9 +213,27 @@ export const Login: React.FC = () => {
           </CardFooter>
         </Card>
 
-        {/* Demo hint */}
-        <p className="text-center text-primary-foreground/50 text-sm mt-6">
-          Use qualquer email para demo. Inclua "admin" para acesso Admin.
+        {/* Demo buttons */}
+        <div className="flex flex-col gap-2 mt-4">
+          <Button 
+            variant="outline" 
+            onClick={handleDemoLogin}
+            className="w-full bg-background/50 backdrop-blur-sm"
+          >
+            Entrar como Demo User
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleAdminDemoLogin}
+            className="w-full bg-background/50 backdrop-blur-sm border-primary/50"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Entrar como Admin (Sem Limites)
+          </Button>
+        </div>
+
+        <p className="text-center text-primary-foreground/50 text-sm mt-4">
+          Ou faça login com email e senha cadastrados.
         </p>
       </div>
     </div>

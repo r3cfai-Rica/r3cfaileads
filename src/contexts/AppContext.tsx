@@ -134,17 +134,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const t = useTranslation(language);
   const isAuthenticated = user !== null;
+  
+  // Admins have unlimited access
+  const isAdmin = user?.role === 'admin';
 
-  const canSearch = user?.plan === 'paid' || (user?.searchesUsed ?? 0) < FREE_SEARCH_LIMIT;
+  const canSearch = isAdmin || user?.plan === 'paid' || (user?.searchesUsed ?? 0) < FREE_SEARCH_LIMIT;
   
   const canSaveLeads = useCallback((count: number) => {
     if (!user) return false;
+    if (user.role === 'admin') return true; // Admins have no limits
     if (user.plan === 'paid') return count <= PAID_LEAD_LIMIT_PER_DAY;
     return (user.leadsUsed + count) <= FREE_LEAD_LIMIT;
   }, [user]);
 
-  const remainingSearches = user?.plan === 'paid' ? Infinity : FREE_SEARCH_LIMIT - (user?.searchesUsed ?? 0);
-  const remainingLeads = user?.plan === 'paid' ? PAID_LEAD_LIMIT_PER_DAY : FREE_LEAD_LIMIT - (user?.leadsUsed ?? 0);
+  const remainingSearches = isAdmin ? Infinity : (user?.plan === 'paid' ? Infinity : FREE_SEARCH_LIMIT - (user?.searchesUsed ?? 0));
+  const remainingLeads = isAdmin ? Infinity : (user?.plan === 'paid' ? PAID_LEAD_LIMIT_PER_DAY : FREE_LEAD_LIMIT - (user?.leadsUsed ?? 0));
 
   return (
     <AppContext.Provider
