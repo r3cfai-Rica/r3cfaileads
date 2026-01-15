@@ -337,6 +337,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_lead_owner: {
+        Args: { _lead_id: string; _user_id: string }
+        Returns: boolean
+      }
+      owns_resource: { Args: { _resource_user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
