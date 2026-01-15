@@ -4,6 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { CheckoutAccessDialog } from '@/components/billing/CheckoutAccessDialog';
 import { Check, Zap, Crown, Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +15,8 @@ export const Plans: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
 
   // Show toast if payment was cancelled
   React.useEffect(() => {
@@ -34,11 +37,24 @@ export const Plans: React.FC = () => {
   };
 
   const handleCheckout = async () => {
+    // Pre-open a tab synchronously to reduce popup blocking (we'll redirect it once we get the URL)
+    const preOpenedWindow = window.open('', '_blank');
+    try {
+      if (preOpenedWindow?.document) {
+        preOpenedWindow.document.write(
+          '<title>Carregando pagamento...</title><div style="font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding:24px;">Carregando pagamento...</div>'
+        );
+      }
+    } catch {
+      // ignore
+    }
+
     setIsLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
+        preOpenedWindow?.close();
         toast({
           title: "Erro",
           description: "Você precisa estar logado para fazer upgrade.",
@@ -59,12 +75,20 @@ export const Plans: React.FC = () => {
         throw error;
       }
 
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
+      if (!data?.url) {
         throw new Error('No checkout URL returned');
       }
+
+      // Keep the app open and show a dialog with the link (useful if corporate networks block the payment page)
+      setCheckoutUrl(data.url);
+      setIsCheckoutDialogOpen(true);
+
+      // Redirect the pre-opened tab, or let user open manually from dialog
+      if (preOpenedWindow) {
+        preOpenedWindow.location.href = data.url;
+      }
     } catch (error) {
+      preOpenedWindow?.close();
       console.error('Error creating checkout:', error);
       toast({
         title: "Erro ao processar",
@@ -195,6 +219,12 @@ export const Plans: React.FC = () => {
             Continuar com plano gratuito por enquanto
           </Button>
         </div>
+
+        <CheckoutAccessDialog
+          open={isCheckoutDialogOpen}
+          onOpenChange={setIsCheckoutDialogOpen}
+          url={checkoutUrl}
+        />
       </div>
     </div>
   );
