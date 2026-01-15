@@ -1,20 +1,79 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Zap, Crown, Sparkles } from 'lucide-react';
+import { Check, Zap, Crown, Sparkles, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const Plans: React.FC = () => {
   const { t, user, setUser } = useApp();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSelectPlan = (plan: 'free' | 'paid') => {
+  // Show toast if payment was cancelled
+  React.useEffect(() => {
+    if (searchParams.get('payment') === 'cancelled') {
+      toast({
+        title: "Pagamento cancelado",
+        description: "Você pode tentar novamente quando quiser.",
+        variant: "destructive",
+      });
+    }
+  }, [searchParams, toast]);
+
+  const handleSelectFreePlan = () => {
     if (user) {
-      setUser({ ...user, plan });
+      setUser({ ...user, plan: 'free' });
     }
     navigate('/dashboard');
+  };
+
+  const handleCheckout = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para fazer upgrade.",
+          variant: "destructive",
+        });
+        navigate('/login');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        console.error('Checkout error:', error);
+        throw error;
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast({
+        title: "Erro ao processar",
+        description: "Não foi possível iniciar o pagamento. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -62,7 +121,7 @@ export const Plans: React.FC = () => {
                 variant="outline"
                 className="w-full"
                 size="lg"
-                onClick={() => handleSelectPlan('free')}
+                onClick={handleSelectFreePlan}
               >
                 {t.plans.startFree}
               </Button>
@@ -110,9 +169,17 @@ export const Plans: React.FC = () => {
                 variant="gradientCTA"
                 className="w-full"
                 size="lg"
-                onClick={() => handleSelectPlan('paid')}
+                onClick={handleCheckout}
+                disabled={isLoading}
               >
-                {t.plans.upgrade}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  t.plans.upgrade
+                )}
               </Button>
             </CardFooter>
           </Card>
