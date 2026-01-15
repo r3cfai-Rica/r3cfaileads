@@ -3,17 +3,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-  "rounded-xl border bg-card text-card-foreground transition-all duration-200",
+  "rounded-xl border transition-all duration-200",
   {
     variants: {
       variant: {
-        default: "shadow-sm",
-        elevated: "shadow-md hover:shadow-lg",
-        flat: "border-transparent shadow-none",
-        glass: "bg-white/80 backdrop-blur-xl border-white/20 shadow-lg",
-        interactive: "shadow-sm hover:shadow-lg hover:scale-[1.01] cursor-pointer",
-        highlight: "shadow-md border-primary/20 hover:border-primary/40",
-        stat: "shadow-sm hover:shadow-md",
+        default: "bg-card text-card-foreground shadow-sm",
+        elevated: "bg-card text-card-foreground shadow-md hover:shadow-lg",
+        flat: "bg-card text-card-foreground border-transparent shadow-none",
+        glass: "bg-white/90 backdrop-blur-xl border-white/30 shadow-lg text-foreground",
+        interactive: "bg-card text-card-foreground shadow-sm hover:shadow-lg hover:scale-[1.01] cursor-pointer",
+        highlight: "bg-card text-card-foreground shadow-md border-primary/20 hover:border-primary/40",
+        stat: "bg-card text-card-foreground shadow-sm hover:shadow-md",
       },
     },
     defaultVariants: {
