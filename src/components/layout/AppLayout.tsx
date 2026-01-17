@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { cn } from '@/lib/utils';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FloatingAssistant } from '@/components/chat/FloatingAssistant';
 
 export const AppLayout: React.FC = () => {
   const { isAuthenticated } = useApp();
@@ -60,6 +61,9 @@ export const AppLayout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* Floating AI Assistant */}
+      <FloatingAssistant />
     </div>
   );
 };
