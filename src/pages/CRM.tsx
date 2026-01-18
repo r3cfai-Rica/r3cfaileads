@@ -41,10 +41,12 @@ import {
   Bookmark,
   History,
   ArrowLeft,
+  Eye,
 } from 'lucide-react';
+import { LeadDetailDialog } from '@/components/crm/LeadDetailDialog';
 
 export const CRM: React.FC = () => {
-  const { t, folders, setFolders, leads, setLeads, ctas, searchHistory } = useApp();
+  const { t, language, folders, setFolders, leads, setLeads, ctas, searchHistory } = useApp();
   
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
@@ -52,6 +54,8 @@ export const CRM: React.FC = () => {
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [showLeadDetail, setShowLeadDetail] = useState(false);
 
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
@@ -179,29 +183,64 @@ export const CRM: React.FC = () => {
         {/* Leads Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredLeads.map((lead) => (
-            <Card key={lead.id} variant="interactive">
+            <Card 
+              key={lead.id} 
+              variant="interactive"
+              className="cursor-pointer group"
+              onClick={() => {
+                setSelectedLead(lead);
+                setShowLeadDetail(true);
+              }}
+            >
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-medium">{lead.name}</h4>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium group-hover:text-primary transition-colors">{lead.name}</h4>
+                      <Eye className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                     <p className="text-sm text-muted-foreground">{lead.position}</p>
                   </div>
                   <Badge variant={statusVariant[lead.status]}>{lead.status}</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mb-3">{lead.intentSignal}</p>
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{lead.intentSignal}</p>
                 <div className="flex items-center gap-2">
                   {lead.email && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `mailto:${lead.email}`;
+                      }}
+                    >
                       <Mail className="w-4 h-4" />
                     </Button>
                   )}
                   {lead.phone && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `tel:${lead.phone}`;
+                      }}
+                    >
                       <Phone className="w-4 h-4" />
                     </Button>
                   )}
                   {lead.whatsapp && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`https://wa.me/${lead.whatsapp?.replace(/\D/g, '')}`, '_blank');
+                      }}
+                    >
                       <MessageCircle className="w-4 h-4" />
                     </Button>
                   )}
@@ -219,6 +258,14 @@ export const CRM: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Lead Detail Dialog */}
+        <LeadDetailDialog
+          lead={selectedLead}
+          open={showLeadDetail}
+          onOpenChange={setShowLeadDetail}
+          language={language}
+        />
       </div>
     );
   }
