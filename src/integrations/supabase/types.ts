@@ -228,6 +228,7 @@ export type Database = {
           leads_used: number
           name: string
           plan: string
+          plan_type: string
           searches_used: number
           user_id: string
         }
@@ -240,6 +241,7 @@ export type Database = {
           leads_used?: number
           name: string
           plan?: string
+          plan_type?: string
           searches_used?: number
           user_id: string
         }
@@ -252,6 +254,7 @@ export type Database = {
           leads_used?: number
           name?: string
           plan?: string
+          plan_type?: string
           searches_used?: number
           user_id?: string
         }
@@ -358,6 +361,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_messaging_usage: {
+        Row: {
+          billing_cycle_start: string
+          created_at: string
+          email_limit: number
+          email_used: number
+          id: string
+          sms_limit: number
+          sms_used: number
+          updated_at: string
+          user_id: string
+          whatsapp_limit: number
+          whatsapp_used: number
+        }
+        Insert: {
+          billing_cycle_start?: string
+          created_at?: string
+          email_limit?: number
+          email_used?: number
+          id?: string
+          sms_limit?: number
+          sms_used?: number
+          updated_at?: string
+          user_id: string
+          whatsapp_limit?: number
+          whatsapp_used?: number
+        }
+        Update: {
+          billing_cycle_start?: string
+          created_at?: string
+          email_limit?: number
+          email_used?: number
+          id?: string
+          sms_limit?: number
+          sms_used?: number
+          updated_at?: string
+          user_id?: string
+          whatsapp_limit?: number
+          whatsapp_used?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -396,6 +441,7 @@ export type Database = {
         Returns: boolean
       }
       owns_resource: { Args: { _resource_user_id: string }; Returns: boolean }
+      reset_monthly_usage: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"
