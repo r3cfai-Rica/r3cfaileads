@@ -17,6 +17,7 @@ import Campaigns from "./pages/Campaigns";
 import Messaging from "./pages/Messaging";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
+import UsageMonitorPage from "./pages/UsageMonitorPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/messaging" element={<Messaging />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/usage" element={<UsageMonitorPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

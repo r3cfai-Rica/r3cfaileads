@@ -42,9 +42,9 @@ import {
   Calendar,
   Filter,
   ArrowUpRight,
-  ArrowDownRight,
+  MessageSquare,
 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
   AreaChart,
@@ -277,6 +277,12 @@ export const Admin: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           <AdminNotifications />
+          <Link to="/admin/usage">
+            <Button variant="outline" size="sm">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Monitor de Uso
+            </Button>
+          </Link>
           <Badge variant="gradient" className="w-fit">
             Admin Dashboard
           </Badge>
@@ -355,11 +361,11 @@ export const Admin: React.FC = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+          </div>
 
-      {/* Charts Section */}
-      <div className="grid lg:grid-cols-3 gap-6">
+          {/* Charts Section */}
+          <div className="grid lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -497,8 +503,10 @@ export const Admin: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+        <TabsContent value="users" className="space-y-6 mt-6">
+          <div className="grid lg:grid-cols-3 gap-6">
         {/* User Management */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -750,7 +758,13 @@ export const Admin: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="usage" className="mt-6">
+          <UsageMonitor />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

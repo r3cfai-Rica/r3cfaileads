@@ -429,11 +429,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_messaging_limit: {
+        Args: { _channel: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      increment_messaging_usage: {
+        Args: { _channel: string; _user_id: string }
         Returns: boolean
       }
       is_lead_owner: {
