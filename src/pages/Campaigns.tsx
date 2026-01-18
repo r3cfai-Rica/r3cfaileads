@@ -29,6 +29,7 @@ import {
   Smartphone,
   Monitor,
   RefreshCw,
+  Check,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { generateCTAsWithAI, generateImageWithAI } from '@/lib/ai-api';
@@ -40,6 +41,8 @@ interface GeneratedCTA {
   imagePrompt: string;
   imageUrl?: string;
   isLoadingImage?: boolean;
+  isSaved?: boolean;
+  isDuplicated?: boolean;
 }
 
 type ImageFormat = '1:1' | '9:16' | '16:9';
@@ -207,10 +210,37 @@ export const Campaigns: React.FC = () => {
     };
     
     setCTAs([...ctas, newCTA]);
+    
+    // Mark as saved
+    setGeneratedCTAs(prev => 
+      prev.map((c, i) => i === index ? { ...c, isSaved: true } : c)
+    );
+    
+    toast({
+      title: language === 'pt-BR' ? 'CTA salvo!' : 'CTA saved!',
+      description: language === 'pt-BR' ? 'O CTA foi salvo com sucesso.' : 'The CTA was saved successfully.',
+    });
   };
 
-  const handleDuplicate = (cta: GeneratedCTA) => {
-    setGeneratedCTAs([...generatedCTAs, { ...cta }]);
+  const handleDuplicate = (cta: GeneratedCTA, index: number) => {
+    setGeneratedCTAs([...generatedCTAs, { ...cta, isSaved: false, isDuplicated: false }]);
+    
+    // Show feedback animation
+    setGeneratedCTAs(prev => 
+      prev.map((c, i) => i === index ? { ...c, isDuplicated: true } : c)
+    );
+    
+    // Reset duplicated state after animation
+    setTimeout(() => {
+      setGeneratedCTAs(prev => 
+        prev.map((c, i) => i === index ? { ...c, isDuplicated: false } : c)
+      );
+    }, 1500);
+    
+    toast({
+      title: language === 'pt-BR' ? 'CTA duplicado!' : 'CTA duplicated!',
+      description: language === 'pt-BR' ? 'Uma cópia foi adicionada abaixo.' : 'A copy was added below.',
+    });
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -508,23 +538,54 @@ export const Campaigns: React.FC = () => {
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-4">{cta.text}</p>
                   <div className="flex flex-wrap gap-2">
                     <Button
-                      variant="gradient"
+                      variant={cta.isSaved ? "success" : "gradient"}
                       size="sm"
                       onClick={() => handleSaveCTA(cta, index)}
+                      disabled={cta.isSaved}
+                      className={`transition-all duration-300 ${
+                        cta.isSaved 
+                          ? 'scale-105' 
+                          : 'hover:scale-105 hover:shadow-lg active:scale-95'
+                      }`}
                     >
-                      <Save className="w-4 h-4 mr-1" />
-                      {t.campaigns.saveCTA}
+                      {cta.isSaved ? (
+                        <>
+                          <Check className="w-4 h-4 mr-1" />
+                          {language === 'pt-BR' ? 'Salvo!' : 'Saved!'}
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-1" />
+                          {t.campaigns.saveCTA}
+                        </>
+                      )}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDuplicate(cta)}
+                      onClick={() => handleDuplicate(cta, index)}
+                      className={`transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95 ${
+                        cta.isDuplicated ? 'bg-primary/10 border-primary text-primary' : ''
+                      }`}
                     >
-                      <Copy className="w-4 h-4 mr-1" />
-                      {t.campaigns.duplicate}
+                      {cta.isDuplicated ? (
+                        <>
+                          <Check className="w-4 h-4 mr-1" />
+                          {language === 'pt-BR' ? 'Duplicado!' : 'Duplicated!'}
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-1" />
+                          {t.campaigns.duplicate}
+                        </>
+                      )}
                     </Button>
                     <Link to="/messaging">
-                      <Button variant="secondary" size="sm">
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        className="transition-all duration-300 hover:scale-105 hover:shadow-md active:scale-95"
+                      >
                         <Send className="w-4 h-4 mr-1" />
                         {t.campaigns.useCTA}
                       </Button>
