@@ -304,6 +304,60 @@ export type Database = {
           },
         ]
       }
+      user_messaging_credentials: {
+        Row: {
+          created_at: string
+          email_configured: boolean
+          email_from_address: string | null
+          email_from_name: string | null
+          id: string
+          resend_api_key: string | null
+          sms_configured: boolean
+          twilio_account_sid: string | null
+          twilio_auth_token: string | null
+          twilio_phone_number: string | null
+          updated_at: string
+          user_id: string
+          whatsapp_access_token: string | null
+          whatsapp_configured: boolean
+          whatsapp_phone_number_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_configured?: boolean
+          email_from_address?: string | null
+          email_from_name?: string | null
+          id?: string
+          resend_api_key?: string | null
+          sms_configured?: boolean
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          twilio_phone_number?: string | null
+          updated_at?: string
+          user_id: string
+          whatsapp_access_token?: string | null
+          whatsapp_configured?: boolean
+          whatsapp_phone_number_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_configured?: boolean
+          email_from_address?: string | null
+          email_from_name?: string | null
+          id?: string
+          resend_api_key?: string | null
+          sms_configured?: boolean
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          twilio_phone_number?: string | null
+          updated_at?: string
+          user_id?: string
+          whatsapp_access_token?: string | null
+          whatsapp_configured?: boolean
+          whatsapp_phone_number_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

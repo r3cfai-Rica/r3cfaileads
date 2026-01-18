@@ -20,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { MessagingCredentialsForm } from '@/components/settings/MessagingCredentialsForm';
 
 export const Settings: React.FC = () => {
   const { t, user, language, setLanguage } = useApp();
@@ -176,6 +177,11 @@ export const Settings: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Messaging Credentials */}
+        <div className="lg:col-span-2">
+          <MessagingCredentialsForm />
+        </div>
       </div>
     </div>
   );
