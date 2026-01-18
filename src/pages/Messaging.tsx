@@ -418,12 +418,70 @@ export const Messaging: React.FC = () => {
                 <CardContent className="space-y-4">
                   {generatedEmail ? (
                     <div className="space-y-4">
+                      {/* Selected Leads Preview - Shows personalization for each lead */}
+                      {selectedLeadIds.size > 1 && (
+                        <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Users className="w-5 h-5 text-primary" />
+                            <p className="font-medium text-primary">
+                              {language === 'pt-BR' ? 'Emails personalizados para cada lead:' : 'Personalized emails for each lead:'}
+                            </p>
+                          </div>
+                          <div className="grid gap-2 max-h-40 overflow-y-auto">
+                            {Array.from(selectedLeadIds).map((leadId) => {
+                              const lead = leads.find(l => l.id === leadId);
+                              if (!lead) return null;
+                              
+                              // Personalize subject and greeting for each lead
+                              const personalizedSubject = generatedEmail.subject.replace(
+                                /para a? ?[A-Za-zÀ-ÖØ-öø-ÿ]+/gi,
+                                `para ${lead.name.split(' ')[0]}`
+                              ).replace(
+                                /for [A-Za-zÀ-ÖØ-öø-ÿ]+/gi,
+                                `for ${lead.name.split(' ')[0]}`
+                              );
+                              
+                              return (
+                                <div 
+                                  key={leadId} 
+                                  className="flex items-center gap-3 bg-background rounded-lg p-3 border"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium text-sm">
+                                    {lead.name.charAt(0)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm truncate">{lead.name}</p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {language === 'pt-BR' ? 'Assunto:' : 'Subject:'} {personalizedSubject}
+                                    </p>
+                                    <p className="text-xs text-primary truncate">
+                                      {language === 'pt-BR' ? 'Olá,' : 'Hi,'} {lead.name.split(' ')[0]}...
+                                    </p>
+                                  </div>
+                                  <Badge variant="outline" className="text-xs">
+                                    <CheckCircle2 className="w-3 h-3 mr-1 text-green-500" />
+                                    {language === 'pt-BR' ? 'Personalizado' : 'Personalized'}
+                                  </Badge>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-3 text-center">
+                            {language === 'pt-BR' 
+                              ? '✨ Cada email será enviado com o nome do respectivo lead'
+                              : '✨ Each email will be sent with the respective lead\'s name'}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Email Preview */}
                       <div className="bg-muted/30 rounded-lg p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <Badge variant="outline" className="gap-1">
                             <Mail className="w-3 h-3" />
-                            Preview do Email
+                            {selectedLeadIds.size > 1 
+                              ? (language === 'pt-BR' ? 'Modelo Base do Email' : 'Base Email Template')
+                              : (language === 'pt-BR' ? 'Preview do Email' : 'Email Preview')}
                           </Badge>
                           <div className="flex gap-2">
                             <Button variant="ghost" size="sm" onClick={handleCopyEmail}>
@@ -437,7 +495,7 @@ export const Messaging: React.FC = () => {
                         
                         <div className="bg-background rounded-lg p-4 border space-y-3">
                           <div className="border-b pb-2">
-                            <p className="text-xs text-muted-foreground">Assunto:</p>
+                            <p className="text-xs text-muted-foreground">{language === 'pt-BR' ? 'Assunto:' : 'Subject:'}</p>
                             <p className="font-semibold">{generatedEmail.subject}</p>
                           </div>
                           <div>
@@ -452,13 +510,21 @@ export const Messaging: React.FC = () => {
                             dangerouslySetInnerHTML={{ __html: generatedEmail.signature }}
                           />
                         </div>
+                        
+                        {selectedLeadIds.size > 1 && (
+                          <p className="text-xs text-center text-muted-foreground">
+                            {language === 'pt-BR' 
+                              ? 'Os nomes destacados acima serão substituídos pelo nome de cada lead'
+                              : 'The highlighted names above will be replaced with each lead\'s name'}
+                          </p>
+                        )}
                       </div>
 
                       {/* Send Button */}
                       <div className="flex justify-between items-center pt-4 border-t">
                         <p className="text-sm text-muted-foreground">
                           <Users className="w-4 h-4 inline mr-1" />
-                          {selectedLeadIds.size} destinatário(s) selecionado(s)
+                          {selectedLeadIds.size} {language === 'pt-BR' ? 'destinatário(s) selecionado(s)' : 'recipient(s) selected'}
                         </p>
                         <Button
                           variant="gradient"
@@ -469,12 +535,12 @@ export const Messaging: React.FC = () => {
                           {isSending ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              Enviando...
+                              {language === 'pt-BR' ? 'Enviando...' : 'Sending...'}
                             </>
                           ) : (
                             <>
                               <Send className="w-4 h-4" />
-                              Enviar para {selectedLeadIds.size} Lead(s)
+                              {language === 'pt-BR' ? `Enviar para ${selectedLeadIds.size} Lead(s)` : `Send to ${selectedLeadIds.size} Lead(s)`}
                             </>
                           )}
                         </Button>
@@ -483,8 +549,8 @@ export const Messaging: React.FC = () => {
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>Preencha os campos acima e clique em "Gerar Email"</p>
-                      <p className="text-sm mt-1">A IA criará um email completo e persuasivo para você</p>
+                      <p>{language === 'pt-BR' ? 'Preencha os campos acima e clique em "Gerar Email"' : 'Fill in the fields above and click "Generate Email"'}</p>
+                      <p className="text-sm mt-1">{language === 'pt-BR' ? 'A IA criará um email completo e persuasivo para você' : 'AI will create a complete and persuasive email for you'}</p>
                     </div>
                   )}
                 </CardContent>
