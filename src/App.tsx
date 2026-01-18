@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// App component with proper provider hierarchy
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AppProvider>
