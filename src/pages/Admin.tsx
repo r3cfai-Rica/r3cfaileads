@@ -361,11 +361,11 @@ export const Admin: React.FC = () => {
               </div>
             </div>
           </CardContent>
-          </Card>
-          </div>
+        </Card>
+      </div>
 
-          {/* Charts Section */}
-          <div className="grid lg:grid-cols-3 gap-6">
+      {/* Charts Section */}
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -503,10 +503,8 @@ export const Admin: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-        </TabsContent>
 
-        <TabsContent value="users" className="space-y-6 mt-6">
-          <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* User Management */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -758,13 +756,7 @@ export const Admin: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="usage" className="mt-6">
-          <UsageMonitor />
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 };
