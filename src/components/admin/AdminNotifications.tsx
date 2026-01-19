@@ -33,18 +33,6 @@ interface AdminNotification {
   user_email?: string;
 }
 
-interface NotificationWithProfile {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  user_id: string | null;
-  is_read: boolean;
-  created_at: string;
-  metadata: Record<string, unknown>;
-  profiles: { name: string; email: string } | null;
-}
-
 export const AdminNotifications: React.FC = () => {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -56,39 +44,59 @@ export const AdminNotifications: React.FC = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const { data, error } = await supabase
+        // First fetch notifications
+        const { data: notifData, error: notifError } = await supabase
           .from('admin_notifications')
-          .select(`
-            id,
-            type,
-            title,
-            message,
-            user_id,
-            is_read,
-            created_at,
-            metadata,
-            profiles!admin_notifications_user_id_fkey(name, email)
-          `)
+          .select('id, type, title, message, user_id, is_read, created_at, metadata')
           .order('created_at', { ascending: false })
           .limit(50);
 
-        if (error) {
-          console.error('Error fetching notifications:', error);
-        } else if (data) {
-          const formattedData: AdminNotification[] = (data as NotificationWithProfile[]).map(n => ({
-            id: n.id,
-            type: n.type as AdminNotification['type'],
-            title: n.title,
-            message: n.message,
-            user_id: n.user_id,
-            is_read: n.is_read,
-            created_at: n.created_at,
-            metadata: n.metadata,
-            user_name: n.profiles?.name,
-            user_email: n.profiles?.email,
-          }));
-          setNotifications(formattedData);
+        if (notifError) {
+          console.error('Error fetching notifications:', notifError);
+          setIsLoading(false);
+          return;
         }
+
+        if (!notifData || notifData.length === 0) {
+          setNotifications([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Get unique user_ids
+        const userIds = [...new Set(notifData.filter(n => n.user_id).map(n => n.user_id))] as string[];
+
+        // Fetch profiles for those users
+        let profilesMap: Record<string, { name: string; email: string }> = {};
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('user_id, name, email')
+            .in('user_id', userIds);
+
+          if (profilesData) {
+            profilesMap = profilesData.reduce((acc, p) => {
+              acc[p.user_id] = { name: p.name, email: p.email };
+              return acc;
+            }, {} as Record<string, { name: string; email: string }>);
+          }
+        }
+
+        // Combine notifications with profile data
+        const formattedData: AdminNotification[] = notifData.map(n => ({
+          id: n.id,
+          type: n.type as AdminNotification['type'],
+          title: n.title,
+          message: n.message,
+          user_id: n.user_id,
+          is_read: n.is_read,
+          created_at: n.created_at,
+          metadata: n.metadata as Record<string, unknown>,
+          user_name: n.user_id ? profilesMap[n.user_id]?.name : undefined,
+          user_email: n.user_id ? profilesMap[n.user_id]?.email : undefined,
+        }));
+
+        setNotifications(formattedData);
       } catch (err) {
         console.error('Error:', err);
       } finally {
