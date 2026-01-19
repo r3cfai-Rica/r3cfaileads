@@ -42,8 +42,12 @@ import {
   History,
   ArrowLeft,
   Eye,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { LeadDetailDialog } from '@/components/crm/LeadDetailDialog';
+import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 export const CRM: React.FC = () => {
   const { t, language, folders, setFolders, leads, setLeads, ctas, searchHistory } = useApp();
@@ -101,6 +105,118 @@ export const CRM: React.FC = () => {
     return searchHistory.filter(s => s.folderId === folderId);
   };
 
+  const handleExportToExcel = (folder: Folder) => {
+    const folderLeads = getFolderLeads(folder.id);
+    
+    if (folderLeads.length === 0) {
+      toast.error(language === 'pt-BR' ? 'Nenhum lead para exportar' : 'No leads to export');
+      return;
+    }
+
+    // Prepare data for Excel
+    const excelData = folderLeads.map((lead) => ({
+      Nome: lead.name,
+      'Cargo/Posição': lead.position || '',
+      Email: lead.email || '',
+      Telefone: lead.phone || '',
+      WhatsApp: lead.whatsapp || '',
+      Localização: lead.location || '',
+      'Sinal de Intenção': lead.intentSignal,
+      Urgência: lead.urgency,
+      Status: lead.status,
+      Concorrente: lead.isCompetitor ? 'Sim' : 'Não',
+      Fontes: lead.sources?.join(', ') || '',
+      'Data de Criação': lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : '',
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    const colWidths = [
+      { wch: 25 }, // Nome
+      { wch: 20 }, // Cargo
+      { wch: 30 }, // Email
+      { wch: 15 }, // Telefone
+      { wch: 15 }, // WhatsApp
+      { wch: 20 }, // Localização
+      { wch: 40 }, // Sinal de Intenção
+      { wch: 10 }, // Urgência
+      { wch: 12 }, // Status
+      { wch: 12 }, // Concorrente
+      { wch: 30 }, // Fontes
+      { wch: 15 }, // Data
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+
+    // Generate filename with folder name and date
+    const date = new Date().toISOString().split('T')[0];
+    const sanitizedFolderName = folder.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `CRM_${sanitizedFolderName}_${date}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(wb, filename);
+    toast.success(language === 'pt-BR' ? `${folderLeads.length} leads exportados!` : `${folderLeads.length} leads exported!`);
+  };
+
+  const handleExportAllLeads = () => {
+    if (leads.length === 0) {
+      toast.error(language === 'pt-BR' ? 'Nenhum lead para exportar' : 'No leads to export');
+      return;
+    }
+
+    // Prepare data for Excel with folder information
+    const excelData = leads.map((lead) => {
+      const folder = folders.find(f => f.id === lead.folderId);
+      return {
+        Pasta: folder?.name || 'Sem pasta',
+        Nome: lead.name,
+        'Cargo/Posição': lead.position || '',
+        Email: lead.email || '',
+        Telefone: lead.phone || '',
+        WhatsApp: lead.whatsapp || '',
+        Localização: lead.location || '',
+        'Sinal de Intenção': lead.intentSignal,
+        Urgência: lead.urgency,
+        Status: lead.status,
+        Concorrente: lead.isCompetitor ? 'Sim' : 'Não',
+        Fontes: lead.sources?.join(', ') || '',
+        'Data de Criação': lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : '',
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    const colWidths = [
+      { wch: 20 }, // Pasta
+      { wch: 25 }, // Nome
+      { wch: 20 }, // Cargo
+      { wch: 30 }, // Email
+      { wch: 15 }, // Telefone
+      { wch: 15 }, // WhatsApp
+      { wch: 20 }, // Localização
+      { wch: 40 }, // Sinal de Intenção
+      { wch: 10 }, // Urgência
+      { wch: 12 }, // Status
+      { wch: 12 }, // Concorrente
+      { wch: 30 }, // Fontes
+      { wch: 15 }, // Data
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Todos os Leads');
+
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `CRM_Todos_Leads_${date}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+    toast.success(language === 'pt-BR' ? `${leads.length} leads exportados!` : `${leads.length} leads exported!`);
+  };
+
   const filteredLeads = selectedFolder
     ? getFolderLeads(selectedFolder.id).filter(lead => {
         const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
@@ -137,6 +253,15 @@ export const CRM: React.FC = () => {
               </p>
             </div>
           </div>
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => handleExportToExcel(selectedFolder)}
+            disabled={getFolderLeads(selectedFolder.id).length === 0}
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            {language === 'pt-BR' ? 'Exportar Excel' : 'Export Excel'}
+          </Button>
         </div>
 
         {/* Tabs */}
@@ -283,33 +408,45 @@ export const CRM: React.FC = () => {
           </h1>
           <p className="text-muted-foreground mt-1">{t.crm.subtitle}</p>
         </div>
-        <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
-          <DialogTrigger asChild>
-            <Button variant="gradient" className="gap-2">
-              <Plus className="w-4 h-4" />
-              {t.crm.newFolder}
+        <div className="flex gap-2">
+          {leads.length > 0 && (
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={handleExportAllLeads}
+            >
+              <Download className="w-4 h-4" />
+              {language === 'pt-BR' ? 'Exportar Todos' : 'Export All'}
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.crm.newFolder}</DialogTitle>
-              <DialogDescription>Crie uma pasta para organizar leads por nicho</DialogDescription>
-            </DialogHeader>
-            <Input
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Ex: Revestimento Industrial"
-            />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>
-                {t.common.cancel}
+          )}
+          <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
+            <DialogTrigger asChild>
+              <Button variant="gradient" className="gap-2">
+                <Plus className="w-4 h-4" />
+                {t.crm.newFolder}
               </Button>
-              <Button onClick={handleCreateFolder}>
-                {t.common.save}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.crm.newFolder}</DialogTitle>
+                <DialogDescription>Crie uma pasta para organizar leads por nicho</DialogDescription>
+              </DialogHeader>
+              <Input
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Ex: Revestimento Industrial"
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>
+                  {t.common.cancel}
+                </Button>
+                <Button onClick={handleCreateFolder}>
+                  {t.common.save}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Folders Grid */}
