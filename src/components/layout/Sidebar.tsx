@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="R3CF.ai Logo" className="w-8 h-8" />
-            <span className="font-bold text-lg text-sidebar-primary">R3CF.ai</span>
+            <span className="font-bold text-lg text-sidebar-primary">R3CF.ai Leads Flow</span>
           </div>
         )}
         <Button

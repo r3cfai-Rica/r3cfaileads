@@ -36,7 +36,7 @@ export const AppLayout: React.FC = () => {
           <Menu className="w-5 h-5" />
         </Button>
         <img src="/logo.png" alt="R3CF.ai Logo" className="ml-2 w-8 h-8" />
-        <span className="ml-2 font-bold text-lg text-primary">R3CF.ai</span>
+        <span className="ml-2 font-bold text-lg text-primary">R3CF.ai Leads Flow</span>
       </header>
 
       {/* Mobile Sidebar Overlay */}
