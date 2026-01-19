@@ -24,11 +24,25 @@ interface AdminNotification {
   type: 'new_user' | 'upgrade' | 'cancellation' | 'milestone';
   title: string;
   message: string;
-  user_name: string | null;
-  user_email: string | null;
+  user_id: string | null;
   is_read: boolean;
   created_at: string;
   metadata: Record<string, unknown>;
+  // Joined from profiles
+  user_name?: string;
+  user_email?: string;
+}
+
+interface NotificationWithProfile {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  user_id: string | null;
+  is_read: boolean;
+  created_at: string;
+  metadata: Record<string, unknown>;
+  profiles: { name: string; email: string } | null;
 }
 
 export const AdminNotifications: React.FC = () => {
@@ -38,20 +52,42 @@ export const AdminNotifications: React.FC = () => {
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
-  // Fetch notifications
+  // Fetch notifications with user info from profiles
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const { data, error } = await supabase
           .from('admin_notifications')
-          .select('*')
+          .select(`
+            id,
+            type,
+            title,
+            message,
+            user_id,
+            is_read,
+            created_at,
+            metadata,
+            profiles!admin_notifications_user_id_fkey(name, email)
+          `)
           .order('created_at', { ascending: false })
           .limit(50);
 
         if (error) {
           console.error('Error fetching notifications:', error);
         } else if (data) {
-          setNotifications(data as AdminNotification[]);
+          const formattedData: AdminNotification[] = (data as NotificationWithProfile[]).map(n => ({
+            id: n.id,
+            type: n.type as AdminNotification['type'],
+            title: n.title,
+            message: n.message,
+            user_id: n.user_id,
+            is_read: n.is_read,
+            created_at: n.created_at,
+            metadata: n.metadata,
+            user_name: n.profiles?.name,
+            user_email: n.profiles?.email,
+          }));
+          setNotifications(formattedData);
         }
       } catch (err) {
         console.error('Error:', err);
