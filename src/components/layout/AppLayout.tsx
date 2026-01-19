@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { Sidebar } from './Sidebar';
+import { PageTransition } from './PageTransition';
 import { cn } from '@/lib/utils';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -67,7 +68,9 @@ export const AppLayout: React.FC = () => {
         )}
       >
         <div className="p-4 lg:p-8">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </div>
       </main>
 
