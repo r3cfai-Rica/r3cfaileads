@@ -141,14 +141,12 @@ export const Settings: React.FC = () => {
                   </p>
                 </div>
               </div>
-              {user?.plan === 'free' && (
-                <Link to="/plans">
-                  <Button variant="gradientCTA" size="lg">
-                    <Crown className="w-4 h-4 mr-2" />
-                    Fazer Upgrade
-                  </Button>
-                </Link>
-              )}
+              <Link to="/plans">
+                <Button variant={user?.plan === 'free' ? 'gradientCTA' : 'outline'} size="lg">
+                  <Crown className="w-4 h-4 mr-2" />
+                  {user?.plan === 'free' ? 'Fazer Upgrade' : 'Ver Planos'}
+                </Button>
+              </Link>
             </div>
 
             {/* Usage Stats */}
