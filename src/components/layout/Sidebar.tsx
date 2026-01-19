@@ -65,10 +65,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         {!isCollapsed && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-lg text-sidebar-primary">LeadFlow</span>
+            <img src="/logo.png" alt="R3CF.ai Logo" className="w-8 h-8" />
+            <span className="font-bold text-lg text-sidebar-primary">R3CF.ai</span>
           </div>
         )}
         <Button
