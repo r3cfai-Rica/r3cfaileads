@@ -1,7 +1,8 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import {
   LayoutDashboard,
   Search,
@@ -27,6 +28,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const { t, user, setUser, folders, language } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const automationsLabel = language === 'pt-BR' ? 'Automações AI' : 'AI Automations';
 
@@ -40,8 +42,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
     { icon: Settings, label: t.nav.settings, path: '/settings' },
   ];
 
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      setUser(null);
+      navigate('/login');
+    }
   };
 
   return (
