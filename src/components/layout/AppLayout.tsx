@@ -8,9 +8,17 @@ import { Button } from '@/components/ui/button';
 import { FloatingAssistant } from '@/components/chat/FloatingAssistant';
 
 export const AppLayout: React.FC = () => {
-  const { isAuthenticated } = useApp();
+  const { isAuthenticated, authLoading } = useApp();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <span className="text-muted-foreground">Carregando…</span>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

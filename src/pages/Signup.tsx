@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ const GoogleIcon = () => (
 );
 
 export const Signup: React.FC = () => {
-  const { t, setUser } = useApp();
+  const { t, setUser, isAuthenticated, user } = useApp();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,14 +42,17 @@ export const Signup: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(user?.role === 'admin' ? '/admin' : '/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate, user?.role]);
+
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/plans`,
-        },
       });
 
       if (error) {
