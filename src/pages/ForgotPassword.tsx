@@ -70,7 +70,7 @@ export const ForgotPassword: React.FC = () => {
         {/* Logo */}
         <div className="text-center mb-8">
           <img src="/logo.png" alt="R3CF.ai Logo" className="w-20 h-20 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-primary-foreground">R3CF.ai</h1>
+          <h1 className="text-3xl font-bold text-primary-foreground">R3CF.ai Leads Flow</h1>
         </div>
 
         <Card variant="glass" className="backdrop-blur-xl">
