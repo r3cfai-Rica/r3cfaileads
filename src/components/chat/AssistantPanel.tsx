@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ interface AssistantPanelProps {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 
-export const AssistantPanel: React.FC<AssistantPanelProps> = ({ onClose }) => {
+export const AssistantPanel = forwardRef<HTMLDivElement, AssistantPanelProps>(({ onClose }, ref) => {
   const { language } = useApp();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -294,4 +294,6 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ onClose }) => {
       </div>
     </div>
   );
-};
+});
+
+AssistantPanel.displayName = 'AssistantPanel';

@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import { LeadDetailDialog } from '@/components/crm/LeadDetailDialog';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export const CRM: React.FC = () => {
   const { t, language, folders, setFolders, leads, setLeads, ctas, searchHistory } = useApp();
@@ -105,7 +105,7 @@ export const CRM: React.FC = () => {
     return searchHistory.filter(s => s.folderId === folderId);
   };
 
-  const handleExportToExcel = (folder: Folder) => {
+  const handleExportToExcel = async (folder: Folder) => {
     const folderLeads = getFolderLeads(folder.id);
     
     if (folderLeads.length === 0) {
@@ -113,108 +113,148 @@ export const CRM: React.FC = () => {
       return;
     }
 
-    // Prepare data for Excel
-    const excelData = folderLeads.map((lead) => ({
-      Nome: lead.name,
-      'Cargo/Posição': lead.position || '',
-      Email: lead.email || '',
-      Telefone: lead.phone || '',
-      WhatsApp: lead.whatsapp || '',
-      Localização: lead.location || '',
-      'Sinal de Intenção': lead.intentSignal,
-      Urgência: lead.urgency,
-      Status: lead.status,
-      Concorrente: lead.isCompetitor ? 'Sim' : 'Não',
-      Fontes: lead.sources?.join(', ') || '',
-      'Data de Criação': lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : '',
-    }));
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Leads');
 
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(excelData);
+      // Define columns
+      worksheet.columns = [
+        { header: 'Nome', key: 'nome', width: 25 },
+        { header: 'Cargo/Posição', key: 'cargo', width: 20 },
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'Telefone', key: 'telefone', width: 15 },
+        { header: 'WhatsApp', key: 'whatsapp', width: 15 },
+        { header: 'Localização', key: 'localizacao', width: 20 },
+        { header: 'Sinal de Intenção', key: 'sinal', width: 40 },
+        { header: 'Urgência', key: 'urgencia', width: 10 },
+        { header: 'Status', key: 'status', width: 12 },
+        { header: 'Concorrente', key: 'concorrente', width: 12 },
+        { header: 'Fontes', key: 'fontes', width: 30 },
+        { header: 'Data de Criação', key: 'data', width: 15 },
+      ];
 
-    // Set column widths
-    const colWidths = [
-      { wch: 25 }, // Nome
-      { wch: 20 }, // Cargo
-      { wch: 30 }, // Email
-      { wch: 15 }, // Telefone
-      { wch: 15 }, // WhatsApp
-      { wch: 20 }, // Localização
-      { wch: 40 }, // Sinal de Intenção
-      { wch: 10 }, // Urgência
-      { wch: 12 }, // Status
-      { wch: 12 }, // Concorrente
-      { wch: 30 }, // Fontes
-      { wch: 15 }, // Data
-    ];
-    ws['!cols'] = colWidths;
+      // Add data
+      folderLeads.forEach((lead) => {
+        worksheet.addRow({
+          nome: lead.name,
+          cargo: lead.position || '',
+          email: lead.email || '',
+          telefone: lead.phone || '',
+          whatsapp: lead.whatsapp || '',
+          localizacao: lead.location || '',
+          sinal: lead.intentSignal,
+          urgencia: lead.urgency,
+          status: lead.status,
+          concorrente: lead.isCompetitor ? 'Sim' : 'Não',
+          fontes: lead.sources?.join(', ') || '',
+          data: lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : '',
+        });
+      });
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+      // Style header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' },
+      };
 
-    // Generate filename with folder name and date
-    const date = new Date().toISOString().split('T')[0];
-    const sanitizedFolderName = folder.name.replace(/[^a-zA-Z0-9]/g, '_');
-    const filename = `CRM_${sanitizedFolderName}_${date}.xlsx`;
+      // Generate file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      
+      const date = new Date().toISOString().split('T')[0];
+      const sanitizedFolderName = folder.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `CRM_${sanitizedFolderName}_${date}.xlsx`;
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
 
-    // Download file
-    XLSX.writeFile(wb, filename);
-    toast.success(language === 'pt-BR' ? `${folderLeads.length} leads exportados!` : `${folderLeads.length} leads exported!`);
+      toast.success(language === 'pt-BR' ? `${folderLeads.length} leads exportados!` : `${folderLeads.length} leads exported!`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(language === 'pt-BR' ? 'Erro ao exportar' : 'Export error');
+    }
   };
 
-  const handleExportAllLeads = () => {
+  const handleExportAllLeads = async () => {
     if (leads.length === 0) {
       toast.error(language === 'pt-BR' ? 'Nenhum lead para exportar' : 'No leads to export');
       return;
     }
 
-    // Prepare data for Excel with folder information
-    const excelData = leads.map((lead) => {
-      const folder = folders.find(f => f.id === lead.folderId);
-      return {
-        Pasta: folder?.name || 'Sem pasta',
-        Nome: lead.name,
-        'Cargo/Posição': lead.position || '',
-        Email: lead.email || '',
-        Telefone: lead.phone || '',
-        WhatsApp: lead.whatsapp || '',
-        Localização: lead.location || '',
-        'Sinal de Intenção': lead.intentSignal,
-        Urgência: lead.urgency,
-        Status: lead.status,
-        Concorrente: lead.isCompetitor ? 'Sim' : 'Não',
-        Fontes: lead.sources?.join(', ') || '',
-        'Data de Criação': lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : '',
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Todos os Leads');
+
+      // Define columns
+      worksheet.columns = [
+        { header: 'Pasta', key: 'pasta', width: 20 },
+        { header: 'Nome', key: 'nome', width: 25 },
+        { header: 'Cargo/Posição', key: 'cargo', width: 20 },
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'Telefone', key: 'telefone', width: 15 },
+        { header: 'WhatsApp', key: 'whatsapp', width: 15 },
+        { header: 'Localização', key: 'localizacao', width: 20 },
+        { header: 'Sinal de Intenção', key: 'sinal', width: 40 },
+        { header: 'Urgência', key: 'urgencia', width: 10 },
+        { header: 'Status', key: 'status', width: 12 },
+        { header: 'Concorrente', key: 'concorrente', width: 12 },
+        { header: 'Fontes', key: 'fontes', width: 30 },
+        { header: 'Data de Criação', key: 'data', width: 15 },
+      ];
+
+      // Add data
+      leads.forEach((lead) => {
+        const folder = folders.find(f => f.id === lead.folderId);
+        worksheet.addRow({
+          pasta: folder?.name || 'Sem pasta',
+          nome: lead.name,
+          cargo: lead.position || '',
+          email: lead.email || '',
+          telefone: lead.phone || '',
+          whatsapp: lead.whatsapp || '',
+          localizacao: lead.location || '',
+          sinal: lead.intentSignal,
+          urgencia: lead.urgency,
+          status: lead.status,
+          concorrente: lead.isCompetitor ? 'Sim' : 'Não',
+          fontes: lead.sources?.join(', ') || '',
+          data: lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : '',
+        });
+      });
+
+      // Style header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' },
       };
-    });
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(excelData);
+      // Generate file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `CRM_Todos_Leads_${date}.xlsx`;
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
 
-    const colWidths = [
-      { wch: 20 }, // Pasta
-      { wch: 25 }, // Nome
-      { wch: 20 }, // Cargo
-      { wch: 30 }, // Email
-      { wch: 15 }, // Telefone
-      { wch: 15 }, // WhatsApp
-      { wch: 20 }, // Localização
-      { wch: 40 }, // Sinal de Intenção
-      { wch: 10 }, // Urgência
-      { wch: 12 }, // Status
-      { wch: 12 }, // Concorrente
-      { wch: 30 }, // Fontes
-      { wch: 15 }, // Data
-    ];
-    ws['!cols'] = colWidths;
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Todos os Leads');
-
-    const date = new Date().toISOString().split('T')[0];
-    const filename = `CRM_Todos_Leads_${date}.xlsx`;
-
-    XLSX.writeFile(wb, filename);
-    toast.success(language === 'pt-BR' ? `${leads.length} leads exportados!` : `${leads.length} leads exported!`);
+      toast.success(language === 'pt-BR' ? `${leads.length} leads exportados!` : `${leads.length} leads exported!`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(language === 'pt-BR' ? 'Erro ao exportar' : 'Export error');
+    }
   };
 
   const filteredLeads = selectedFolder

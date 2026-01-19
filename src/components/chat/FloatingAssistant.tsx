@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AssistantPanel } from './AssistantPanel';
 
-export const FloatingAssistant: React.FC = () => {
+export const FloatingAssistant = forwardRef<HTMLDivElement>((_, ref) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <>
+    <div ref={ref}>
       {/* Chat Panel */}
       <div
         className={cn(
@@ -38,6 +38,8 @@ export const FloatingAssistant: React.FC = () => {
           <MessageCircle className="w-6 h-6" />
         )}
       </Button>
-    </>
+    </div>
   );
-};
+});
+
+FloatingAssistant.displayName = 'FloatingAssistant';
