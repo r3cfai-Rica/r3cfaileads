@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -39,12 +39,18 @@ const GoogleIcon = () => (
 );
 
 export const Login: React.FC = () => {
-  const { t, language, setLanguage, setUser } = useApp();
+  const { t, language, setLanguage, setUser, isAuthenticated, user } = useApp();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(user?.role === 'admin' ? '/admin' : '/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate, user?.role]);
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
