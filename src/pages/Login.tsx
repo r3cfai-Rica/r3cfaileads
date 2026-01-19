@@ -55,10 +55,12 @@ export const Login: React.FC = () => {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // Let the backend-managed auth configuration decide the correct redirect URL.
-      // This avoids issues when the app is running under different preview domains.
+      // Force redirect back to the *current* origin to avoid misconfigured Site URL/Redirect URLs.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
       });
 
       if (error) {

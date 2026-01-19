@@ -51,8 +51,12 @@ export const Signup: React.FC = () => {
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
     try {
+      // Force redirect back to the *current* origin to avoid misconfigured Site URL/Redirect URLs.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
       });
 
       if (error) {
