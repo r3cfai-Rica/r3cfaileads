@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Linkedin, Twitter, Instagram } from 'lucide-react';
 
-export const Footer = forwardRef<HTMLElement>((_, ref) => {
+export const Footer = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(function Footer(props, ref) {
   return (
     <footer ref={ref} className="bg-foreground text-white py-16">
       <div className="container mx-auto px-4">
@@ -86,5 +86,3 @@ export const Footer = forwardRef<HTMLElement>((_, ref) => {
     </footer>
   );
 });
-
-Footer.displayName = 'Footer';

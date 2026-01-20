@@ -9,7 +9,7 @@ const benefits = [
   'Suporte 24/7'
 ];
 
-export const CTASection = forwardRef<HTMLElement>((_, ref) => {
+export const CTASection = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(function CTASection(props, ref) {
   return (
     <section ref={ref} className="py-24 relative overflow-hidden">
       {/* Background */}
@@ -70,5 +70,3 @@ export const CTASection = forwardRef<HTMLElement>((_, ref) => {
     </section>
   );
 });
-
-CTASection.displayName = 'CTASection';
