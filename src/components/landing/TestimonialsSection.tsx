@@ -36,8 +36,8 @@ export const TestimonialsSection: React.FC = () => {
             Depoimentos
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6">
-            O que nossos clientes
-            <span className="text-gradient"> estão dizendo</span>
+            O que nossos clientes{' '}
+            <span className="text-success">estão dizendo</span>
           </h2>
           <p className="text-lg text-muted-foreground">
             Empresas de todos os tamanhos estão transformando seus resultados.
