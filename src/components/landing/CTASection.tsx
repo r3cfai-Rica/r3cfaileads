@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Check } from 'lucide-react';
@@ -10,8 +10,9 @@ const benefits = [
 ];
 
 export const CTASection = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(function CTASection(props, ref) {
+export const CTASection: React.FC = () => {
   return (
-    <section ref={ref} className="py-24 relative overflow-hidden">
+    <section className="py-24 relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 gradient-primary" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
@@ -69,4 +70,4 @@ export const CTASection = forwardRef<HTMLElement, React.HTMLAttributes<HTMLEleme
       </div>
     </section>
   );
-});
+};
