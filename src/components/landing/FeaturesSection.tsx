@@ -83,8 +83,8 @@ export const FeaturesSection: React.FC = () => {
             Funcionalidades
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6">
-            Tudo que você precisa para
-            <span className="text-gradient"> prospectar melhor</span>
+            Tudo que você precisa para{' '}
+            <span className="text-primary">prospectar melhor</span>
           </h2>
           <p className="text-lg text-muted-foreground">
             Uma plataforma completa com ferramentas poderosas para transformar 
