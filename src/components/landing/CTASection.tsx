@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCtaTracking } from '@/hooks/useCtaTracking';
 
 const benefits = [
   'Sem cartão de crédito',
@@ -15,6 +16,11 @@ export const CTASection = forwardRef<HTMLElement, React.HTMLAttributes<HTMLEleme
   ref
 ) {
   const { className, ...rest } = props;
+  const { trackClick } = useCtaTracking();
+
+  const handleCtaClick = () => {
+    trackClick({ page: 'landing', section: 'cta', ctaText: 'Criar Conta Grátis' });
+  };
   return (
     <section
       ref={ref}
@@ -60,7 +66,7 @@ export const CTASection = forwardRef<HTMLElement, React.HTMLAttributes<HTMLEleme
           </div>
 
           {/* CTA Button */}
-          <Link to="/signup">
+          <Link to="/signup" onClick={handleCtaClick}>
             <Button 
               size="lg" 
               className="bg-white text-primary hover:bg-white/90 px-10 py-7 text-lg font-semibold shadow-2xl hover:scale-105 transition-all duration-300"

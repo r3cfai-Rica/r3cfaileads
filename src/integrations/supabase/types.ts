@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      cta_clicks: {
+        Row: {
+          created_at: string
+          cta_text: string | null
+          id: string
+          page: string
+          section: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          cta_text?: string | null
+          id?: string
+          page: string
+          section: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          cta_text?: string | null
+          id?: string
+          page?: string
+          section?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ctas: {
         Row: {
           created_at: string
@@ -211,6 +241,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      page_views: {
+        Row: {
+          created_at: string
+          id: string
+          page: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

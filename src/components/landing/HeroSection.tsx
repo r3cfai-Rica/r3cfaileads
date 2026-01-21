@@ -2,8 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Sparkles, Zap, TrendingUp } from 'lucide-react';
+import { useCtaTracking } from '@/hooks/useCtaTracking';
 
 export const HeroSection: React.FC = () => {
+  const { trackClick } = useCtaTracking();
+
+  const handleCtaClick = (ctaText: string) => {
+    trackClick({ page: 'landing', section: 'hero', ctaText });
+  };
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-hero">
       {/* Background Effects */}
@@ -50,13 +56,13 @@ export const HeroSection: React.FC = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <Link to="/signup">
+            <Link to="/signup" onClick={() => handleCtaClick('Começar Gratuitamente')}>
               <Button size="lg" className="gradient-cta text-white border-0 px-8 py-6 text-lg font-semibold shadow-xl hover:scale-105 transition-transform">
                 Começar Gratuitamente
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/login">
+            <Link to="/login" onClick={() => handleCtaClick('Já tenho conta')}>
               <Button size="lg" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 px-8 py-6 text-lg">
                 Já tenho conta
               </Button>
