@@ -34,6 +34,7 @@ import {
 import { Link } from 'react-router-dom';
 import { generateCTAsWithAI, generateImageWithAI } from '@/lib/ai-api';
 import { useToast } from '@/hooks/use-toast';
+import { useCTAs } from '@/hooks/useCTAs';
 
 interface GeneratedCTA {
   title: string;
@@ -48,7 +49,8 @@ interface GeneratedCTA {
 type ImageFormat = '1:1' | '9:16' | '16:9';
 
 export const Campaigns: React.FC = () => {
-  const { t, folders, ctas, setCTAs, searchHistory, user, language } = useApp();
+  const { t, folders, searchHistory, user, language } = useApp();
+  const { ctas, saveCTA } = useCTAs();
   
   const [companyName, setCompanyName] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
@@ -197,29 +199,30 @@ export const Campaigns: React.FC = () => {
     }
   };
 
-  const handleSaveCTA = (cta: GeneratedCTA, index: number) => {
-    if (!selectedSearchData?.folderId) return;
+  const handleSaveCTA = async (cta: GeneratedCTA, index: number) => {
+    if (!selectedSearchData?.folderId) {
+      toast({
+        title: language === 'pt-BR' ? 'Erro' : 'Error',
+        description: language === 'pt-BR' ? 'Selecione uma prospecção válida' : 'Select a valid prospection',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    const newCTA: CTA = {
+    // Save to database using the hook
+    const savedCTA = await saveCTA({
       title: cta.title,
       text: cta.text,
       imageUrl: cta.imageUrl,
-      id: `cta-${Date.now()}-${index}`,
       folderId: selectedSearchData.folderId,
-      createdAt: new Date(),
-    };
-    
-    setCTAs([...ctas, newCTA]);
-    
-    // Mark as saved
-    setGeneratedCTAs(prev => 
-      prev.map((c, i) => i === index ? { ...c, isSaved: true } : c)
-    );
-    
-    toast({
-      title: language === 'pt-BR' ? 'CTA salvo!' : 'CTA saved!',
-      description: language === 'pt-BR' ? 'O CTA foi salvo com sucesso.' : 'The CTA was saved successfully.',
     });
+    
+    if (savedCTA) {
+      // Mark as saved in the UI
+      setGeneratedCTAs(prev => 
+        prev.map((c, i) => i === index ? { ...c, isSaved: true } : c)
+      );
+    }
   };
 
   const handleDuplicate = (cta: GeneratedCTA, index: number) => {

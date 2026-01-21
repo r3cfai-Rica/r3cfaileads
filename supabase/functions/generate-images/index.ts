@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, format } = await req.json();
+    const { prompt, format, saveToStorage = true } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -66,15 +67,65 @@ serve(async (req) => {
     const aiResponse = await response.json();
     console.log('Image generation response received');
 
-    const imageUrl = aiResponse.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const base64ImageUrl = aiResponse.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-    if (!imageUrl) {
+    if (!base64ImageUrl) {
       console.error('No image URL in response:', aiResponse);
       throw new Error('No image generated');
     }
 
+    let finalImageUrl = base64ImageUrl;
+
+    // If saveToStorage is true, upload the base64 image to Supabase Storage
+    if (saveToStorage && base64ImageUrl.startsWith('data:image')) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Extract base64 data
+        const base64Data = base64ImageUrl.split(',')[1];
+        const mimeType = base64ImageUrl.match(/data:([^;]+);/)?.[1] || 'image/png';
+        const extension = mimeType.split('/')[1] || 'png';
+        
+        // Decode base64 to bytes
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Generate unique filename
+        const fileName = `cta-${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
+        
+        // Upload to campaign-images bucket
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('campaign-images')
+          .upload(fileName, bytes, {
+            contentType: mimeType,
+            cacheControl: '3600',
+          });
+
+        if (uploadError) {
+          console.error('Error uploading to storage:', uploadError);
+          // Return base64 as fallback
+        } else {
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('campaign-images')
+            .getPublicUrl(fileName);
+          
+          finalImageUrl = publicUrl;
+          console.log('Image uploaded to storage:', finalImageUrl);
+        }
+      } catch (storageError) {
+        console.error('Storage error:', storageError);
+        // Return base64 as fallback
+      }
+    }
+
     return new Response(
-      JSON.stringify({ imageUrl }),
+      JSON.stringify({ imageUrl: finalImageUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

@@ -34,12 +34,16 @@ import {
   Wand2,
   Copy,
   RefreshCw,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateEmailWithAI, GeneratedEmail } from '@/lib/ai-api';
+import { supabase } from '@/integrations/supabase/client';
+import { useCTAs } from '@/hooks/useCTAs';
 
 export const Messaging: React.FC = () => {
-  const { t, leads, folders, messageLogs, setMessageLogs, ctas, language } = useApp();
+  const { t, leads, folders, messageLogs, setMessageLogs, language } = useApp();
+  const { ctas } = useCTAs();
   const { toast } = useToast();
   
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
@@ -162,26 +166,120 @@ export const Messaging: React.FC = () => {
     }
   };
 
+  // Build HTML email with optional CTA image
+  const buildEmailHtml = (leadName: string) => {
+    if (!generatedEmail) return '';
+    
+    const personalizedGreeting = generatedEmail.greeting.replace(
+      /Olá,? ?[A-Za-zÀ-ÖØ-öø-ÿ]+/gi,
+      `Olá, ${leadName.split(' ')[0]}`
+    ).replace(
+      /Hi,? ?[A-Za-zÀ-ÖØ-öø-ÿ]+/gi,
+      `Hi, ${leadName.split(' ')[0]}`
+    );
+    
+    let imageHtml = '';
+    if (selectedCTA?.imageUrl) {
+      imageHtml = `
+        <div style="text-align: center; margin: 20px 0;">
+          <img src="${selectedCTA.imageUrl}" alt="${selectedCTA.title}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
+        </div>
+      `;
+    }
+    
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <p style="font-size: 16px; line-height: 1.6;">${personalizedGreeting}</p>
+        <div style="font-size: 16px; line-height: 1.6; margin: 20px 0;">
+          ${generatedEmail.body}
+        </div>
+        ${imageHtml}
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+          ${generatedEmail.signature}
+        </div>
+      </div>
+    `;
+  };
+
   const handleSend = async () => {
-    if (selectedLeadIds.size === 0 || !message.trim()) return;
+    if (selectedLeadIds.size === 0) return;
+    
+    if (channel === 'email' && !generatedEmail && !message.trim()) {
+      toast({
+        title: language === 'pt-BR' ? 'Erro' : 'Error',
+        description: language === 'pt-BR' ? 'Gere um email ou escreva uma mensagem' : 'Generate an email or write a message',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     setIsSending(true);
     
-    // Simulate sending
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const newLogs: MessageLog[] = Array.from(selectedLeadIds).map(leadId => {
+    const newLogs: MessageLog[] = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const leadId of Array.from(selectedLeadIds)) {
       const lead = leads.find(l => l.id === leadId);
-      return {
-        id: `log-${Date.now()}-${leadId}`,
-        leadId,
-        leadName: lead?.name || 'Unknown',
-        channel,
-        message,
-        status: Math.random() > 0.1 ? 'sent' : 'failed', // 90% success rate
-        sentAt: new Date(),
-      };
-    });
+      if (!lead) continue;
+
+      try {
+        if (channel === 'email' && lead.email) {
+          const htmlContent = generatedEmail ? buildEmailHtml(lead.name) : `<p>${message}</p>`;
+          const subject = generatedEmail?.subject || (language === 'pt-BR' ? 'Proposta Comercial' : 'Business Proposal');
+          
+          const { data, error } = await supabase.functions.invoke('send-email', {
+            body: {
+              to: lead.email,
+              subject,
+              html: htmlContent,
+              leadId: lead.id,
+              leadName: lead.name,
+            },
+          });
+
+          if (error || !data?.success) {
+            throw new Error(error?.message || data?.error || 'Failed to send');
+          }
+
+          newLogs.push({
+            id: `log-${Date.now()}-${leadId}`,
+            leadId,
+            leadName: lead.name,
+            channel: 'email',
+            message: `Assunto: ${subject}`,
+            status: 'sent',
+            sentAt: new Date(),
+          });
+          successCount++;
+        } else {
+          // For WhatsApp/SMS, use simulation for now
+          await new Promise(resolve => setTimeout(resolve, 500));
+          newLogs.push({
+            id: `log-${Date.now()}-${leadId}`,
+            leadId,
+            leadName: lead.name,
+            channel,
+            message,
+            status: 'sent',
+            sentAt: new Date(),
+          });
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`Error sending to ${lead.name}:`, error);
+        newLogs.push({
+          id: `log-${Date.now()}-${leadId}`,
+          leadId,
+          leadName: lead.name,
+          channel,
+          message: generatedEmail?.subject || message,
+          status: 'failed',
+          sentAt: new Date(),
+        });
+        failCount++;
+      }
+    }
     
     setMessageLogs([...messageLogs, ...newLogs]);
     setIsSending(false);
@@ -189,10 +287,20 @@ export const Messaging: React.FC = () => {
     setMessage('');
     setGeneratedEmail(null);
 
-    toast({
-      title: "Mensagens enviadas!",
-      description: `${newLogs.filter(l => l.status === 'sent').length} mensagens enviadas com sucesso`,
-    });
+    if (successCount > 0) {
+      toast({
+        title: language === 'pt-BR' ? 'Mensagens enviadas!' : 'Messages sent!',
+        description: language === 'pt-BR' 
+          ? `${successCount} mensagem(ns) enviada(s) com sucesso${failCount > 0 ? `, ${failCount} falha(s)` : ''}`
+          : `${successCount} message(s) sent successfully${failCount > 0 ? `, ${failCount} failed` : ''}`,
+      });
+    } else {
+      toast({
+        title: language === 'pt-BR' ? 'Erro ao enviar' : 'Send failed',
+        description: language === 'pt-BR' ? 'Nenhuma mensagem foi enviada' : 'No messages were sent',
+        variant: 'destructive',
+      });
+    }
   };
 
   const channelIcon = {
@@ -505,6 +613,23 @@ export const Messaging: React.FC = () => {
                             className="prose prose-sm max-w-none text-foreground"
                             dangerouslySetInnerHTML={{ __html: generatedEmail.body }}
                           />
+                          
+                          {/* CTA Image Preview */}
+                          {selectedCTA?.imageUrl && (
+                            <div className="py-4">
+                              <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+                                <ImageIcon className="w-4 h-4" />
+                                <span>{language === 'pt-BR' ? 'Imagem do CTA incluída no email:' : 'CTA image included in email:'}</span>
+                              </div>
+                              <img 
+                                src={selectedCTA.imageUrl} 
+                                alt={selectedCTA.title}
+                                className="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                                style={{ maxHeight: '200px' }}
+                              />
+                            </div>
+                          )}
+                          
                           <div 
                             className="pt-2 border-t text-sm"
                             dangerouslySetInnerHTML={{ __html: generatedEmail.signature }}
