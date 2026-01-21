@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { 
@@ -17,12 +15,9 @@ import {
   ExternalLink,
   AlertTriangle,
   CheckCircle2,
-  ArrowRight,
   BookOpen,
-  Settings,
   Key,
   Globe,
-  Shield,
   Play,
   Video
 } from 'lucide-react';
@@ -88,25 +83,53 @@ interface VideoTutorialProps {
   youtubeId: string;
 }
 
-const VideoTutorial: React.FC<VideoTutorialProps> = ({ title, description, youtubeId }) => (
-  <div className="space-y-3">
-    <div className="rounded-lg overflow-hidden border">
-      <AspectRatio ratio={16 / 9}>
-        <iframe
-          src={`https://www.youtube.com/embed/${youtubeId}`}
-          title={title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full"
-        />
-      </AspectRatio>
+const VideoTutorial: React.FC<VideoTutorialProps> = ({ title, description, youtubeId }) => {
+  const youtubeUrl = youtubeId
+    ? `https://www.youtube.com/watch?v=${youtubeId}`
+    : `https://www.youtube.com/results?search_query=${encodeURIComponent(title)}`;
+
+  const embedUrl = youtubeId
+    ? `https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`
+    : undefined;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg overflow-hidden border bg-muted/30">
+        <AspectRatio ratio={16 / 9}>
+          {embedUrl ? (
+            <iframe
+              src={embedUrl}
+              title={title}
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
+              Vídeo indisponível
+            </div>
+          )}
+        </AspectRatio>
+      </div>
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="font-medium leading-snug">{title}</h4>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+
+        <Button asChild variant="outline" size="sm" className="shrink-0">
+          <a href={youtubeUrl} target="_blank" rel="noopener noreferrer">
+            Assistir
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </Button>
+      </div>
     </div>
-    <div>
-      <h4 className="font-medium">{title}</h4>
-      <p className="text-sm text-muted-foreground">{description}</p>
-    </div>
-  </div>
-);
+  );
+};
 
 export default function Help() {
   const { language } = useApp();
@@ -220,7 +243,7 @@ export default function Help() {
                   <VideoTutorial
                     title="WhatsApp Webhooks - Passo a Passo"
                     description="Como configurar webhooks no Meta for Developers para receber mensagens"
-                    youtubeId="KGwWRvUB03A"
+                    youtubeId="DBNiWopmqcw"
                   />
                 </div>
               </div>
