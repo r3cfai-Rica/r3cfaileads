@@ -47,6 +47,59 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          last_message: string | null
+          last_message_at: string | null
+          lead_contact: string
+          lead_id: string | null
+          lead_name: string
+          status: string
+          unread_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          lead_contact: string
+          lead_id?: string | null
+          lead_name: string
+          status?: string
+          unread_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          lead_contact?: string
+          lead_id?: string | null
+          lead_name?: string
+          status?: string
+          unread_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cta_clicks: {
         Row: {
           created_at: string
@@ -138,6 +191,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      inbox_messages: {
+        Row: {
+          channel: string
+          content: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          external_id: string | null
+          id: string
+          metadata: Json | null
+          status: string
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          content: string
+          conversation_id: string
+          created_at?: string
+          direction: string
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
