@@ -239,7 +239,7 @@ export const Messaging: React.FC = () => {
           });
 
           if (error || !data?.success) {
-            throw new Error(error?.message || data?.error || 'Failed to send');
+            throw new Error(error?.message || data?.error || 'Failed to send email');
           }
 
           newLogs.push({
@@ -252,14 +252,49 @@ export const Messaging: React.FC = () => {
             sentAt: new Date(),
           });
           successCount++;
-        } else {
-          // For WhatsApp/SMS, use simulation for now
-          await new Promise(resolve => setTimeout(resolve, 500));
+        } else if (channel === 'whatsapp' && lead.whatsapp) {
+          const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+            body: {
+              to: lead.whatsapp,
+              message: message.trim(),
+              leadId: lead.id,
+              leadName: lead.name,
+            },
+          });
+
+          if (error || !data?.success) {
+            throw new Error(error?.message || data?.error || 'Failed to send WhatsApp');
+          }
+
           newLogs.push({
             id: `log-${Date.now()}-${leadId}`,
             leadId,
             leadName: lead.name,
-            channel,
+            channel: 'whatsapp',
+            message,
+            status: 'sent',
+            sentAt: new Date(),
+          });
+          successCount++;
+        } else if (channel === 'sms' && lead.phone) {
+          const { data, error } = await supabase.functions.invoke('send-sms', {
+            body: {
+              to: lead.phone,
+              message: message.trim(),
+              leadId: lead.id,
+              leadName: lead.name,
+            },
+          });
+
+          if (error || !data?.success) {
+            throw new Error(error?.message || data?.error || 'Failed to send SMS');
+          }
+
+          newLogs.push({
+            id: `log-${Date.now()}-${leadId}`,
+            leadId,
+            leadName: lead.name,
+            channel: 'sms',
             message,
             status: 'sent',
             sentAt: new Date(),
