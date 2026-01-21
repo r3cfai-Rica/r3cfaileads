@@ -16,6 +16,7 @@ import {
   Clock,
   Target,
 } from 'lucide-react';
+import { ConversionRateCard } from '@/components/dashboard/ConversionRateCard';
 
 export const Dashboard: React.FC = () => {
   const { t, user, leads, folders, messageLogs, canSearch, remainingSearches, remainingLeads } = useApp();
@@ -177,7 +178,10 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Conversion Rate Card */}
+        <ConversionRateCard />
+
         {/* Recent Leads */}
         <Card>
           <CardHeader>
