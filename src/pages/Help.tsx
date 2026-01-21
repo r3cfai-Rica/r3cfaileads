@@ -331,73 +331,206 @@ export default function Help() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-orange-500" />
-                <CardTitle>Configurar Webhook de Email (Resend)</CardTitle>
+                <CardTitle>Guia Completo: Configurar Email com Resend</CardTitle>
               </div>
               <CardDescription>
-                Configure webhooks para acompanhar seus emails enviados
+                Passo a passo detalhado para configurar seus envios de email - DO ZERO até o primeiro teste
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-muted/50 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Globe className="h-4 w-4 text-primary" />
-                  <span className="font-medium">URL do Webhook</span>
-                </div>
-                <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-email`} />
-              </div>
-
-              {/* Success indicator if webhook is configured */}
-              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-green-700 dark:text-green-400">Você só precisa do Resend!</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    O Resend é suficiente para enviar emails e acompanhar entregas. Não precisa de Mailgun, SendGrid ou outras plataformas.
-                  </p>
-                </div>
-              </div>
-
-              <Step number={1} title="Acesse o Dashboard do Resend">
-                <p>Vá para <a href="https://resend.com/webhooks" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/webhooks <ExternalLink className="h-3 w-3" /></a> e faça login na sua conta.</p>
-              </Step>
-
-              <Step number={2} title="Crie um Novo Webhook">
-                <ol className="list-decimal list-inside space-y-2 mt-2">
-                  <li>Clique em <strong>+ Add Webhook</strong></li>
-                  <li>Cole a URL do webhook (acima) no campo "Endpoint URL"</li>
-                  <li>Selecione os eventos:
-                    <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
-                      <li><code className="bg-muted px-1 rounded">email.delivered</code> - Saber quando o email chegou</li>
-                      <li><code className="bg-muted px-1 rounded">email.opened</code> - Saber quando o lead abriu</li>
-                      <li><code className="bg-muted px-1 rounded">email.clicked</code> - Saber quando clicou em links</li>
-                      <li><code className="bg-muted px-1 rounded">email.bounced</code> - Email rejeitado (endereço inválido)</li>
+            <CardContent className="space-y-8">
+              {/* Resumo do que você precisa */}
+              <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/20 rounded-lg p-5">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-orange-500" />
+                  O que você precisa (APENAS Resend):
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-orange-600 mb-1">✅ Para ENVIAR emails:</p>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• Conta no Resend (gratuita)</li>
+                      <li>• Domínio verificado</li>
+                      <li>• API Key</li>
                     </ul>
-                  </li>
-                  <li>Clique em <strong>Create Webhook</strong></li>
-                </ol>
-              </Step>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-orange-600 mb-1">✅ Para RECEBER respostas:</p>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• Seu email pessoal no "Reply-To"</li>
+                      <li>• Exemplo: ricaferrari@mac.com</li>
+                      <li>• Respostas vão pro seu Gmail/Outlook!</li>
+                    </ul>
+                  </div>
+                </div>
+                <Warning>
+                  <strong>❌ Você NÃO precisa de:</strong> Mailgun, SendGrid, ou qualquer outra plataforma paga. Só o Resend é suficiente!
+                </Warning>
+              </div>
 
-              <Step number={3} title="Pronto! ✅">
-                <p>Com o webhook configurado, você receberá notificações na Caixa de Entrada sempre que:</p>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Um email for <strong>entregue</strong> com sucesso</li>
-                  <li>O lead <strong>abrir</strong> seu email</li>
-                  <li>O lead <strong>clicar</strong> em algum link</li>
-                </ul>
-              </Step>
+              {/* PARTE 1: Criar conta e verificar domínio */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-orange-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">1</span>
+                  PARTE 1: Criar Conta e Verificar Domínio
+                </h3>
+                
+                <Step number={1} title="Crie sua conta no Resend">
+                  <p>Acesse <a href="https://resend.com/signup" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/signup <ExternalLink className="h-3 w-3" /></a> e crie uma conta gratuita.</p>
+                  <p className="mt-2 text-sm">O plano gratuito permite <strong>100 emails/dia</strong> e <strong>3.000 emails/mês</strong>.</p>
+                </Step>
 
-              <Tip>
-                <strong>Sobre respostas de email:</strong> Quando um lead responder ao seu email, a resposta vai para o endereço configurado no "Reply-To" (nas suas Configurações → Credenciais). Você pode usar seu email pessoal/comercial para receber e responder normalmente.
-              </Tip>
+                <Step number={2} title="Adicione e verifique seu domínio">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Vá para <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/domains <ExternalLink className="h-3 w-3" /></a></li>
+                    <li>Clique em <strong>+ Add Domain</strong></li>
+                    <li>Digite seu domínio (ex: <code className="bg-muted px-1 rounded">suaempresa.com.br</code>)</li>
+                    <li>Adicione os registros DNS mostrados no painel do seu provedor de domínio</li>
+                    <li>Aguarde a verificação (pode levar alguns minutos)</li>
+                  </ol>
+                  <Tip>
+                    Se você usa Cloudflare, Hostinger, GoDaddy, etc - cada um tem um painel diferente para adicionar registros DNS. O Resend mostra exatamente o que você precisa copiar.
+                  </Tip>
+                </Step>
 
-              <div className="bg-muted/30 border rounded-lg p-4 mt-4">
-                <h4 className="font-medium mb-2">📧 Como funciona o fluxo de Email:</h4>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                  <li><strong>Você envia</strong> → Email sai pelo Resend usando sua chave API</li>
-                  <li><strong>Webhook notifica</strong> → Você vê o status (entregue, aberto, etc) na Caixa de Entrada</li>
-                  <li><strong>Lead responde</strong> → Resposta vai para seu email pessoal configurado no Reply-To</li>
-                  <li><strong>Você responde</strong> → Continue a conversa normalmente pelo seu email</li>
-                </ol>
+                <Step number={3} title="Crie sua API Key">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Vá para <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/api-keys <ExternalLink className="h-3 w-3" /></a></li>
+                    <li>Clique em <strong>+ Create API Key</strong></li>
+                    <li>Dê um nome (ex: "R3CF Leads Flow")</li>
+                    <li>Permissão: <strong>Full Access</strong> ou <strong>Sending Access</strong></li>
+                    <li><strong className="text-red-500">IMPORTANTE:</strong> Copie e guarde a chave! Ela só aparece uma vez.</li>
+                  </ol>
+                </Step>
+              </div>
+
+              {/* PARTE 2: Configurar no App */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-orange-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">2</span>
+                  PARTE 2: Configurar no App (Configurações)
+                </h3>
+
+                <Step number={1} title="Vá para Configurações → Email">
+                  <p>No menu lateral, clique em <strong>Configurações</strong>, role até "Credenciais de Mensagens" e selecione a aba <strong className="text-orange-500">Email</strong>.</p>
+                </Step>
+
+                <Step number={2} title="Preencha os 3 campos">
+                  <div className="bg-muted/50 rounded-lg p-4 mt-3 space-y-4">
+                    <div>
+                      <p className="font-medium text-sm">API Key</p>
+                      <code className="text-xs text-muted-foreground">Sua chave do Resend que começa com re_</code>
+                      <p className="mt-1 text-sm">Exemplo: <code className="bg-muted px-1 rounded">re_ABC123xyz...</code></p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Email de Envio</p>
+                      <code className="text-xs text-muted-foreground">O email com seu domínio verificado</code>
+                      <p className="mt-1 text-sm">Exemplo: <code className="bg-muted px-1 rounded">contato@suaempresa.com.br</code></p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Nome do Remetente</p>
+                      <code className="text-xs text-muted-foreground">O nome que aparece pro destinatário</code>
+                      <p className="mt-1 text-sm">Exemplo: <code className="bg-muted px-1 rounded">Ricardo da R3CF</code></p>
+                    </div>
+                  </div>
+                </Step>
+
+                <Step number={3} title="Clique em Salvar">
+                  <p>Clique no botão <strong>Salvar Configurações Email</strong>. O status deve mudar para ✅ Configurado.</p>
+                </Step>
+              </div>
+
+              {/* PARTE 3: Configurar Webhooks (Opcional mas Recomendado) */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">3</span>
+                  PARTE 3: Configurar Webhooks (Opcional - Para Tracking)
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  Webhooks permitem ver quando o lead <strong>recebeu</strong>, <strong>abriu</strong> ou <strong>clicou</strong> no seu email.
+                </p>
+
+                <div className="bg-muted/50 rounded-lg p-4 mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Globe className="h-4 w-4 text-primary" />
+                    <span className="font-medium">URL do Webhook para copiar:</span>
+                  </div>
+                  <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-email`} />
+                </div>
+
+                <Step number={1} title="Acesse a página de Webhooks do Resend">
+                  <p>Vá para <a href="https://resend.com/webhooks" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/webhooks <ExternalLink className="h-3 w-3" /></a></p>
+                </Step>
+
+                <Step number={2} title="Crie um novo webhook">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Clique em <strong>+ Add Webhook</strong></li>
+                    <li>Cole a URL acima no campo "Endpoint URL"</li>
+                    <li>Marque os eventos:
+                      <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                        <li><code className="bg-muted px-1 rounded">email.delivered</code> - Email entregue ✓</li>
+                        <li><code className="bg-muted px-1 rounded">email.opened</code> - Lead abriu o email 👀</li>
+                        <li><code className="bg-muted px-1 rounded">email.clicked</code> - Lead clicou em link 🔗</li>
+                        <li><code className="bg-muted px-1 rounded">email.bounced</code> - Email rejeitado ❌</li>
+                      </ul>
+                    </li>
+                    <li>Clique em <strong>Create Webhook</strong></li>
+                  </ol>
+                </Step>
+
+                <Tip>
+                  <strong>Por que usar webhooks?</strong> Você saberá quem abriu seus emails e poderá priorizar leads mais engajados!
+                </Tip>
+              </div>
+
+              {/* PARTE 4: Testar */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">4</span>
+                  PARTE 4: Fazer seu Primeiro Teste
+                </h3>
+
+                <Step number={1} title="Vá para Prospecção AI e gere alguns leads">
+                  <p>Clique em <strong>Prospecção AI</strong> no menu e faça uma busca de teste. Salve pelo menos 1 lead.</p>
+                </Step>
+
+                <Step number={2} title="Abra o CRM e selecione um lead">
+                  <p>Clique em <strong>CRM</strong> no menu, depois clique em um lead para ver os detalhes.</p>
+                </Step>
+
+                <Step number={3} title="Clique em 'Enviar Email'">
+                  <p>No painel do lead, clique no botão <strong className="text-orange-500">📧 Enviar Email</strong>. A IA vai gerar uma mensagem personalizada e enviar!</p>
+                </Step>
+
+                <Step number={4} title="Verifique a Caixa de Entrada">
+                  <p>Vá para <strong>Caixa de Entrada</strong> e veja o status do email enviado. Se configurou webhooks, verá quando for entregue/aberto.</p>
+                </Step>
+              </div>
+
+              {/* Fluxo Visual */}
+              <div className="bg-gradient-to-r from-muted/50 to-muted/30 border rounded-lg p-5 mt-4">
+                <h4 className="font-bold mb-4">📧 Resumo do Fluxo Completo:</h4>
+                <div className="flex flex-col md:flex-row items-center gap-3 text-sm">
+                  <div className="bg-background rounded-lg p-3 text-center flex-1">
+                    <p className="font-medium">1. Você envia</p>
+                    <p className="text-xs text-muted-foreground">Via Resend API</p>
+                  </div>
+                  <div className="hidden md:block text-muted-foreground">→</div>
+                  <div className="bg-background rounded-lg p-3 text-center flex-1">
+                    <p className="font-medium">2. Lead recebe</p>
+                    <p className="text-xs text-muted-foreground">No email dele</p>
+                  </div>
+                  <div className="hidden md:block text-muted-foreground">→</div>
+                  <div className="bg-background rounded-lg p-3 text-center flex-1">
+                    <p className="font-medium">3. Lead responde</p>
+                    <p className="text-xs text-muted-foreground">Vai pro seu email!</p>
+                  </div>
+                  <div className="hidden md:block text-muted-foreground">→</div>
+                  <div className="bg-background rounded-lg p-3 text-center flex-1">
+                    <p className="font-medium">4. Você responde</p>
+                    <p className="text-xs text-muted-foreground">Do Gmail/Outlook</p>
+                  </div>
+                </div>
               </div>
 
               {/* Video Tutorial Section */}
@@ -413,8 +546,8 @@ export default function Help() {
                     youtubeId="T2xaiw7VK4c"
                   />
                   <VideoTutorial
-                    title="Configurando Webhooks de Email"
-                    description="Tutorial sobre webhooks e tracking de emails com Resend"
+                    title="Verificar Domínio no Resend"
+                    description="Tutorial sobre como verificar seu domínio e criar API Keys"
                     youtubeId="YNfV4ASLaGE"
                   />
                 </div>
