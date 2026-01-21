@@ -330,11 +330,11 @@ export default function Help() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-blue-500" />
+                <Mail className="h-5 w-5 text-orange-500" />
                 <CardTitle>Configurar Webhook de Email (Resend)</CardTitle>
               </div>
               <CardDescription>
-                Configure webhooks para receber notificações de email na sua Caixa de Entrada
+                Configure webhooks para acompanhar seus emails enviados
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -346,42 +346,59 @@ export default function Help() {
                 <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-email`} />
               </div>
 
+              {/* Success indicator if webhook is configured */}
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-green-700 dark:text-green-400">Você só precisa do Resend!</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    O Resend é suficiente para enviar emails e acompanhar entregas. Não precisa de Mailgun, SendGrid ou outras plataformas.
+                  </p>
+                </div>
+              </div>
+
               <Step number={1} title="Acesse o Dashboard do Resend">
                 <p>Vá para <a href="https://resend.com/webhooks" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/webhooks <ExternalLink className="h-3 w-3" /></a> e faça login na sua conta.</p>
               </Step>
 
               <Step number={2} title="Crie um Novo Webhook">
                 <ol className="list-decimal list-inside space-y-2 mt-2">
-                  <li>Clique em <strong>Add Webhook</strong></li>
+                  <li>Clique em <strong>+ Add Webhook</strong></li>
                   <li>Cole a URL do webhook (acima) no campo "Endpoint URL"</li>
-                  <li>Selecione os eventos que deseja receber:
-                    <ul className="list-disc list-inside ml-4 mt-2">
-                      <li><code>email.delivered</code> - Email entregue</li>
-                      <li><code>email.opened</code> - Email aberto</li>
-                      <li><code>email.clicked</code> - Link clicado</li>
-                      <li><code>email.bounced</code> - Email rejeitado</li>
-                      <li><code>email.complained</code> - Marcado como spam</li>
+                  <li>Selecione os eventos:
+                    <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                      <li><code className="bg-muted px-1 rounded">email.delivered</code> - Saber quando o email chegou</li>
+                      <li><code className="bg-muted px-1 rounded">email.opened</code> - Saber quando o lead abriu</li>
+                      <li><code className="bg-muted px-1 rounded">email.clicked</code> - Saber quando clicou em links</li>
+                      <li><code className="bg-muted px-1 rounded">email.bounced</code> - Email rejeitado (endereço inválido)</li>
                     </ul>
                   </li>
                   <li>Clique em <strong>Create Webhook</strong></li>
                 </ol>
               </Step>
 
-              <Step number={3} title="Configure o Reply-To (Opcional)">
-                <p>Para receber respostas de email, você precisa configurar um serviço de inbound email. Recomendamos:</p>
+              <Step number={3} title="Pronto! ✅">
+                <p>Com o webhook configurado, você receberá notificações na Caixa de Entrada sempre que:</p>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li><a href="https://www.mailgun.com/inbound-routing/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Mailgun Inbound Routing</a></li>
-                  <li><a href="https://sendgrid.com/solutions/inbound-parse/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">SendGrid Inbound Parse</a></li>
+                  <li>Um email for <strong>entregue</strong> com sucesso</li>
+                  <li>O lead <strong>abrir</strong> seu email</li>
+                  <li>O lead <strong>clicar</strong> em algum link</li>
                 </ul>
               </Step>
 
               <Tip>
-                Os webhooks do Resend notificam sobre status de entrega (aberto, clicado, etc). Para receber respostas completas de email, configure um serviço de inbound email que encaminhe para o mesmo webhook.
+                <strong>Sobre respostas de email:</strong> Quando um lead responder ao seu email, a resposta vai para o endereço configurado no "Reply-To" (nas suas Configurações → Credenciais). Você pode usar seu email pessoal/comercial para receber e responder normalmente.
               </Tip>
 
-              <Warning>
-                O Resend atualmente não oferece inbound email nativo. As respostas dos leads vão para o email configurado no "Reply-To" e precisam ser verificadas no seu cliente de email.
-              </Warning>
+              <div className="bg-muted/30 border rounded-lg p-4 mt-4">
+                <h4 className="font-medium mb-2">📧 Como funciona o fluxo de Email:</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                  <li><strong>Você envia</strong> → Email sai pelo Resend usando sua chave API</li>
+                  <li><strong>Webhook notifica</strong> → Você vê o status (entregue, aberto, etc) na Caixa de Entrada</li>
+                  <li><strong>Lead responde</strong> → Resposta vai para seu email pessoal configurado no Reply-To</li>
+                  <li><strong>Você responde</strong> → Continue a conversa normalmente pelo seu email</li>
+                </ol>
+              </div>
 
               {/* Video Tutorial Section */}
               <div className="border-t pt-6 mt-6">
