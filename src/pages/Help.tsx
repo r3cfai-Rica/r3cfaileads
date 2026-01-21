@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { 
   HelpCircle, 
   MessageSquare, 
@@ -21,7 +22,9 @@ import {
   Settings,
   Key,
   Globe,
-  Shield
+  Shield,
+  Play,
+  Video
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -76,6 +79,32 @@ const Warning: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 my-4 flex gap-3">
     <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
     <div className="text-sm">{children}</div>
+  </div>
+);
+
+interface VideoTutorialProps {
+  title: string;
+  description: string;
+  youtubeId: string;
+}
+
+const VideoTutorial: React.FC<VideoTutorialProps> = ({ title, description, youtubeId }) => (
+  <div className="space-y-3">
+    <div className="rounded-lg overflow-hidden border">
+      <AspectRatio ratio={16 / 9}>
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeId}`}
+          title={title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full"
+        />
+      </AspectRatio>
+    </div>
+    <div>
+      <h4 className="font-medium">{title}</h4>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
   </div>
 );
 
@@ -175,6 +204,26 @@ export default function Help() {
               <Warning>
                 O número de telefone precisa estar verificado e aprovado pela Meta. Mensagens de teste podem ser enviadas apenas para números registrados como "Test Numbers" durante o desenvolvimento.
               </Warning>
+
+              {/* Video Tutorial Section */}
+              <div className="border-t pt-6 mt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Video className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Vídeo Tutorial</h3>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <VideoTutorial
+                    title="WhatsApp Cloud API - Configuração Completa"
+                    description="Tutorial oficial da Meta sobre como configurar webhooks no WhatsApp Business API"
+                    youtubeId="CEt_KMMv3V8"
+                  />
+                  <VideoTutorial
+                    title="Recebendo Mensagens via Webhook"
+                    description="Como configurar e testar webhooks para receber mensagens do WhatsApp"
+                    youtubeId="eT8GRNkXOmE"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -229,6 +278,26 @@ export default function Help() {
               <Warning>
                 Certifique-se de que seu número Twilio está habilitado para receber SMS. Alguns números são apenas para chamadas de voz.
               </Warning>
+
+              {/* Video Tutorial Section */}
+              <div className="border-t pt-6 mt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Video className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Vídeo Tutorial</h3>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <VideoTutorial
+                    title="Twilio SMS Webhooks - Guia Completo"
+                    description="Como configurar webhooks para receber SMS no Twilio"
+                    youtubeId="4qZY7IZjvPo"
+                  />
+                  <VideoTutorial
+                    title="Configurando Números de Telefone"
+                    description="Tutorial sobre configuração de números e webhooks no console Twilio"
+                    youtubeId="WTpciu4qgck"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -290,6 +359,26 @@ export default function Help() {
               <Warning>
                 O Resend atualmente não oferece inbound email nativo. As respostas dos leads vão para o email configurado no "Reply-To" e precisam ser verificadas no seu cliente de email.
               </Warning>
+
+              {/* Video Tutorial Section */}
+              <div className="border-t pt-6 mt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Video className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Vídeo Tutorial</h3>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <VideoTutorial
+                    title="Resend - Primeiros Passos"
+                    description="Como configurar sua conta Resend e começar a enviar emails"
+                    youtubeId="T2xaiw7VK4c"
+                  />
+                  <VideoTutorial
+                    title="Configurando Webhooks de Email"
+                    description="Tutorial sobre webhooks e tracking de emails com Resend"
+                    youtubeId="YNfV4ASLaGE"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
