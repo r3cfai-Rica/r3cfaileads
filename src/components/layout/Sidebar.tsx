@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bot,
+  Inbox,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const navigate = useNavigate();
 
   const automationsLabel = language === 'pt-BR' ? 'Automações AI' : 'AI Automations';
+  const inboxLabel = language === 'pt-BR' ? 'Caixa de Entrada' : 'Inbox';
 
   const menuItems = [
     { icon: LayoutDashboard, label: t.nav.dashboard, path: '/dashboard' },
@@ -39,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
     { icon: Bot, label: automationsLabel, path: '/automations' },
     { icon: Megaphone, label: t.nav.campaigns, path: '/campaigns' },
     { icon: Send, label: t.nav.messaging, path: '/messaging' },
+    { icon: Inbox, label: inboxLabel, path: '/inbox' },
     { icon: Settings, label: t.nav.settings, path: '/settings' },
   ];
 

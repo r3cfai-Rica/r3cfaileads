@@ -18,6 +18,7 @@ import CRM from "./pages/CRM";
 import Automations from "./pages/Automations";
 import Campaigns from "./pages/Campaigns";
 import Messaging from "./pages/Messaging";
+import Inbox from "./pages/Inbox";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import UsageMonitorPage from "./pages/UsageMonitorPage";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/automations" element={<Automations />} />
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/messaging" element={<Messaging />} />
+              <Route path="/inbox" element={<Inbox />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/usage" element={<UsageMonitorPage />} />
