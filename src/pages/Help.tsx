@@ -145,22 +145,22 @@ export default function Help() {
       </div>
 
       <p className="text-muted-foreground">
-        Aprenda como configurar os webhooks para receber respostas de WhatsApp, SMS e Email diretamente na sua Caixa de Entrada.
+        Aprenda como configurar os webhooks para receber respostas de <span className="font-bold text-green-600">WhatsApp</span>, <span className="font-bold text-blue-600">SMS</span> e <span className="font-bold text-orange-500">Email</span> diretamente na sua Caixa de Entrada.
       </p>
 
       <Tabs defaultValue="whatsapp" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="whatsapp" className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            WhatsApp
+            <MessageSquare className="h-4 w-4 text-green-600" />
+            <span className="font-bold text-green-600">WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger value="sms" className="gap-2">
-            <Phone className="h-4 w-4" />
-            SMS (Twilio)
+            <Phone className="h-4 w-4 text-blue-600" />
+            <span className="font-bold text-blue-600">SMS (Twilio)</span>
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
-            <Mail className="h-4 w-4" />
-            Email
+            <Mail className="h-4 w-4 text-orange-500" />
+            <span className="font-bold text-orange-500">Email</span>
           </TabsTrigger>
         </TabsList>
 
