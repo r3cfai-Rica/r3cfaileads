@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Bot,
   Inbox,
+  HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
 
   const automationsLabel = language === 'pt-BR' ? 'Automações AI' : 'AI Automations';
   const inboxLabel = language === 'pt-BR' ? 'Caixa de Entrada' : 'Inbox';
+  const helpLabel = language === 'pt-BR' ? 'Ajuda' : 'Help';
 
   const menuItems = [
     { icon: LayoutDashboard, label: t.nav.dashboard, path: '/dashboard' },
@@ -43,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
     { icon: Send, label: t.nav.messaging, path: '/messaging' },
     { icon: Inbox, label: inboxLabel, path: '/inbox' },
     { icon: Settings, label: t.nav.settings, path: '/settings' },
+    { icon: HelpCircle, label: helpLabel, path: '/help' },
   ];
 
   const handleLogout = async () => {
