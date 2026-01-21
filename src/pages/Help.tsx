@@ -218,9 +218,9 @@ export default function Help() {
                     youtubeId="CEt_KMMv3V8"
                   />
                   <VideoTutorial
-                    title="Recebendo Mensagens via Webhook"
-                    description="Como configurar e testar webhooks para receber mensagens do WhatsApp"
-                    youtubeId="eT8GRNkXOmE"
+                    title="WhatsApp Webhooks - Passo a Passo"
+                    description="Como configurar webhooks no Meta for Developers para receber mensagens"
+                    youtubeId="KGwWRvUB03A"
                   />
                 </div>
               </div>
