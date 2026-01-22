@@ -259,10 +259,16 @@ export const Messaging: React.FC = () => {
           });
           successCount++;
         } else if (channel === 'whatsapp' && lead.whatsapp) {
+          // Include CTA image URL in WhatsApp message if available
+          let whatsappMessage = message.trim();
+          if (selectedCTA?.imageUrl) {
+            whatsappMessage = `${whatsappMessage}\n\n📷 ${selectedCTA.imageUrl}`;
+          }
+          
           const { data, error } = await supabase.functions.invoke('send-whatsapp', {
             body: {
               to: lead.whatsapp,
-              message: message.trim(),
+              message: whatsappMessage,
               leadId: lead.id,
               leadName: lead.name,
             },
@@ -277,16 +283,22 @@ export const Messaging: React.FC = () => {
             leadId,
             leadName: lead.name,
             channel: 'whatsapp',
-            message,
+            message: whatsappMessage,
             status: 'sent',
             sentAt: new Date(),
           });
           successCount++;
         } else if (channel === 'sms' && lead.phone) {
+          // Include CTA image URL in SMS message if available
+          let smsMessage = message.trim();
+          if (selectedCTA?.imageUrl) {
+            smsMessage = `${smsMessage}\n\n${selectedCTA.imageUrl}`;
+          }
+          
           const { data, error } = await supabase.functions.invoke('send-sms', {
             body: {
               to: lead.phone,
-              message: message.trim(),
+              message: smsMessage,
               leadId: lead.id,
               leadName: lead.name,
             },
@@ -301,7 +313,7 @@ export const Messaging: React.FC = () => {
             leadId,
             leadName: lead.name,
             channel: 'sms',
-            message,
+            message: smsMessage,
             status: 'sent',
             sentAt: new Date(),
           });
