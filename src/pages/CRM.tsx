@@ -48,9 +48,14 @@ import {
 import { LeadDetailDialog } from '@/components/crm/LeadDetailDialog';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
+import { useFolders } from '@/hooks/useFolders';
+import { useLeads } from '@/hooks/useLeads';
 
 export const CRM: React.FC = () => {
-  const { t, language, folders, setFolders, leads, setLeads, ctas, searchHistory } = useApp();
+  const { t, language, ctas, searchHistory } = useApp();
+  const { folders, createFolder, updateFolder, deleteFolder } = useFolders();
+  const { leads, deleteLead } = useLeads();
+  
   
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
@@ -61,34 +66,26 @@ export const CRM: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     
-    const newFolder: Folder = {
-      id: `folder-${Date.now()}`,
-      name: newFolderName,
-      leadCount: 0,
-      createdAt: new Date(),
-    };
-    
-    setFolders([...folders, newFolder]);
-    setNewFolderName('');
-    setShowNewFolderDialog(false);
+    const newFolder = await createFolder(newFolderName);
+    if (newFolder) {
+      setNewFolderName('');
+      setShowNewFolderDialog(false);
+    }
   };
 
-  const handleUpdateFolder = () => {
+  const handleUpdateFolder = async () => {
     if (!editingFolder || !editingFolder.name.trim()) return;
     
-    setFolders(folders.map(f => 
-      f.id === editingFolder.id ? editingFolder : f
-    ));
+    await updateFolder(editingFolder.id, editingFolder.name);
     setEditingFolder(null);
   };
 
-  const handleDeleteFolder = (folderId: string) => {
-    setFolders(folders.filter(f => f.id !== folderId));
-    setLeads(leads.filter(l => l.folderId !== folderId));
-    if (selectedFolder?.id === folderId) {
+  const handleDeleteFolder = async (folderId: string) => {
+    const success = await deleteFolder(folderId);
+    if (success && selectedFolder?.id === folderId) {
       setSelectedFolder(null);
     }
   };

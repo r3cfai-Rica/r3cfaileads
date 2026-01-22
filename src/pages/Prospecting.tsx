@@ -46,6 +46,9 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { generateLeadsWithAI } from '@/lib/ai-api';
 import { useToast } from '@/hooks/use-toast';
+import { useFolders } from '@/hooks/useFolders';
+import { useLeads } from '@/hooks/useLeads';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const countries = [
   { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
@@ -61,11 +64,6 @@ export const Prospecting: React.FC = () => {
   const {
     t,
     user,
-    leads,
-    setLeads,
-    folders,
-    setFolders,
-    setSearchHistory,
     canSearch,
     canSaveLeads,
     remainingSearches,
@@ -73,6 +71,10 @@ export const Prospecting: React.FC = () => {
     setUser,
     language,
   } = useApp();
+  
+  const { folders, createFolder, updateFolderLeadCount } = useFolders();
+  const { saveLeads } = useLeads();
+  const { createSearchHistory } = useSearchHistory();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -183,23 +185,18 @@ export const Prospecting: React.FC = () => {
     }
   };
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     
-    const newFolder = {
-      id: `folder-${Date.now()}`,
-      name: newFolderName,
-      leadCount: 0,
-      createdAt: new Date(),
-    };
-    
-    setFolders([...folders, newFolder]);
-    setTargetFolder(newFolder.id);
-    setNewFolderName('');
-    setShowNewFolderDialog(false);
+    const newFolder = await createFolder(newFolderName);
+    if (newFolder) {
+      setTargetFolder(newFolder.id);
+      setNewFolderName('');
+      setShowNewFolderDialog(false);
+    }
   };
 
-  const handleSaveLeads = () => {
+  const handleSaveLeads = async () => {
     if (!targetFolder || selectedLeads.size === 0) return;
     
     if (!canSaveLeads(selectedLeads.size)) {
@@ -207,39 +204,37 @@ export const Prospecting: React.FC = () => {
     }
 
     const leadsToSave = searchResults
-      .filter(l => selectedLeads.has(l.id) && !l.isCompetitor)
-      .map(l => ({ ...l, folderId: targetFolder }));
+      .filter(l => selectedLeads.has(l.id) && !l.isCompetitor);
 
-    setLeads([...leads, ...leadsToSave]);
+    // Save leads to database with real UUIDs
+    const savedLeads = await saveLeads(leadsToSave, targetFolder);
+    
+    if (savedLeads.length > 0) {
+      // Update folder lead count in database
+      await updateFolderLeadCount(targetFolder, savedLeads.length);
 
-    setFolders(folders.map(f => 
-      f.id === targetFolder 
-        ? { ...f, leadCount: f.leadCount + leadsToSave.length }
-        : f
-    ));
+      // Create search history record in database
+      if (insights) {
+        await createSearchHistory({
+          name: searchQuery,
+          niche: searchQuery,
+          category: 'Prospecção',
+          leadsFound: searchResults.length,
+          leadsSaved: savedLeads.length,
+          insights,
+          folderId: targetFolder,
+        });
+      }
 
-    if (insights) {
-      setSearchHistory(prev => [...prev, {
-        id: `search-${Date.now()}`,
-        name: searchQuery,
-        category: 'Prospecção',
-        niche: searchQuery,
-        date: new Date(),
-        leadsFound: searchResults.length,
-        leadsSaved: leadsToSave.length,
-        insights,
-        folderId: targetFolder,
-      }]);
+      if (user) {
+        setUser({ ...user, leadsUsed: user.leadsUsed + savedLeads.length });
+      }
+
+      setSelectedLeads(new Set());
+      setSearchResults([]);
+      setInsights(null);
+      setSearchQuery('');
     }
-
-    if (user) {
-      setUser({ ...user, leadsUsed: user.leadsUsed + leadsToSave.length });
-    }
-
-    setSelectedLeads(new Set());
-    setSearchResults([]);
-    setInsights(null);
-    setSearchQuery('');
   };
 
   const urgencyVariant = {
