@@ -89,31 +89,42 @@ const VideoTutorial: React.FC<VideoTutorialProps> = ({ title, description, youtu
     ? `https://www.youtube.com/watch?v=${youtubeId}`
     : `https://www.youtube.com/results?search_query=${encodeURIComponent(title)}`;
 
-  const embedUrl = youtubeId
-    ? `https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`
-    : undefined;
+  // NOTE: Alguns vídeos bloqueiam reprodução via iframe ("Playback on other websites...").
+  // Para evitar cards quebrados, usamos miniatura + link direto para o YouTube.
+  const thumbUrl = youtubeId ? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg` : undefined;
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg overflow-hidden border bg-muted/30">
+      <a
+        href={youtubeUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block rounded-lg overflow-hidden border bg-muted/30"
+        aria-label={`Abrir vídeo no YouTube: ${title}`}
+      >
         <AspectRatio ratio={16 / 9}>
-          {embedUrl ? (
-            <iframe
-              src={embedUrl}
-              title={title}
-              loading="lazy"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            />
+          {thumbUrl ? (
+            <div className="relative h-full w-full">
+              <img
+                src={thumbUrl}
+                alt={`Miniatura do vídeo: ${title}`}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 grid place-items-center">
+                <div className="rounded-full border border-border bg-background/70 backdrop-blur-sm p-3 shadow-sm transition-transform duration-200 group-hover:scale-105">
+                  <Play className="h-6 w-6 text-foreground" />
+                  <span className="sr-only">Assistir no YouTube</span>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
-              Vídeo indisponível
+              Clique em “Assistir” para abrir no YouTube
             </div>
           )}
         </AspectRatio>
-      </div>
+      </a>
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -635,16 +646,6 @@ export default function Help() {
                     description="Quick start para enviar e receber primeiras mensagens"
                     youtubeId="q0ojEbdezFU"
                   />
-                  <VideoTutorial
-                    title="Meta Business Suite - Configuração Inicial"
-                    description="Como criar conta Business e configurar a plataforma"
-                    youtubeId="CEt_KMMv3V8"
-                  />
-                  <VideoTutorial
-                    title="WhatsApp API Webhooks Tutorial"
-                    description="Como configurar webhooks para receber mensagens"
-                    youtubeId="GbpXvHBa4EQ"
-                  />
                 </div>
 
                 <div className="mt-6 p-4 bg-muted/50 rounded-lg">
@@ -1096,11 +1097,6 @@ export default function Help() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <VideoTutorial
-                    title="Twilio SMS Tutorial - Guia Completo 2024"
-                    description="Como criar conta, comprar número e configurar SMS do zero"
-                    youtubeId="4qhLb-gSnk4"
-                  />
-                  <VideoTutorial
                     title="Como Usar Twilio SMS - Tutorial 2025"
                     description="Walkthrough completo do console Twilio"
                     youtubeId="TSJChz6adv8"
@@ -1109,11 +1105,6 @@ export default function Help() {
                     title="Twilio Programmable SMS"
                     description="Entenda como funciona a plataforma Twilio"
                     youtubeId="knxlmCVFAZI"
-                  />
-                  <VideoTutorial
-                    title="Send SMS with Twilio and Node.js"
-                    description="Tutorial prático de integração com Twilio"
-                    youtubeId="sKpnDI-hNOg"
                   />
                 </div>
                 <div className="mt-4">
@@ -1652,16 +1643,6 @@ export default function Help() {
                     title="Configurar DNS para Email - DKIM, SPF, DMARC"
                     description="Tutorial detalhado sobre registros DNS para autenticação de email"
                     youtubeId="ixLAsfSQOb4"
-                  />
-                  <VideoTutorial
-                    title="Email Setup com Resend e DNS"
-                    description="Passo a passo para configurar MX, TXT e DKIM records"
-                    youtubeId="gpwAzPfuf4M"
-                  />
-                  <VideoTutorial
-                    title="SPF, DKIM e DMARC Explicados"
-                    description="Entenda cada tipo de registro DNS para email"
-                    youtubeId="aZ8VPI-YqVs"
                   />
                 </div>
 
