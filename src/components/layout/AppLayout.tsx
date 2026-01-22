@@ -4,12 +4,14 @@ import { useApp } from '@/contexts/AppContext';
 import { Sidebar } from './Sidebar';
 import { PageTransition } from './PageTransition';
 import { cn } from '@/lib/utils';
-import { Menu } from 'lucide-react';
+import { Menu, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FloatingAssistant } from '@/components/chat/FloatingAssistant';
+import { useDataInitializer } from '@/hooks/useDataInitializer';
 
 export const AppLayout: React.FC = () => {
   const { isAuthenticated, authLoading } = useApp();
+  const { isLoading: dataLoading, isInitialized } = useDataInitializer();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -23,6 +25,18 @@ export const AppLayout: React.FC = () => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Show loading state while initializing data
+  if (dataLoading && !isInitialized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <span className="text-muted-foreground">Carregando dados…</span>
+        </div>
+      </div>
+    );
   }
 
   return (
