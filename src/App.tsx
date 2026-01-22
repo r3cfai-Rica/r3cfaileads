@@ -22,6 +22,7 @@ import Inbox from "./pages/Inbox";
 import Help from "./pages/Help";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
+import AdminTools from "./pages/AdminTools";
 import UsageMonitorPage from "./pages/UsageMonitorPage";
 import NotFound from "./pages/NotFound";
 
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/help" element={<Help />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/tools" element={<AdminTools />} />
               <Route path="/admin/usage" element={<UsageMonitorPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
