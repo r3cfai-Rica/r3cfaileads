@@ -331,134 +331,457 @@ export default function Help() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-orange-500" />
-                <CardTitle>Guia Completo: Configurar Email com Resend</CardTitle>
+                <CardTitle>Guia COMPLETO: Configurar Email Profissional com Resend</CardTitle>
               </div>
               <CardDescription>
-                Passo a passo detalhado para configurar seus envios de email - DO ZERO até o primeiro teste
+                Tutorial detalhado DO ZERO - Inclui configuração DNS (DKIM, SPF, DMARC) para emails não caírem no spam
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              {/* Resumo do que você precisa */}
+              {/* Resumo Executivo */}
               <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/20 rounded-lg p-5">
                 <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-orange-500" />
-                  O que você precisa (APENAS Resend):
+                  Resumo: O que você vai configurar
                 </h3>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   <div className="bg-background/50 rounded-lg p-3">
-                    <p className="font-medium text-sm text-orange-600 mb-1">✅ Para ENVIAR emails:</p>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
-                      <li>• Conta no Resend (gratuita)</li>
-                      <li>• Domínio verificado</li>
-                      <li>• API Key</li>
+                    <p className="font-medium text-sm text-orange-600 mb-1">📧 Resend (Gratuito)</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• Plataforma de envio</li>
+                      <li>• 100 emails/dia grátis</li>
+                      <li>• 3.000 emails/mês grátis</li>
                     </ul>
                   </div>
                   <div className="bg-background/50 rounded-lg p-3">
-                    <p className="font-medium text-sm text-orange-600 mb-1">✅ Para RECEBER respostas:</p>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
-                      <li>• Seu email pessoal no "Reply-To"</li>
-                      <li>• Exemplo: ricaferrari@mac.com</li>
-                      <li>• Respostas vão pro seu Gmail/Outlook!</li>
+                    <p className="font-medium text-sm text-orange-600 mb-1">🌐 DNS do Domínio</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• DKIM (autenticação)</li>
+                      <li>• SPF (autorização)</li>
+                      <li>• DMARC (proteção)</li>
+                    </ul>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-orange-600 mb-1">⚙️ No App</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• API Key</li>
+                      <li>• Email de envio</li>
+                      <li>• Nome do remetente</li>
                     </ul>
                   </div>
                 </div>
-                <Warning>
-                  <strong>❌ Você NÃO precisa de:</strong> Mailgun, SendGrid, ou qualquer outra plataforma paga. Só o Resend é suficiente!
-                </Warning>
+                <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm"><strong>⏱️ Tempo estimado:</strong> 15-30 minutos (incluindo propagação DNS)</p>
+                </div>
               </div>
 
-              {/* PARTE 1: Criar conta e verificar domínio */}
+              {/* Por que configurar DNS? */}
+              <div className="border border-yellow-500/30 bg-yellow-500/5 rounded-lg p-5">
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-yellow-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  ⚠️ POR QUE CONFIGURAR DNS É OBRIGATÓRIO?
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Sem DNS configurado, seus emails vão <strong className="text-red-500">direto para o SPAM</strong>. Os provedores (Gmail, Outlook, etc.) 
+                  verificam se você tem autorização para enviar emails pelo seu domínio.
+                </p>
+                <div className="grid md:grid-cols-3 gap-3 mt-4">
+                  <div className="text-center p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">DKIM</p>
+                    <p className="text-xs text-muted-foreground">Assinatura digital que prova que o email é autêntico</p>
+                  </div>
+                  <div className="text-center p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">SPF</p>
+                    <p className="text-xs text-muted-foreground">Lista de servidores autorizados a enviar pelo seu domínio</p>
+                  </div>
+                  <div className="text-center p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">DMARC</p>
+                    <p className="text-xs text-muted-foreground">Política de segurança contra falsificação de email</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* PARTE 1: Criar conta Resend */}
               <div className="border-t pt-6">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <span className="bg-orange-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">1</span>
-                  PARTE 1: Criar Conta e Verificar Domínio
+                  PARTE 1: Criar Conta no Resend
                 </h3>
                 
-                <Step number={1} title="Crie sua conta no Resend">
-                  <p>Acesse <a href="https://resend.com/signup" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/signup <ExternalLink className="h-3 w-3" /></a> e crie uma conta gratuita.</p>
-                  <p className="mt-2 text-sm">O plano gratuito permite <strong>100 emails/dia</strong> e <strong>3.000 emails/mês</strong>.</p>
+                <Step number={1} title="Acesse o site do Resend">
+                  <p>Vá para <a href="https://resend.com/signup" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 font-medium">resend.com/signup <ExternalLink className="h-3 w-3" /></a></p>
+                  <p className="mt-2 text-sm">Você pode fazer login com Google ou criar conta com email.</p>
                 </Step>
 
-                <Step number={2} title="Adicione e verifique seu domínio">
-                  <ol className="list-decimal list-inside space-y-2 mt-2">
-                    <li>Vá para <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/domains <ExternalLink className="h-3 w-3" /></a></li>
-                    <li>Clique em <strong>+ Add Domain</strong></li>
-                    <li>Digite seu domínio (ex: <code className="bg-muted px-1 rounded">suaempresa.com.br</code>)</li>
-                    <li>Adicione os registros DNS mostrados no painel do seu provedor de domínio</li>
-                    <li>Aguarde a verificação (pode levar alguns minutos)</li>
-                  </ol>
-                  <Tip>
-                    Se você usa Cloudflare, Hostinger, GoDaddy, etc - cada um tem um painel diferente para adicionar registros DNS. O Resend mostra exatamente o que você precisa copiar.
-                  </Tip>
+                <Step number={2} title="Confirme seu email">
+                  <p>Se criou com email, verifique sua caixa de entrada e clique no link de confirmação.</p>
                 </Step>
 
-                <Step number={3} title="Crie sua API Key">
-                  <ol className="list-decimal list-inside space-y-2 mt-2">
-                    <li>Vá para <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/api-keys <ExternalLink className="h-3 w-3" /></a></li>
-                    <li>Clique em <strong>+ Create API Key</strong></li>
-                    <li>Dê um nome (ex: "R3CF Leads Flow")</li>
-                    <li>Permissão: <strong>Full Access</strong> ou <strong>Sending Access</strong></li>
-                    <li><strong className="text-red-500">IMPORTANTE:</strong> Copie e guarde a chave! Ela só aparece uma vez.</li>
-                  </ol>
-                </Step>
+                <Tip>
+                  <strong>Plano Gratuito:</strong> O Resend oferece 100 emails/dia e 3.000/mês sem pagar nada. Ideal para começar!
+                </Tip>
               </div>
 
-              {/* PARTE 2: Configurar no App */}
+              {/* PARTE 2: Adicionar e Verificar Domínio */}
               <div className="border-t pt-6">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <span className="bg-orange-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">2</span>
-                  PARTE 2: Configurar no App (Configurações)
+                  PARTE 2: Adicionar Domínio no Resend
                 </h3>
 
-                <Step number={1} title="Vá para Configurações → Email">
-                  <p>No menu lateral, clique em <strong>Configurações</strong>, role até "Credenciais de Mensagens" e selecione a aba <strong className="text-orange-500">Email</strong>.</p>
+                <Step number={1} title="Vá para a página de Domínios">
+                  <p>Acesse <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 font-medium">resend.com/domains <ExternalLink className="h-3 w-3" /></a></p>
                 </Step>
 
-                <Step number={2} title="Preencha os 3 campos">
-                  <div className="bg-muted/50 rounded-lg p-4 mt-3 space-y-4">
-                    <div>
-                      <p className="font-medium text-sm">API Key</p>
-                      <code className="text-xs text-muted-foreground">Sua chave do Resend que começa com re_</code>
-                      <p className="mt-1 text-sm">Exemplo: <code className="bg-muted px-1 rounded">re_ABC123xyz...</code></p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Email de Envio</p>
-                      <code className="text-xs text-muted-foreground">O email com seu domínio verificado</code>
-                      <p className="mt-1 text-sm">Exemplo: <code className="bg-muted px-1 rounded">contato@suaempresa.com.br</code></p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Nome do Remetente</p>
-                      <code className="text-xs text-muted-foreground">O nome que aparece pro destinatário</code>
-                      <p className="mt-1 text-sm">Exemplo: <code className="bg-muted px-1 rounded">Ricardo da R3CF</code></p>
+                <Step number={2} title="Adicione seu domínio">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Clique no botão <strong className="text-orange-500">+ Add Domain</strong></li>
+                    <li>Digite o domínio da sua empresa</li>
+                    <li>Clique em <strong>Add</strong></li>
+                  </ol>
+                  <div className="bg-muted/50 rounded-lg p-4 mt-3">
+                    <p className="text-sm font-medium mb-2">💡 Qual domínio usar?</p>
+                    <div className="space-y-2 text-sm">
+                      <p><strong>Recomendado:</strong> Use um subdomínio como <code className="bg-muted px-1 rounded">send.suaempresa.com.br</code></p>
+                      <p className="text-muted-foreground">Isso protege a reputação do seu domínio principal se algo der errado.</p>
+                      <p><strong>Alternativa:</strong> Use o domínio principal <code className="bg-muted px-1 rounded">suaempresa.com.br</code></p>
                     </div>
                   </div>
                 </Step>
 
-                <Step number={3} title="Clique em Salvar">
-                  <p>Clique no botão <strong>Salvar Configurações Email</strong>. O status deve mudar para ✅ Configurado.</p>
+                <Step number={3} title="Anote os registros DNS que o Resend mostra">
+                  <p>Após adicionar, o Resend vai mostrar <strong>3 registros DNS</strong> que você precisa adicionar:</p>
+                  <div className="overflow-x-auto mt-3">
+                    <table className="w-full text-sm border rounded-lg overflow-hidden">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left p-3 font-medium">Tipo</th>
+                          <th className="text-left p-3 font-medium">Nome/Host</th>
+                          <th className="text-left p-3 font-medium">Valor (exemplo)</th>
+                          <th className="text-left p-3 font-medium">O que faz</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-t">
+                          <td className="p-3 font-mono text-orange-500">TXT</td>
+                          <td className="p-3 font-mono text-xs">resend._domainkey</td>
+                          <td className="p-3 text-xs text-muted-foreground">p=MIGfMA0GCS... (chave longa)</td>
+                          <td className="p-3 text-xs">DKIM - Assinatura</td>
+                        </tr>
+                        <tr className="border-t bg-muted/30">
+                          <td className="p-3 font-mono text-orange-500">TXT</td>
+                          <td className="p-3 font-mono text-xs">@ ou domínio</td>
+                          <td className="p-3 text-xs text-muted-foreground">v=spf1 include:resend.com ~all</td>
+                          <td className="p-3 text-xs">SPF - Autorização</td>
+                        </tr>
+                        <tr className="border-t">
+                          <td className="p-3 font-mono text-orange-500">TXT</td>
+                          <td className="p-3 font-mono text-xs">_dmarc</td>
+                          <td className="p-3 text-xs text-muted-foreground">v=DMARC1; p=none;</td>
+                          <td className="p-3 text-xs">DMARC - Proteção</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <Warning>
+                    <strong>COPIE OS VALORES EXATOS</strong> que o Resend mostra para você. Os valores acima são apenas exemplos!
+                  </Warning>
                 </Step>
               </div>
 
-              {/* PARTE 3: Configurar Webhooks (Opcional mas Recomendado) */}
+              {/* PARTE 3: Configurar DNS no seu provedor */}
               <div className="border-t pt-6">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">3</span>
-                  PARTE 3: Configurar Webhooks (Opcional - Para Tracking)
+                  PARTE 3: Adicionar Registros DNS (Passo Crítico!)
                 </h3>
 
                 <p className="text-muted-foreground mb-4">
-                  Webhooks permitem ver quando o lead <strong>recebeu</strong>, <strong>abriu</strong> ou <strong>clicou</strong> no seu email.
+                  Agora você precisa acessar o painel do seu provedor de domínio e adicionar os registros que o Resend mostrou.
+                </p>
+
+                {/* Provedores mais comuns */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  <a href="https://registro.br" target="_blank" rel="noopener noreferrer" className="p-4 border rounded-lg hover:bg-muted/50 transition-colors flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-blue-500" />
+                    <div>
+                      <p className="font-medium">Registro.br</p>
+                      <p className="text-xs text-muted-foreground">Domínios .br</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                  <a href="https://hostgator.com.br" target="_blank" rel="noopener noreferrer" className="p-4 border rounded-lg hover:bg-muted/50 transition-colors flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-orange-500" />
+                    <div>
+                      <p className="font-medium">HostGator</p>
+                      <p className="text-xs text-muted-foreground">cPanel DNS Zone</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                  <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="p-4 border rounded-lg hover:bg-muted/50 transition-colors flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-amber-500" />
+                    <div>
+                      <p className="font-medium">Cloudflare</p>
+                      <p className="text-xs text-muted-foreground">DNS Records</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                  <a href="https://dcc.godaddy.com" target="_blank" rel="noopener noreferrer" className="p-4 border rounded-lg hover:bg-muted/50 transition-colors flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-green-500" />
+                    <div>
+                      <p className="font-medium">GoDaddy</p>
+                      <p className="text-xs text-muted-foreground">DNS Management</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                  <a href="https://hpanel.hostinger.com" target="_blank" rel="noopener noreferrer" className="p-4 border rounded-lg hover:bg-muted/50 transition-colors flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-purple-500" />
+                    <div>
+                      <p className="font-medium">Hostinger</p>
+                      <p className="text-xs text-muted-foreground">hPanel DNS</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                  <a href="https://locaweb.com.br" target="_blank" rel="noopener noreferrer" className="p-4 border rounded-lg hover:bg-muted/50 transition-colors flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-red-500" />
+                    <div>
+                      <p className="font-medium">Locaweb</p>
+                      <p className="text-xs text-muted-foreground">Painel de DNS</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 ml-auto" />
+                  </a>
+                </div>
+
+                <Step number={1} title="Faça login no painel do seu provedor">
+                  <p>Acesse o site onde você comprou/gerencia seu domínio e faça login.</p>
+                </Step>
+
+                <Step number={2} title="Encontre a seção de DNS / Zona DNS">
+                  <p>Procure por opções como:</p>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                    <li><strong>HostGator:</strong> cPanel → Zona DNS ou DNS Zone Editor</li>
+                    <li><strong>Cloudflare:</strong> DNS → Records</li>
+                    <li><strong>GoDaddy:</strong> DNS Management → DNS Records</li>
+                    <li><strong>Hostinger:</strong> hPanel → Advanced → DNS Zone Editor</li>
+                    <li><strong>Registro.br:</strong> Painel → Editar Zona DNS</li>
+                  </ul>
+                </Step>
+
+                <Step number={3} title="Adicione cada registro TXT">
+                  <p>Para <strong>CADA</strong> registro que o Resend mostrou:</p>
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Clique em <strong>Adicionar Registro</strong> ou <strong>Add Record</strong></li>
+                    <li>Selecione tipo <strong className="text-orange-500">TXT</strong></li>
+                    <li>No campo <strong>Nome/Host</strong>: cole o que o Resend indicou</li>
+                    <li>No campo <strong>Valor/Content</strong>: cole o valor completo</li>
+                    <li>TTL: deixe o padrão (3600 ou Auto)</li>
+                    <li>Clique em <strong>Salvar</strong></li>
+                  </ol>
+                </Step>
+
+                <div className="bg-muted/50 rounded-lg p-5 mt-4">
+                  <h4 className="font-bold mb-3 flex items-center gap-2">
+                    <Play className="h-4 w-4" />
+                    Exemplo Visual: Adicionando no HostGator/cPanel
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="bg-background rounded-lg p-3 border">
+                      <p className="font-medium text-orange-500">Registro 1: DKIM</p>
+                      <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                        <div><span className="text-muted-foreground">Tipo:</span> TXT</div>
+                        <div><span className="text-muted-foreground">Nome:</span> resend._domainkey.send</div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Valor:</span> p=MIGfMA0... (copie do Resend)</div>
+                      </div>
+                    </div>
+                    <div className="bg-background rounded-lg p-3 border">
+                      <p className="font-medium text-orange-500">Registro 2: SPF</p>
+                      <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                        <div><span className="text-muted-foreground">Tipo:</span> TXT</div>
+                        <div><span className="text-muted-foreground">Nome:</span> send (ou @ para domínio principal)</div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Valor:</span> v=spf1 include:resend.com ~all</div>
+                      </div>
+                    </div>
+                    <div className="bg-background rounded-lg p-3 border">
+                      <p className="font-medium text-orange-500">Registro 3: DMARC (opcional mas recomendado)</p>
+                      <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                        <div><span className="text-muted-foreground">Tipo:</span> TXT</div>
+                        <div><span className="text-muted-foreground">Nome:</span> _dmarc.send</div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Valor:</span> v=DMARC1; p=none; rua=mailto:seuemail@gmail.com</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Warning>
+                  <strong>Propagação DNS:</strong> Após adicionar os registros, pode levar de 5 minutos até 48 horas para propagar. 
+                  Geralmente leva menos de 1 hora. O Resend mostra um ícone ✅ quando verificar.
+                </Warning>
+              </div>
+
+              {/* PARTE 4: Verificar no Resend */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">4</span>
+                  PARTE 4: Verificar Domínio no Resend
+                </h3>
+
+                <Step number={1} title="Volte para o Resend">
+                  <p>Acesse <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/domains <ExternalLink className="h-3 w-3" /></a></p>
+                </Step>
+
+                <Step number={2} title="Clique em 'Verify DNS Records'">
+                  <p>O Resend vai verificar se os registros foram adicionados corretamente.</p>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span>Verde = Configurado corretamente</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                      <span>Amarelo = Pendente (aguarde propagação)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      <span>Vermelho = Erro (verifique os valores)</span>
+                    </div>
+                  </div>
+                </Step>
+
+                <Tip>
+                  Se demorar mais de 1 hora e ainda não verificou, use ferramentas como <a href="https://mxtoolbox.com/SuperTool.aspx" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">MXToolbox</a> para verificar se os registros estão propagados.
+                </Tip>
+              </div>
+
+              {/* PARTE 5: Criar API Key */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-purple-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">5</span>
+                  PARTE 5: Criar API Key
+                </h3>
+
+                <Step number={1} title="Acesse a página de API Keys">
+                  <p>Vá para <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 font-medium">resend.com/api-keys <ExternalLink className="h-3 w-3" /></a></p>
+                </Step>
+
+                <Step number={2} title="Crie uma nova API Key">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Clique em <strong className="text-purple-500">+ Create API Key</strong></li>
+                    <li>Nome: <code className="bg-muted px-1 rounded">R3CF Leads Flow</code> (ou outro nome descritivo)</li>
+                    <li>Permissão: Selecione <strong>Full Access</strong></li>
+                    <li>Domínio: Selecione seu domínio verificado ou "All Domains"</li>
+                    <li>Clique em <strong>Create</strong></li>
+                  </ol>
+                </Step>
+
+                <Warning>
+                  <strong className="text-red-500">🚨 COPIE A CHAVE AGORA!</strong> A API Key só aparece UMA VEZ. 
+                  Se você não copiar, terá que criar uma nova. A chave começa com <code className="bg-muted px-1 rounded">re_</code>
+                </Warning>
+
+                <div className="bg-muted/50 rounded-lg p-4 mt-4">
+                  <p className="text-sm font-medium mb-2">Exemplo de API Key:</p>
+                  <code className="text-xs bg-background p-2 rounded block">re_ABC123xyz789defGHI456jkl...</code>
+                  <p className="text-xs text-muted-foreground mt-2">Guarde em um lugar seguro (arquivo .txt, gerenciador de senhas, etc.)</p>
+                </div>
+              </div>
+
+              {/* PARTE 6: Configurar no App */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center text-sm">6</span>
+                  PARTE 6: Configurar no App R3CF Leads Flow
+                </h3>
+
+                <Step number={1} title="Vá para Configurações">
+                  <p>No menu lateral, clique em <strong>Configurações</strong>.</p>
+                </Step>
+
+                <Step number={2} title="Role até 'Credenciais de Mensagens' e clique na aba Email">
+                  <p>Você verá 3 campos para preencher:</p>
+                </Step>
+
+                <div className="bg-muted/50 rounded-lg p-5 mt-3 space-y-4">
+                  <div className="border-b pb-4">
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <Key className="h-4 w-4 text-primary" />
+                      API Key do Resend
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Cole a chave que você copiou (começa com re_)</p>
+                    <code className="text-xs bg-background p-2 rounded block mt-2">re_ABC123xyz789defGHI456jkl...</code>
+                  </div>
+                  <div className="border-b pb-4">
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-orange-500" />
+                      Email de Envio
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">O email usando seu domínio verificado</p>
+                    <code className="text-xs bg-background p-2 rounded block mt-2">contato@send.suaempresa.com.br</code>
+                    <p className="text-xs text-muted-foreground mt-1">⚠️ Deve usar o mesmo domínio que você verificou no Resend!</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-blue-500" />
+                      Nome do Remetente
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">O nome que o destinatário verá</p>
+                    <code className="text-xs bg-background p-2 rounded block mt-2">Ricardo da Empresa XYZ</code>
+                  </div>
+                </div>
+
+                <Step number={3} title="Clique em 'Salvar Configurações Email'">
+                  <p>O status deve mudar para <strong className="text-green-500">✅ Configurado</strong>.</p>
+                </Step>
+              </div>
+
+              {/* PARTE 7: Testar */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">7</span>
+                  PARTE 7: Fazer o Primeiro Teste
+                </h3>
+
+                <Step number={1} title="Crie um lead de teste">
+                  <p>Vá em <strong>Prospecção AI</strong>, faça uma busca e salve um lead com um email válido (pode usar o seu próprio email para testar).</p>
+                </Step>
+
+                <Step number={2} title="Envie um email de teste">
+                  <p>No <strong>CRM</strong>, clique no lead e depois em <strong className="text-orange-500">📧 Enviar Email</strong>.</p>
+                </Step>
+
+                <Step number={3} title="Verifique sua caixa de entrada">
+                  <p>O email deve chegar em segundos. Verifique também:</p>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                    <li>Se caiu na pasta <strong>principal</strong> (não no spam)</li>
+                    <li>Se o nome do remetente está correto</li>
+                    <li>Se o email de resposta está correto</li>
+                  </ul>
+                </Step>
+
+                <Tip>
+                  <strong>Dica Pro:</strong> Teste enviando para Gmail, Outlook e outros provedores para garantir que não está caindo no spam em nenhum deles.
+                </Tip>
+              </div>
+
+              {/* Webhooks Opcionais */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">+</span>
+                  BÔNUS: Configurar Webhooks (Tracking de Abertura/Cliques)
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  <strong>Opcional mas recomendado!</strong> Webhooks permitem saber quando o lead abriu seu email ou clicou em links.
                 </p>
 
                 <div className="bg-muted/50 rounded-lg p-4 mb-6">
                   <div className="flex items-center gap-2 mb-2">
                     <Globe className="h-4 w-4 text-primary" />
-                    <span className="font-medium">URL do Webhook para copiar:</span>
+                    <span className="font-medium">URL do Webhook:</span>
                   </div>
                   <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-email`} />
                 </div>
 
-                <Step number={1} title="Acesse a página de Webhooks do Resend">
+                <Step number={1} title="Acesse os Webhooks do Resend">
                   <p>Vá para <a href="https://resend.com/webhooks" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">resend.com/webhooks <ExternalLink className="h-3 w-3" /></a></p>
                 </Step>
 
@@ -476,34 +799,6 @@ export default function Help() {
                     </li>
                     <li>Clique em <strong>Create Webhook</strong></li>
                   </ol>
-                </Step>
-
-                <Tip>
-                  <strong>Por que usar webhooks?</strong> Você saberá quem abriu seus emails e poderá priorizar leads mais engajados!
-                </Tip>
-              </div>
-
-              {/* PARTE 4: Testar */}
-              <div className="border-t pt-6">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                  <span className="bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">4</span>
-                  PARTE 4: Fazer seu Primeiro Teste
-                </h3>
-
-                <Step number={1} title="Vá para Prospecção AI e gere alguns leads">
-                  <p>Clique em <strong>Prospecção AI</strong> no menu e faça uma busca de teste. Salve pelo menos 1 lead.</p>
-                </Step>
-
-                <Step number={2} title="Abra o CRM e selecione um lead">
-                  <p>Clique em <strong>CRM</strong> no menu, depois clique em um lead para ver os detalhes.</p>
-                </Step>
-
-                <Step number={3} title="Clique em 'Enviar Email'">
-                  <p>No painel do lead, clique no botão <strong className="text-orange-500">📧 Enviar Email</strong>. A IA vai gerar uma mensagem personalizada e enviar!</p>
-                </Step>
-
-                <Step number={4} title="Verifique a Caixa de Entrada">
-                  <p>Vá para <strong>Caixa de Entrada</strong> e veja o status do email enviado. Se configurou webhooks, verá quando for entregue/aberto.</p>
                 </Step>
               </div>
 
@@ -537,19 +832,47 @@ export default function Help() {
               <div className="border-t pt-6 mt-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Video className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold">Vídeo Tutorial</h3>
+                  <h3 className="font-semibold">Vídeos Tutoriais</h3>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <VideoTutorial
-                    title="Resend - Primeiros Passos"
-                    description="Como configurar sua conta Resend e começar a enviar emails"
+                    title="Resend: Configuração Completa do Zero"
+                    description="Como criar conta, verificar domínio e enviar o primeiro email"
                     youtubeId="T2xaiw7VK4c"
                   />
                   <VideoTutorial
-                    title="Verificar Domínio no Resend"
-                    description="Tutorial sobre como verificar seu domínio e criar API Keys"
+                    title="Como Configurar DNS para Email (DKIM, SPF, DMARC)"
+                    description="Tutorial detalhado sobre registros DNS para autenticação de email"
+                    youtubeId="J3ySLqFiSMM"
+                  />
+                  <VideoTutorial
+                    title="Verificando Domínio no Resend"
+                    description="Passo a passo para verificar seu domínio e criar API Keys"
                     youtubeId="YNfV4ASLaGE"
                   />
+                  <VideoTutorial
+                    title="DNS Records Explained (DKIM, SPF, DMARC)"
+                    description="Explicação técnica de cada tipo de registro DNS para email"
+                    youtubeId="qoUNrXr-FsM"
+                  />
+                </div>
+
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-medium mb-3">🔗 Links Úteis para Configuração DNS:</h4>
+                  <div className="grid md:grid-cols-2 gap-2 text-sm">
+                    <a href="https://resend.com/docs/dashboard/domains/introduction" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      📘 Documentação Oficial do Resend <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://mxtoolbox.com/SuperTool.aspx" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      🔍 MXToolbox - Verificar DNS <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://support.hostgator.com/articles/hosting-guide/lets-get-started/dns-management-add-edit-delete-dns-records" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      📗 Guia HostGator DNS <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      📙 Guia Cloudflare DNS <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </CardContent>
