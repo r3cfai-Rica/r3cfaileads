@@ -638,12 +638,12 @@ export default function Help() {
                   <VideoTutorial
                     title="Meta Business Suite - Configuração Inicial"
                     description="Como criar conta Business e configurar a plataforma"
-                    youtubeId="sYh_A7v7VRA"
+                    youtubeId="CEt_KMMv3V8"
                   />
                   <VideoTutorial
                     title="WhatsApp API Webhooks Tutorial"
                     description="Como configurar webhooks para receber mensagens"
-                    youtubeId="UNIavMxKqeg"
+                    youtubeId="GbpXvHBa4EQ"
                   />
                 </div>
 
@@ -1098,7 +1098,7 @@ export default function Help() {
                   <VideoTutorial
                     title="Twilio SMS Tutorial - Guia Completo 2024"
                     description="Como criar conta, comprar número e configurar SMS do zero"
-                    youtubeId="QjLtzPBy8DY"
+                    youtubeId="4qhLb-gSnk4"
                   />
                   <VideoTutorial
                     title="Como Usar Twilio SMS - Tutorial 2025"
@@ -1113,7 +1113,7 @@ export default function Help() {
                   <VideoTutorial
                     title="Send SMS with Twilio and Node.js"
                     description="Tutorial prático de integração com Twilio"
-                    youtubeId="HLqM6yo_YA0"
+                    youtubeId="sKpnDI-hNOg"
                   />
                 </div>
                 <div className="mt-4">
@@ -1661,7 +1661,7 @@ export default function Help() {
                   <VideoTutorial
                     title="SPF, DKIM e DMARC Explicados"
                     description="Entenda cada tipo de registro DNS para email"
-                    youtubeId="7d_5zVxdGPY"
+                    youtubeId="aZ8VPI-YqVs"
                   />
                 </div>
 
