@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, forwardRef } from 'react';
-import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
+import { useLocation } from 'react-router-dom';
+import { getPageContext } from '@/lib/assistant-context';
 
 interface Message {
   id: string;
@@ -20,6 +22,9 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant
 
 export const AssistantPanel = forwardRef<HTMLDivElement, AssistantPanelProps>(({ onClose }, ref) => {
   const { language } = useApp();
+  const location = useLocation();
+  const pageContext = getPageContext(location.pathname, language);
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +78,12 @@ export const AssistantPanel = forwardRef<HTMLDivElement, AssistantPanelProps>(({
             content: m.content,
           })),
           language,
+          pageContext: {
+            page: pageContext.page,
+            title: pageContext.title,
+            description: pageContext.description,
+            helpTopics: pageContext.helpTopics,
+          },
         }),
       });
 
@@ -172,17 +183,8 @@ export const AssistantPanel = forwardRef<HTMLDivElement, AssistantPanelProps>(({
     }
   };
 
-  const suggestions = language === 'pt-BR' 
-    ? [
-        'Como usar a prospecção?',
-        'Dicas de cold email',
-        'Como criar CTAs?',
-      ]
-    : [
-        'How to use prospecting?',
-        'Cold email tips',
-        'How to create CTAs?',
-      ];
+  // Use contextual suggestions based on current page
+  const suggestions = pageContext.suggestions;
 
   return (
     <div className="w-80 sm:w-96 h-[500px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
@@ -191,13 +193,14 @@ export const AssistantPanel = forwardRef<HTMLDivElement, AssistantPanelProps>(({
         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
           <Sparkles className="w-5 h-5 text-primary" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-foreground">
-            {language === 'pt-BR' ? 'Assistente LeadFlow' : 'LeadFlow Assistant'}
+            {language === 'pt-BR' ? 'Guia de Configuração' : 'Setup Guide'}
           </h3>
-          <p className="text-xs text-muted-foreground">
-            {language === 'pt-BR' ? 'Vendas & Suporte' : 'Sales & Support'}
-          </p>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <MapPin className="w-3 h-3" />
+            <span className="truncate">{pageContext.title}</span>
+          </div>
         </div>
       </div>
 
@@ -205,13 +208,14 @@ export const AssistantPanel = forwardRef<HTMLDivElement, AssistantPanelProps>(({
       <ScrollArea className="flex-1 p-4" ref={scrollRef as any}>
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
               <Bot className="w-8 h-8 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              {language === 'pt-BR' 
-                ? 'Olá! Sou seu assistente de vendas. Como posso ajudar?' 
-                : 'Hi! I\'m your sales assistant. How can I help?'}
+            <p className="text-sm font-medium text-foreground mb-1">
+              {pageContext.title}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4 max-w-[250px]">
+              {pageContext.description}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               {suggestions.map((suggestion, i) => (
