@@ -121,11 +121,17 @@ export const Messaging: React.FC = () => {
     setIsGeneratingEmail(true);
 
     try {
+      // IMPORTANT: Use lead.location or position-derived company, never lead's first name
+      // If no company info available, leave undefined to let AI handle it appropriately
+      const derivedCompany = lead.location && lead.location.length > 2 
+        ? undefined // Don't guess - let AI create generic phrasing
+        : undefined;
+      
       const email = await generateEmailWithAI({
         niche: selectedFolder?.name || 'Produtos/Serviços',
         leadName: lead.name,
         leadPosition: lead.position,
-        leadCompany: lead.name.split(' ')[0],
+        leadCompany: derivedCompany, // Never use lead name as company
         cta: selectedCTA ? { title: selectedCTA.title, text: selectedCTA.text } : undefined,
         senderName,
         senderCompany,
