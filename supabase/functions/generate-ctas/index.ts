@@ -35,9 +35,7 @@ DIRETRIZES:
 2. Adapte o tom conforme solicitado
 3. Cada CTA deve ser único e focado em conversão
 4. Use emojis estrategicamente para aumentar engajamento
-5. Textos devem ser adaptados para WhatsApp, SMS e Email
-
-Responda APENAS com um JSON válido no formato especificado.`
+5. Textos devem ser adaptados para WhatsApp, SMS e Email`
       : `You are an expert copywriter in digital marketing and sales. Your task is to create persuasive, high-impact CTAs (Call-to-Actions) for marketing campaigns.
 
 GUIDELINES:
@@ -45,56 +43,17 @@ GUIDELINES:
 2. Adapt the tone as requested
 3. Each CTA should be unique and focused on conversion
 4. Use emojis strategically to increase engagement
-5. Texts should be adapted for WhatsApp, SMS and Email
-
-Respond ONLY with valid JSON in the specified format.`;
+5. Texts should be adapted for WhatsApp, SMS and Email`;
 
     const insightsContext = insights 
-      ? `
-Insights do mercado:
-- Dores: ${insights.pains?.join(', ')}
-- Tendências: ${insights.trends?.join(', ')}
-- Urgência: ${insights.urgency} (${insights.urgencyReason})
-`
+      ? language === 'pt-BR'
+        ? `Insights do mercado: Dores: ${insights.pains?.join(', ')}. Tendências: ${insights.trends?.join(', ')}. Urgência: ${insights.urgency} (${insights.urgencyReason}).`
+        : `Market insights: Pains: ${insights.pains?.join(', ')}. Trends: ${insights.trends?.join(', ')}. Urgency: ${insights.urgency} (${insights.urgencyReason}).`
       : '';
 
     const userPrompt = language === 'pt-BR'
-      ? `Crie 3 CTAs de alto impacto para o nicho "${niche}"${companyName ? ` da empresa "${companyName}"` : ''}.
-
-Tom de voz: ${toneDescriptions[messageTone] || 'profissional'}
-Formato da imagem: ${imageFormat}
-${insightsContext}
-
-Retorne um JSON com esta estrutura exata:
-{
-  "ctas": [
-    {
-      "title": "Título chamativo com emoji (max 60 caracteres)",
-      "text": "Texto persuasivo completo para WhatsApp/Email (150-300 caracteres)",
-      "imagePrompt": "Descrição detalhada para gerar uma imagem profissional relacionada ao nicho e ao CTA"
-    }
-  ]
-}
-
-Crie 3 CTAs diferentes, cada um com abordagem única.`
-      : `Create 3 high-impact CTAs for the niche "${niche}"${companyName ? ` for the company "${companyName}"` : ''}.
-
-Tone of voice: ${toneDescriptions[messageTone] || 'professional'}
-Image format: ${imageFormat}
-${insightsContext}
-
-Return a JSON with this exact structure:
-{
-  "ctas": [
-    {
-      "title": "Catchy title with emoji (max 60 characters)",
-      "text": "Complete persuasive text for WhatsApp/Email (150-300 characters)",
-      "imagePrompt": "Detailed description to generate a professional image related to the niche and CTA"
-    }
-  ]
-}
-
-Create 3 different CTAs, each with a unique approach.`;
+      ? `Crie 3 CTAs de alto impacto para o nicho "${niche}"${companyName ? ` da empresa "${companyName}"` : ''}. Tom de voz: ${toneDescriptions[messageTone] || 'profissional'}. Formato da imagem: ${imageFormat}. ${insightsContext}`
+      : `Create 3 high-impact CTAs for the niche "${niche}"${companyName ? ` for the company "${companyName}"` : ''}. Tone of voice: ${toneDescriptions[messageTone] || 'professional'}. Image format: ${imageFormat}. ${insightsContext}`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -108,6 +67,45 @@ Create 3 different CTAs, each with a unique approach.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "generate_ctas",
+              description: "Generate 3 high-impact CTAs for marketing campaigns",
+              parameters: {
+                type: "object",
+                properties: {
+                  ctas: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        title: { 
+                          type: "string", 
+                          description: "Catchy title with emoji (max 60 characters)" 
+                        },
+                        text: { 
+                          type: "string", 
+                          description: "Complete persuasive text for WhatsApp/Email (150-300 characters)" 
+                        },
+                        imagePrompt: { 
+                          type: "string", 
+                          description: "Detailed description to generate a professional image related to the niche and CTA" 
+                        }
+                      },
+                      required: ["title", "text", "imagePrompt"],
+                      additionalProperties: false
+                    }
+                  }
+                },
+                required: ["ctas"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "generate_ctas" } }
       }),
     });
 
@@ -132,19 +130,25 @@ Create 3 different CTAs, each with a unique approach.`;
     }
 
     const aiResponse = await response.json();
-    const content = aiResponse.choices?.[0]?.message?.content;
+    console.log('AI response:', JSON.stringify(aiResponse, null, 2));
 
-    console.log('AI response content:', content);
+    // Extract tool call result
+    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall || toolCall.function.name !== 'generate_ctas') {
+      throw new Error('No valid tool call in AI response');
+    }
 
-    // Parse the JSON from the response
     let parsedContent;
     try {
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-      const jsonStr = jsonMatch[1]?.trim() || content.trim();
-      parsedContent = JSON.parse(jsonStr);
+      parsedContent = JSON.parse(toolCall.function.arguments);
     } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
+      console.error('Failed to parse tool call arguments:', parseError);
       throw new Error('Failed to parse AI response');
+    }
+
+    // Validate the response structure
+    if (!parsedContent.ctas || !Array.isArray(parsedContent.ctas)) {
+      throw new Error('Invalid CTA structure in response');
     }
 
     return new Response(
