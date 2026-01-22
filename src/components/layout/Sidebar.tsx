@@ -18,6 +18,7 @@ import {
   Bot,
   Inbox,
   HelpCircle,
+  Wrench,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -120,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
 
         {/* Admin Console */}
         {user?.role === 'admin' && (
-          <div className="mt-6 pt-4 border-t border-sidebar-border">
+          <div className="mt-6 pt-4 border-t border-sidebar-border space-y-1">
             <Link
               to="/admin"
               className={cn(
@@ -132,6 +133,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
             >
               <Shield className="w-5 h-5 flex-shrink-0" />
               {!isCollapsed && <span className="truncate">{t.nav.admin}</span>}
+            </Link>
+            <Link
+              to="/admin/tools"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+                location.pathname === '/admin/tools'
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
+                  : 'hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground'
+              )}
+            >
+              <Wrench className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && <span className="truncate">{language === 'pt-BR' ? 'Ferramentas' : 'Tools'}</span>}
             </Link>
           </div>
         )}
