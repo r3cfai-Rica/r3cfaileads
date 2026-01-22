@@ -19,7 +19,8 @@ import {
   Key,
   Globe,
   Play,
-  Video
+  Video,
+  FileText
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -673,69 +674,459 @@ export default function Help() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Phone className="h-5 w-5 text-blue-500" />
+                <Phone className="h-5 w-5 text-blue-600" />
                 <CardTitle>Guia COMPLETO: Configurar SMS via Twilio</CardTitle>
               </div>
               <CardDescription>
                 Tutorial detalhado DO ZERO - Criação de conta, compra de número e configuração de webhook
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-muted/50 rounded-lg p-4 mb-6">
+            <CardContent className="space-y-8">
+              {/* Resumo Executivo */}
+              <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-lg p-5">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                  Resumo: O que você vai configurar
+                </h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-blue-600 mb-1">📱 Conta Twilio</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• Criar conta gratuita</li>
+                      <li>• Verificar identidade</li>
+                      <li>• Obter credenciais API</li>
+                    </ul>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-blue-600 mb-1">📞 Número de Telefone</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• Comprar número SMS</li>
+                      <li>• Configurar webhook</li>
+                      <li>• Testar envio/recepção</li>
+                    </ul>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-blue-600 mb-1">⚙️ No App</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• Account SID</li>
+                      <li>• Auth Token</li>
+                      <li>• Número de telefone</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm"><strong>⏱️ Tempo estimado:</strong> 10-20 minutos (se já tem cartão de crédito cadastrado)</p>
+                </div>
+              </div>
+
+              {/* Pré-requisitos */}
+              <div className="border border-blue-500/30 bg-blue-500/5 rounded-lg p-5">
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-blue-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  📋 PRÉ-REQUISITOS
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <p className="font-medium">Você vai precisar de:</p>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span><strong>Cartão de crédito internacional</strong> (para verificação da conta)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span><strong>Documento de identidade</strong> (RG ou CNH para verificação)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span><strong>Telefone para verificação</strong> (receberá código por SMS)</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                    <p className="font-medium text-yellow-600 mb-2">💵 Sobre o Trial Gratuito:</p>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• Twilio oferece <strong>$15 USD de crédito grátis</strong></li>
+                      <li>• Suficiente para ~300 SMS nacionais</li>
+                      <li>• Não precisa pagar nada para testar</li>
+                      <li>• Cartão só é necessário após trial</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabela de Custos */}
+              <div className="border rounded-lg p-5">
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  💰 Tabela de Custos - Twilio SMS
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left p-3 font-semibold">Item</th>
+                        <th className="text-left p-3 font-semibold">Custo (USD)</th>
+                        <th className="text-left p-3 font-semibold">Observações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr>
+                        <td className="p-3 font-medium">📞 Número de Telefone (BR)</td>
+                        <td className="p-3 text-blue-600 font-mono">$5.50/mês</td>
+                        <td className="p-3 text-muted-foreground">Número brasileiro com SMS habilitado</td>
+                      </tr>
+                      <tr className="bg-muted/30">
+                        <td className="p-3 font-medium">📤 SMS Enviado (BR)</td>
+                        <td className="p-3 text-blue-600 font-mono">~$0.05/SMS</td>
+                        <td className="p-3 text-muted-foreground">Varia por operadora do destinatário</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-medium">📥 SMS Recebido (BR)</td>
+                        <td className="p-3 text-blue-600 font-mono">$0.0075/SMS</td>
+                        <td className="p-3 text-muted-foreground">Muito mais barato que enviar</td>
+                      </tr>
+                      <tr className="bg-muted/30">
+                        <td className="p-3 font-medium">🇺🇸 Número USA</td>
+                        <td className="p-3 text-blue-600 font-mono">$1.15/mês</td>
+                        <td className="p-3 text-muted-foreground">Opção mais barata, mas +55 fica caro</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-medium">🎁 Crédito Trial</td>
+                        <td className="p-3 text-green-600 font-mono font-bold">$15 GRÁTIS</td>
+                        <td className="p-3 text-muted-foreground">Para novos usuários</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  * Preços aproximados. Consulte <a href="https://www.twilio.com/en-us/sms/pricing/br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">twilio.com/sms/pricing</a> para valores atualizados.
+                </p>
+              </div>
+
+              {/* URL do Webhook */}
+              <div className="bg-muted/50 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Globe className="h-4 w-4 text-primary" />
-                  <span className="font-medium">URL do Webhook</span>
+                  <span className="font-medium">URL do Webhook (você vai precisar no Passo 6)</span>
                 </div>
                 <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-sms`} />
               </div>
 
-              <Step number={1} title="Acesse o Console do Twilio">
-                <p>Vá para <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">console.twilio.com <ExternalLink className="h-3 w-3" /></a> e faça login na sua conta.</p>
-              </Step>
-
-              <Step number={2} title="Navegue até seus Números de Telefone">
-                <ol className="list-decimal list-inside space-y-2 mt-2">
-                  <li>No menu lateral, clique em <strong>Phone Numbers</strong></li>
-                  <li>Clique em <strong>Manage</strong> → <strong>Active Numbers</strong></li>
-                  <li>Selecione o número que você usa para enviar SMS</li>
+              {/* Passo 1: Criar conta */}
+              <Step number={1} title="Criar Conta no Twilio">
+                <ol className="list-decimal list-inside space-y-3 mt-3">
+                  <li>Acesse <a href="https://www.twilio.com/try-twilio" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">twilio.com/try-twilio <ExternalLink className="h-3 w-3" /></a></li>
+                  <li>Clique em <strong>"Start for free"</strong></li>
+                  <li>Preencha seus dados:
+                    <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-muted-foreground">
+                      <li>Email (será seu login)</li>
+                      <li>Nome completo</li>
+                      <li>Senha forte</li>
+                      <li>Número de telefone (para verificação)</li>
+                    </ul>
+                  </li>
+                  <li>Confirme seu email clicando no link recebido</li>
+                  <li>Verifique seu telefone inserindo o código SMS</li>
                 </ol>
+                <Tip>
+                  <strong>Dica:</strong> Use seu email corporativo para facilitar a verificação de identidade posteriormente.
+                </Tip>
               </Step>
 
-              <Step number={3} title="Configure o Webhook de Mensagens">
-                <ol className="list-decimal list-inside space-y-2 mt-2">
-                  <li>Role até a seção <strong>Messaging Configuration</strong></li>
-                  <li>Em "A MESSAGE COMES IN", selecione <strong>Webhook</strong></li>
-                  <li>Cole a URL do webhook (acima) no campo</li>
-                  <li>Certifique-se de que o método está como <strong>HTTP POST</strong></li>
-                  <li>Clique em <strong>Save Configuration</strong></li>
+              {/* Passo 2: Verificar Identidade */}
+              <Step number={2} title="Verificar Identidade (Obrigatório)">
+                <p className="text-muted-foreground mb-3">O Twilio exige verificação de identidade para prevenir fraudes. Sem isso, você não consegue comprar números.</p>
+                <ol className="list-decimal list-inside space-y-3 mt-3">
+                  <li>No console, vá em <strong>Settings → General → User Settings</strong></li>
+                  <li>Clique em <strong>"Verify your identity"</strong></li>
+                  <li>Escolha o tipo de documento:
+                    <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-muted-foreground">
+                      <li><strong>Passaporte</strong> (mais rápido - aprovação instantânea)</li>
+                      <li><strong>RG ou CNH</strong> (pode levar até 24h)</li>
+                    </ul>
+                  </li>
+                  <li>Tire uma foto do documento</li>
+                  <li>Tire uma selfie para confirmação</li>
+                  <li>Aguarde a aprovação</li>
                 </ol>
+                <Warning>
+                  <strong>Importante:</strong> A verificação com passaporte é quase instantânea. RG/CNH pode demorar algumas horas para aprovação manual.
+                </Warning>
               </Step>
 
-              <Tip>
-                <strong>Teste a configuração:</strong> Envie uma mensagem SMS para o seu número Twilio a partir de qualquer celular. A mensagem deve aparecer na Caixa de Entrada em segundos.
-              </Tip>
+              {/* Passo 3: Obter Credenciais API */}
+              <Step number={3} title="Obter Account SID e Auth Token">
+                <p className="text-muted-foreground mb-3">Essas são suas credenciais de API - você vai precisar delas para configurar no app.</p>
+                <ol className="list-decimal list-inside space-y-3 mt-3">
+                  <li>Acesse <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">console.twilio.com <ExternalLink className="h-3 w-3" /></a></li>
+                  <li>Na página inicial (Dashboard), localize o painel <strong>"Account Info"</strong></li>
+                  <li>Copie o <strong>Account SID</strong> (começa com "AC")</li>
+                  <li>Clique no ícone de olho para revelar o <strong>Auth Token</strong></li>
+                  <li>Copie o Auth Token também</li>
+                </ol>
+                <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                  <p className="text-sm font-medium text-red-600 mb-2">🔐 SEGURANÇA CRÍTICA:</p>
+                  <ul className="text-sm space-y-1">
+                    <li>• <strong>NUNCA</strong> compartilhe seu Auth Token publicamente</li>
+                    <li>• Não coloque em repositórios públicos (GitHub, etc.)</li>
+                    <li>• Se vazar, regenere imediatamente no console</li>
+                  </ul>
+                </div>
+              </Step>
 
-              <Warning>
-                Certifique-se de que seu número Twilio está habilitado para receber SMS. Alguns números são apenas para chamadas de voz.
-              </Warning>
+              {/* Passo 4: Comprar Número */}
+              <Step number={4} title="Comprar um Número de Telefone">
+                <ol className="list-decimal list-inside space-y-3 mt-3">
+                  <li>No console, vá em <strong>Phone Numbers → Manage → Buy a number</strong></li>
+                  <li>Em "Country", selecione <strong>Brazil (+55)</strong></li>
+                  <li>Marque a opção <strong>"SMS"</strong> em Capabilities</li>
+                  <li>Clique em <strong>"Search"</strong></li>
+                  <li>Escolha um número da lista disponível</li>
+                  <li>Clique em <strong>"Buy"</strong> para confirmar a compra</li>
+                </ol>
+                <div className="mt-4 grid md:grid-cols-2 gap-4">
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                    <p className="font-medium text-blue-600 mb-2">📍 Sobre Números Brasileiros:</p>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• DDDs disponíveis variam (11, 21, etc.)</li>
+                      <li>• Custo: ~$5.50/mês</li>
+                      <li>• SMS para qualquer operadora BR</li>
+                    </ul>
+                  </div>
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                    <p className="font-medium text-amber-600 mb-2">🇺🇸 Alternativa - Número USA:</p>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• Mais barato: $1.15/mês</li>
+                      <li>• SMS para BR funciona</li>
+                      <li>• Leads veem número estrangeiro</li>
+                    </ul>
+                  </div>
+                </div>
+                <Tip>
+                  <strong>Trial:</strong> Durante o trial gratuito, você pode usar os $15 de crédito para comprar um número e enviar SMS de teste.
+                </Tip>
+              </Step>
+
+              {/* Passo 5: Configurar no App */}
+              <Step number={5} title="Configurar Credenciais no App">
+                <ol className="list-decimal list-inside space-y-3 mt-3">
+                  <li>No app, acesse <strong>Configurações → Credenciais de Mensagens</strong></li>
+                  <li>Na seção <strong className="text-blue-600">"SMS (Twilio)"</strong>, preencha:
+                    <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
+                      <li><strong>Account SID:</strong> Cole o valor que começa com "AC..."</li>
+                      <li><strong>Auth Token:</strong> Cole o token secreto</li>
+                      <li><strong>Número de Telefone:</strong> No formato internacional (+5511...)</li>
+                    </ul>
+                  </li>
+                  <li>Clique em <strong>"Salvar Configurações"</strong></li>
+                </ol>
+                <div className="mt-4 bg-muted rounded-lg p-4 font-mono text-sm">
+                  <p className="text-muted-foreground mb-2">Exemplo de número no formato correto:</p>
+                  <code className="text-blue-600">+5511999887766</code>
+                </div>
+              </Step>
+
+              {/* Passo 6: Configurar Webhook */}
+              <Step number={6} title="Configurar Webhook para Respostas">
+                <p className="text-muted-foreground mb-3">Para que as respostas dos seus leads apareçam na Caixa de Entrada, configure o webhook:</p>
+                <ol className="list-decimal list-inside space-y-3 mt-3">
+                  <li>No console Twilio, vá em <strong>Phone Numbers → Manage → Active numbers</strong></li>
+                  <li>Clique no número que você comprou</li>
+                  <li>Role até a seção <strong>"Messaging Configuration"</strong></li>
+                  <li>Em "A MESSAGE COMES IN":
+                    <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
+                      <li>Selecione <strong>"Webhook"</strong></li>
+                      <li>Cole a URL: <code className="bg-muted px-2 py-1 rounded text-xs">{`${WEBHOOK_BASE_URL}/webhook-sms`}</code></li>
+                      <li>Método: <strong>HTTP POST</strong></li>
+                    </ul>
+                  </li>
+                  <li>Clique em <strong>"Save configuration"</strong></li>
+                </ol>
+                <div className="mt-4 bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm font-medium mb-2">Copie a URL do Webhook:</p>
+                  <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-sms`} />
+                </div>
+              </Step>
+
+              {/* Passo 7: Testar */}
+              <Step number={7} title="Testar Envio e Recebimento">
+                <div className="space-y-4">
+                  <div>
+                    <p className="font-medium mb-2">📤 Teste de ENVIO:</p>
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                      <li>Vá em <strong>CRM → Leads</strong></li>
+                      <li>Selecione um lead com telefone cadastrado</li>
+                      <li>Clique no ícone de SMS</li>
+                      <li>Envie uma mensagem de teste</li>
+                      <li>Verifique se chegou no celular</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <p className="font-medium mb-2">📥 Teste de RECEBIMENTO:</p>
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                      <li>Do celular, responda o SMS recebido</li>
+                      <li>Vá em <strong>Caixa de Entrada</strong> no app</li>
+                      <li>A resposta deve aparecer em segundos</li>
+                      <li>O canal deve mostrar ícone de SMS (azul)</li>
+                    </ol>
+                  </div>
+                </div>
+                <Tip>
+                  <strong>Trial:</strong> Durante o trial, você só pode enviar SMS para números verificados. Adicione seu celular em <strong>Phone Numbers → Verified Caller IDs</strong>.
+                </Tip>
+              </Step>
+
+              {/* Limitações do Trial */}
+              <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-5">
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-amber-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  ⚠️ Limitações do Trial Gratuito
+                </h3>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-500">•</span>
+                    <span><strong>Apenas números verificados:</strong> Só pode enviar SMS para números que você cadastrou manualmente</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-500">•</span>
+                    <span><strong>Prefixo nas mensagens:</strong> "Sent from your Twilio trial account" aparece no início de cada SMS</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-500">•</span>
+                    <span><strong>Crédito limitado:</strong> $15 USD que expira após alguns meses</span>
+                  </li>
+                </ul>
+                <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm"><strong>Para remover limitações:</strong> Faça upgrade da conta adicionando créditos ou assinando um plano pago.</p>
+                </div>
+              </div>
+
+              {/* Troubleshooting */}
+              <div className="border rounded-lg p-5">
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-blue-600" />
+                  🔧 Resolução de Problemas
+                </h3>
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="item-1">
+                    <AccordionTrigger>SMS não está sendo enviado</AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="list-disc list-inside space-y-2 text-sm">
+                        <li>Verifique se o Account SID e Auth Token estão corretos</li>
+                        <li>Confirme se o número está no formato +55...</li>
+                        <li>No trial, verifique se o destinatário está em "Verified Caller IDs"</li>
+                        <li>Cheque se há crédito suficiente na conta</li>
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-2">
+                    <AccordionTrigger>Respostas não aparecem na Caixa de Entrada</AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="list-disc list-inside space-y-2 text-sm">
+                        <li>Verifique se a URL do webhook está correta no Twilio</li>
+                        <li>Confirme que o método está como HTTP POST</li>
+                        <li>Teste enviando uma mensagem para seu número Twilio</li>
+                        <li>Verifique os logs de erro no console do Twilio</li>
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-3">
+                    <AccordionTrigger>Erro "21608: The 'To' phone number is not valid"</AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="list-disc list-inside space-y-2 text-sm">
+                        <li>O número deve estar no formato E.164: +5511999887766</li>
+                        <li>Não use parênteses, traços ou espaços</li>
+                        <li>Inclua o código do país (+55 para Brasil)</li>
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-4">
+                    <AccordionTrigger>Erro "21211: Invalid 'To' Phone Number"</AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="list-disc list-inside space-y-2 text-sm">
+                        <li>No trial, você só pode enviar para números verificados</li>
+                        <li>Adicione o número em: Phone Numbers → Verified Caller IDs</li>
+                        <li>O Twilio enviará um código de verificação por ligação ou SMS</li>
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+
+              {/* Links Úteis */}
+              <div className="border rounded-lg p-5">
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <ExternalLink className="h-5 w-5 text-blue-600" />
+                  🔗 Links Úteis
+                </h3>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" 
+                    className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    <Globe className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Console do Twilio</span>
+                    <ExternalLink className="h-3 w-3 ml-auto" />
+                  </a>
+                  <a href="https://www.twilio.com/docs/sms" target="_blank" rel="noopener noreferrer" 
+                    className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Documentação SMS</span>
+                    <ExternalLink className="h-3 w-3 ml-auto" />
+                  </a>
+                  <a href="https://www.twilio.com/en-us/sms/pricing/br" target="_blank" rel="noopener noreferrer" 
+                    className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Preços SMS Brasil</span>
+                    <ExternalLink className="h-3 w-3 ml-auto" />
+                  </a>
+                  <a href="https://support.twilio.com" target="_blank" rel="noopener noreferrer" 
+                    className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    <HelpCircle className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Suporte Twilio</span>
+                    <ExternalLink className="h-3 w-3 ml-auto" />
+                  </a>
+                </div>
+              </div>
 
               {/* Video Tutorial Section */}
               <div className="border-t pt-6 mt-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Video className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold">Vídeo Tutorial</h3>
+                  <Video className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold">📺 Vídeos Tutoriais</h3>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <VideoTutorial
-                    title="Twilio SMS Webhooks - Guia Completo"
-                    description="Como configurar webhooks para receber SMS no Twilio"
+                    title="Twilio SMS Setup - Guia Completo"
+                    description="Como criar conta, comprar número e configurar SMS do zero"
                     youtubeId="4qZY7IZjvPo"
                   />
                   <VideoTutorial
-                    title="Configurando Números de Telefone"
-                    description="Tutorial sobre configuração de números e webhooks no console Twilio"
+                    title="Configurando Webhooks no Twilio"
+                    description="Tutorial sobre configuração de webhooks para receber respostas"
                     youtubeId="WTpciu4qgck"
                   />
+                  <VideoTutorial
+                    title="Twilio para Iniciantes"
+                    description="Entenda como funciona a plataforma Twilio"
+                    youtubeId="dXEroQQKzVU"
+                  />
+                  <VideoTutorial
+                    title="Verificação de Identidade Twilio"
+                    description="Como passar pela verificação de identidade rapidamente"
+                    youtubeId="fJyWngob_q8"
+                  />
+                </div>
+                <div className="mt-4">
+                  <a 
+                    href="https://www.youtube.com/results?search_query=twilio+sms+setup+tutorial" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <Video className="h-4 w-4" />
+                    Assistir mais tutoriais no YouTube
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
               </div>
             </CardContent>
