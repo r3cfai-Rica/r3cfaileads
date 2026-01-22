@@ -628,22 +628,22 @@ export default function Help() {
                   <VideoTutorial
                     title="WhatsApp Cloud API - Configuração Completa 2024"
                     description="Tutorial atualizado sobre como criar app e configurar a API do WhatsApp"
-                    youtubeId="CEt_KMMv3V8"
+                    youtubeId="Y8kihPdCI_U"
                   />
                   <VideoTutorial
-                    title="Criar System User e Token Permanente"
-                    description="Como gerar um token que não expira para a API do WhatsApp"
-                    youtubeId="MBoghE9Y-9c"
+                    title="WhatsApp Cloud API - Guia Rápido"
+                    description="Quick start para enviar e receber primeiras mensagens"
+                    youtubeId="q0ojEbdezFU"
                   />
                   <VideoTutorial
-                    title="Configurar Webhooks no WhatsApp Business API"
-                    description="Passo a passo para receber mensagens via webhook"
-                    youtubeId="DBNiWopmqcw"
+                    title="Meta Business Suite - Configuração Inicial"
+                    description="Como criar conta Business e configurar a plataforma"
+                    youtubeId="sYh_A7v7VRA"
                   />
                   <VideoTutorial
-                    title="Verificação de Negócio na Meta"
-                    description="Como verificar sua empresa para sair do modo teste"
-                    youtubeId="Jl3tuY4v1FI"
+                    title="WhatsApp API Webhooks Tutorial"
+                    description="Como configurar webhooks para receber mensagens"
+                    youtubeId="UNIavMxKqeg"
                   />
                 </div>
 
@@ -1096,24 +1096,24 @@ export default function Help() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <VideoTutorial
-                    title="Twilio SMS Setup - Guia Completo"
+                    title="Twilio SMS Tutorial - Guia Completo 2024"
                     description="Como criar conta, comprar número e configurar SMS do zero"
-                    youtubeId="4qZY7IZjvPo"
+                    youtubeId="QjLtzPBy8DY"
                   />
                   <VideoTutorial
-                    title="Configurando Webhooks no Twilio"
-                    description="Tutorial sobre configuração de webhooks para receber respostas"
-                    youtubeId="WTpciu4qgck"
+                    title="Como Usar Twilio SMS - Tutorial 2025"
+                    description="Walkthrough completo do console Twilio"
+                    youtubeId="TSJChz6adv8"
                   />
                   <VideoTutorial
-                    title="Twilio para Iniciantes"
+                    title="Twilio Programmable SMS"
                     description="Entenda como funciona a plataforma Twilio"
-                    youtubeId="dXEroQQKzVU"
+                    youtubeId="knxlmCVFAZI"
                   />
                   <VideoTutorial
-                    title="Verificação de Identidade Twilio"
-                    description="Como passar pela verificação de identidade rapidamente"
-                    youtubeId="fJyWngob_q8"
+                    title="Send SMS with Twilio and Node.js"
+                    description="Tutorial prático de integração com Twilio"
+                    youtubeId="HLqM6yo_YA0"
                   />
                 </div>
                 <div className="mt-4">
@@ -1646,22 +1646,22 @@ export default function Help() {
                   <VideoTutorial
                     title="Resend: Configuração Completa do Zero"
                     description="Como criar conta, verificar domínio e enviar o primeiro email"
-                    youtubeId="T2xaiw7VK4c"
+                    youtubeId="omdy7tqAMWI"
                   />
                   <VideoTutorial
-                    title="Como Configurar DNS para Email (DKIM, SPF, DMARC)"
+                    title="Configurar DNS para Email - DKIM, SPF, DMARC"
                     description="Tutorial detalhado sobre registros DNS para autenticação de email"
-                    youtubeId="J3ySLqFiSMM"
+                    youtubeId="ixLAsfSQOb4"
                   />
                   <VideoTutorial
-                    title="Verificando Domínio no Resend"
-                    description="Passo a passo para verificar seu domínio e criar API Keys"
-                    youtubeId="YNfV4ASLaGE"
+                    title="Email Setup com Resend e DNS"
+                    description="Passo a passo para configurar MX, TXT e DKIM records"
+                    youtubeId="gpwAzPfuf4M"
                   />
                   <VideoTutorial
-                    title="DNS Records Explained (DKIM, SPF, DMARC)"
-                    description="Explicação técnica de cada tipo de registro DNS para email"
-                    youtubeId="qoUNrXr-FsM"
+                    title="SPF, DKIM e DMARC Explicados"
+                    description="Entenda cada tipo de registro DNS para email"
+                    youtubeId="7d_5zVxdGPY"
                   />
                 </div>
 
