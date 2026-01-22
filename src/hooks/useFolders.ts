@@ -162,11 +162,13 @@ export const useFolders = () => {
     }
   }, [user, folders, setFolders]);
 
+  // Note: Initial loading is now handled by useDataInitializer in AppLayout
+  // This useEffect only triggers if folders are empty and user exists (edge case)
   useEffect(() => {
-    if (user) {
+    if (user && folders.length === 0) {
       loadFolders();
     }
-  }, [user, loadFolders]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     folders,

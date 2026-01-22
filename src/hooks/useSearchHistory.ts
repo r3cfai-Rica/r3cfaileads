@@ -123,11 +123,13 @@ export const useSearchHistory = () => {
     }
   }, [user, setSearchHistory]);
 
+  // Note: Initial loading is now handled by useDataInitializer in AppLayout
+  // This useEffect only triggers if search history is empty and user exists (edge case)
   useEffect(() => {
-    if (user) {
+    if (user && searchHistory.length === 0) {
       loadSearchHistory();
     }
-  }, [user, loadSearchHistory]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     searchHistory,

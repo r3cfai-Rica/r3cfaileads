@@ -133,12 +133,13 @@ export const useCTAs = () => {
     }
   }, [user, setCTAs, toast, language]);
 
-  // Load CTAs when user changes
+  // Note: Initial loading is now handled by useDataInitializer in AppLayout
+  // This useEffect only triggers if CTAs are empty and user exists (edge case)
   useEffect(() => {
-    if (user) {
+    if (user && ctas.length === 0) {
       loadCTAs();
     }
-  }, [user, loadCTAs]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     ctas,

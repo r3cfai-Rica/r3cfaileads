@@ -154,11 +154,13 @@ export const useLeads = () => {
     }
   }, [user, setLeads]);
 
+  // Note: Initial loading is now handled by useDataInitializer in AppLayout
+  // This useEffect only triggers if leads are empty and user exists (edge case)
   useEffect(() => {
-    if (user) {
+    if (user && leads.length === 0) {
       loadLeads();
     }
-  }, [user, loadLeads]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     leads,
