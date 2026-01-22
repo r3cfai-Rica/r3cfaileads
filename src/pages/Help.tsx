@@ -673,11 +673,11 @@ export default function Help() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Phone className="h-5 w-5 text-purple-500" />
-                <CardTitle>Configurar Webhook do Twilio (SMS)</CardTitle>
+                <Phone className="h-5 w-5 text-blue-500" />
+                <CardTitle>Guia COMPLETO: Configurar SMS via Twilio</CardTitle>
               </div>
               <CardDescription>
-                Configure o Twilio para encaminhar respostas de SMS para sua Caixa de Entrada
+                Tutorial detalhado DO ZERO - Criação de conta, compra de número e configuração de webhook
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
