@@ -146,7 +146,8 @@ const VideoTutorial: React.FC<VideoTutorialProps> = ({ title, description, youtu
 };
 
 export default function Help() {
-  const { language } = useApp();
+  const { language, user } = useApp();
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="space-y-6">
@@ -162,8 +163,8 @@ export default function Help() {
         Aprenda como configurar os webhooks para receber respostas de <span className="font-bold text-green-600">WhatsApp</span>, <span className="font-bold text-blue-600">SMS</span> e <span className="font-bold text-orange-500">Email</span> diretamente na sua Caixa de Entrada.
       </p>
 
-      {/* Premium Cost Calculator */}
-      <PremiumCostCalculator />
+      {/* Premium Cost Calculator - Admin Only */}
+      {isAdmin && <PremiumCostCalculator />}
 
       <Tabs defaultValue="whatsapp" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
