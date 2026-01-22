@@ -170,81 +170,498 @@ export default function Help() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-green-500" />
-                <CardTitle>Configurar Webhook do WhatsApp Business API</CardTitle>
+                <CardTitle>Guia COMPLETO: Configurar WhatsApp Business API</CardTitle>
               </div>
               <CardDescription>
-                Siga os passos abaixo para receber mensagens de WhatsApp na sua Caixa de Entrada
+                Tutorial detalhado DO ZERO - Inclui criação de App na Meta, configuração de webhook e primeiro teste
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2 mb-6">
+            <CardContent className="space-y-8">
+              {/* Resumo Executivo */}
+              <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-lg p-5">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  Resumo: O que você vai configurar
+                </h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-green-600 mb-1">📱 Meta Business Suite</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• Conta Business verificada</li>
+                      <li>• Número de telefone</li>
+                      <li>• App no Meta Developers</li>
+                    </ul>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-green-600 mb-1">🔗 Webhook</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• URL de callback</li>
+                      <li>• Token de verificação</li>
+                      <li>• Eventos de mensagem</li>
+                    </ul>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-green-600 mb-1">⚙️ No App</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• Access Token</li>
+                      <li>• Phone Number ID</li>
+                      <li>• Número de envio</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm"><strong>⏱️ Tempo estimado:</strong> 30-60 minutos (verificação da Meta pode levar mais)</p>
+                </div>
+              </div>
+
+              {/* Pré-requisitos */}
+              <div className="border border-yellow-500/30 bg-yellow-500/5 rounded-lg p-5">
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-yellow-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  ⚠️ PRÉ-REQUISITOS OBRIGATÓRIOS
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Antes de começar, você precisa ter:
+                </p>
+                <div className="grid md:grid-cols-2 gap-3 mt-4">
+                  <div className="p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">✅ Conta no Facebook</p>
+                    <p className="text-xs text-muted-foreground">Conta pessoal ativa para acessar o Meta for Developers</p>
+                  </div>
+                  <div className="p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">✅ Meta Business Account</p>
+                    <p className="text-xs text-muted-foreground">Conta business para associar ao WhatsApp</p>
+                  </div>
+                  <div className="p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">✅ Número de Telefone</p>
+                    <p className="text-xs text-muted-foreground">Número que NÃO esteja vinculado ao WhatsApp pessoal</p>
+                  </div>
+                  <div className="p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">✅ Verificação de Negócio</p>
+                    <p className="text-xs text-muted-foreground">CNPJ ou documentos da empresa (para sair do modo teste)</p>
+                  </div>
+                </div>
+                <Warning>
+                  <strong>IMPORTANTE:</strong> O número usado para a API do WhatsApp Business <strong className="text-red-500">NÃO PODE</strong> estar 
+                  vinculado a um WhatsApp pessoal. Use um número novo ou desvincule o existente.
+                </Warning>
+              </div>
+
+              {/* URLs importantes */}
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="bg-muted/50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Globe className="h-4 w-4 text-primary" />
-                    <span className="font-medium">URL do Webhook</span>
+                    <span className="font-medium">URL do Webhook (copie!)</span>
                   </div>
                   <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-whatsapp`} />
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Key className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Token de Verificação</span>
+                    <span className="font-medium">Token de Verificação (copie!)</span>
                   </div>
                   <CopyableUrl url="lovable_inbox_verify" />
                 </div>
               </div>
 
-              <Step number={1} title="Acesse o Meta for Developers">
-                <p>Vá para <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">developers.facebook.com <ExternalLink className="h-3 w-3" /></a> e faça login com sua conta do Facebook.</p>
-              </Step>
+              {/* PARTE 1: Criar App na Meta */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">1</span>
+                  PARTE 1: Criar App no Meta for Developers
+                </h3>
+                
+                <Step number={1} title="Acesse o Meta for Developers">
+                  <p>Vá para <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 font-medium">developers.facebook.com <ExternalLink className="h-3 w-3" /></a></p>
+                  <p className="mt-2 text-sm">Faça login com sua conta do Facebook.</p>
+                </Step>
 
-              <Step number={2} title="Selecione seu App do WhatsApp Business">
-                <p>No painel, clique no seu app que está configurado com a API do WhatsApp Business. Se ainda não tem um app, crie um novo selecionando "WhatsApp" como produto.</p>
-              </Step>
+                <Step number={2} title="Crie um novo App">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Clique em <strong className="text-green-500">My Apps</strong> no canto superior direito</li>
+                    <li>Clique em <strong>Create App</strong></li>
+                    <li>Selecione <strong>"Other"</strong> como tipo de uso</li>
+                    <li>Selecione <strong>"Business"</strong> como tipo de app</li>
+                    <li>Dê um nome ao app (ex: "R3CF WhatsApp")</li>
+                    <li>Clique em <strong>Create App</strong></li>
+                  </ol>
+                </Step>
 
-              <Step number={3} title="Configure o Webhook">
-                <ol className="list-decimal list-inside space-y-2 mt-2">
-                  <li>No menu lateral, clique em <strong>WhatsApp</strong> → <strong>Configuration</strong></li>
-                  <li>Na seção "Webhook", clique em <strong>Edit</strong></li>
-                  <li>Cole a URL do webhook (acima) no campo "Callback URL"</li>
-                  <li>Cole o token de verificação no campo "Verify Token"</li>
-                  <li>Clique em <strong>Verify and Save</strong></li>
-                </ol>
-              </Step>
+                <Step number={3} title="Adicione o produto WhatsApp">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Na tela do App Dashboard, role até "Add Products to Your App"</li>
+                    <li>Encontre <strong className="text-green-500">WhatsApp</strong> e clique em <strong>Set Up</strong></li>
+                    <li>Selecione sua Meta Business Account (ou crie uma nova)</li>
+                  </ol>
+                </Step>
 
-              <Step number={4} title="Inscreva-se nos Eventos">
-                <ol className="list-decimal list-inside space-y-2 mt-2">
-                  <li>Após verificar o webhook, clique em <strong>Manage</strong></li>
-                  <li>Marque a opção <strong>messages</strong></li>
-                  <li>Clique em <strong>Done</strong></li>
-                </ol>
-              </Step>
+                <Tip>
+                  Se você não tem uma Meta Business Account, o assistente vai te guiar para criar uma. 
+                  Siga os passos e tenha em mãos os dados da sua empresa.
+                </Tip>
+              </div>
 
-              <Tip>
-                <strong>Pronto!</strong> Agora quando alguém responder uma mensagem enviada pelo app, a resposta aparecerá automaticamente na sua Caixa de Entrada.
-              </Tip>
+              {/* PARTE 2: Configurar Número de Telefone */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">2</span>
+                  PARTE 2: Configurar Número de Telefone
+                </h3>
 
-              <Warning>
-                O número de telefone precisa estar verificado e aprovado pela Meta. Mensagens de teste podem ser enviadas apenas para números registrados como "Test Numbers" durante o desenvolvimento.
-              </Warning>
+                <Step number={1} title="Acesse a seção 'API Setup'">
+                  <p>No menu lateral, clique em <strong>WhatsApp</strong> → <strong>API Setup</strong></p>
+                </Step>
+
+                <Step number={2} title="Adicione seu número de telefone">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Na seção "From", você verá um número de teste da Meta</li>
+                    <li>Para usar seu próprio número, clique em <strong>Add phone number</strong></li>
+                    <li>Preencha:
+                      <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                        <li><strong>Display Name:</strong> Nome que aparece no WhatsApp (ex: "Empresa XYZ")</li>
+                        <li><strong>Phone Number:</strong> Seu número com código do país (+55...)</li>
+                      </ul>
+                    </li>
+                    <li>Escolha como verificar: <strong>SMS</strong> ou <strong>Ligação</strong></li>
+                    <li>Insira o código de verificação recebido</li>
+                  </ol>
+                </Step>
+
+                <Step number={3} title="Anote o Phone Number ID">
+                  <p>Após verificar, você verá o <strong>Phone Number ID</strong> na página. Copie esse valor!</p>
+                  <div className="bg-muted/50 rounded-lg p-4 mt-3">
+                    <p className="text-sm font-medium mb-2">Exemplo de Phone Number ID:</p>
+                    <code className="text-xs bg-background p-2 rounded block">123456789012345</code>
+                    <p className="text-xs text-muted-foreground mt-2">É um número grande, normalmente 15 dígitos</p>
+                  </div>
+                </Step>
+
+                <Warning>
+                  <strong>Modo de Teste:</strong> Enquanto sua empresa não for verificada, você só pode enviar mensagens 
+                  para números adicionados como "Test Numbers". Para produção, complete a verificação do negócio.
+                </Warning>
+              </div>
+
+              {/* PARTE 3: Gerar Access Token */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">3</span>
+                  PARTE 3: Gerar Access Token Permanente
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  O token temporário da página API Setup expira em 24h. Vamos criar um permanente.
+                </p>
+
+                <Step number={1} title="Vá para Business Settings">
+                  <p>Acesse <a href="https://business.facebook.com/settings" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 font-medium">business.facebook.com/settings <ExternalLink className="h-3 w-3" /></a></p>
+                </Step>
+
+                <Step number={2} title="Crie um System User">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>No menu lateral, clique em <strong>Users</strong> → <strong>System Users</strong></li>
+                    <li>Clique em <strong>Add</strong></li>
+                    <li>Nome: <code className="bg-muted px-1 rounded">R3CF API</code></li>
+                    <li>Role: Selecione <strong>Admin</strong></li>
+                    <li>Clique em <strong>Create System User</strong></li>
+                  </ol>
+                </Step>
+
+                <Step number={3} title="Adicione Assets ao System User">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Clique no System User criado</li>
+                    <li>Clique em <strong>Add Assets</strong></li>
+                    <li>Selecione <strong>Apps</strong> → Seu app do WhatsApp</li>
+                    <li>Marque <strong>Full Control</strong></li>
+                    <li>Clique em <strong>Save Changes</strong></li>
+                  </ol>
+                </Step>
+
+                <Step number={4} title="Gere o Access Token">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Na página do System User, clique em <strong>Generate New Token</strong></li>
+                    <li>Selecione seu app do WhatsApp</li>
+                    <li>Marque as permissões:
+                      <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                        <li><code className="bg-muted px-1 rounded">whatsapp_business_messaging</code></li>
+                        <li><code className="bg-muted px-1 rounded">whatsapp_business_management</code></li>
+                      </ul>
+                    </li>
+                    <li>Selecione <strong>Never Expire</strong> para o token não expirar</li>
+                    <li>Clique em <strong>Generate Token</strong></li>
+                  </ol>
+                </Step>
+
+                <Warning>
+                  <strong className="text-red-500">🚨 COPIE O TOKEN AGORA!</strong> Ele só aparece UMA VEZ. 
+                  O token é muito longo (começa com "EAA..."). Guarde em um lugar seguro!
+                </Warning>
+
+                <div className="bg-muted/50 rounded-lg p-4 mt-4">
+                  <p className="text-sm font-medium mb-2">Exemplo de Access Token:</p>
+                  <code className="text-xs bg-background p-2 rounded block break-all">EAABsbCS1iHgBAKm7ZCZBZBgZD...</code>
+                  <p className="text-xs text-muted-foreground mt-2">O token real é muito maior (centenas de caracteres)</p>
+                </div>
+              </div>
+
+              {/* PARTE 4: Configurar Webhook */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">4</span>
+                  PARTE 4: Configurar Webhook (Receber Mensagens)
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  O webhook permite que seu app receba mensagens quando leads respondem no WhatsApp.
+                </p>
+
+                <Step number={1} title="Acesse a Configuration do WhatsApp">
+                  <p>No menu lateral do seu App, clique em <strong>WhatsApp</strong> → <strong>Configuration</strong></p>
+                </Step>
+
+                <Step number={2} title="Configure o Webhook">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Na seção "Webhook", clique em <strong>Edit</strong></li>
+                    <li>Cole no campo <strong>Callback URL</strong>:</li>
+                  </ol>
+                  <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-whatsapp`} />
+                  <ol className="list-decimal list-inside space-y-2 mt-2" start={3}>
+                    <li>Cole no campo <strong>Verify Token</strong>:</li>
+                  </ol>
+                  <CopyableUrl url="lovable_inbox_verify" />
+                  <ol className="list-decimal list-inside space-y-2 mt-2" start={4}>
+                    <li>Clique em <strong>Verify and Save</strong></li>
+                  </ol>
+                </Step>
+
+                <Step number={3} title="Inscreva-se nos eventos de mensagem">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Após verificar, clique em <strong>Manage</strong></li>
+                    <li>Encontre <strong>messages</strong> na lista</li>
+                    <li>Marque a checkbox para ativar</li>
+                    <li>Clique em <strong>Done</strong></li>
+                  </ol>
+                  <div className="mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <p className="text-sm text-green-700">✅ Se aparecer "Subscribed", o webhook está configurado!</p>
+                  </div>
+                </Step>
+
+                <Tip>
+                  Se a verificação falhar, verifique se a URL está correta e se não tem espaços. 
+                  O sistema espera o token exato "lovable_inbox_verify".
+                </Tip>
+              </div>
+
+              {/* PARTE 5: Configurar no App */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center text-sm">5</span>
+                  PARTE 5: Configurar no App R3CF Leads Flow
+                </h3>
+
+                <Step number={1} title="Vá para Configurações">
+                  <p>No menu lateral, clique em <strong>Configurações</strong>.</p>
+                </Step>
+
+                <Step number={2} title="Role até 'Credenciais de Mensagens' e clique na aba WhatsApp">
+                  <p>Você verá 2 campos para preencher:</p>
+                </Step>
+
+                <div className="bg-muted/50 rounded-lg p-5 mt-3 space-y-4">
+                  <div className="border-b pb-4">
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <Key className="h-4 w-4 text-primary" />
+                      Access Token
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">O token permanente que você gerou (começa com EAA...)</p>
+                    <code className="text-xs bg-background p-2 rounded block mt-2 break-all">EAABsbCS1iHgBAKm7ZCZBZBgZD...</code>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-green-500" />
+                      Phone Number ID
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">O ID do seu número na Meta (15 dígitos)</p>
+                    <code className="text-xs bg-background p-2 rounded block mt-2">123456789012345</code>
+                  </div>
+                </div>
+
+                <Step number={3} title="Clique em 'Salvar Configurações WhatsApp'">
+                  <p>O status deve mudar para <strong className="text-green-500">✅ Configurado</strong>.</p>
+                </Step>
+              </div>
+
+              {/* PARTE 6: Adicionar Test Numbers */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-yellow-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">6</span>
+                  PARTE 6: Adicionar Números de Teste (Modo Desenvolvimento)
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  Enquanto sua empresa não for verificada pela Meta, você só pode enviar mensagens para números cadastrados como teste.
+                </p>
+
+                <Step number={1} title="Volte para API Setup">
+                  <p>No menu lateral, clique em <strong>WhatsApp</strong> → <strong>API Setup</strong></p>
+                </Step>
+
+                <Step number={2} title="Adicione números de teste">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Role até a seção <strong>"To"</strong></li>
+                    <li>Clique em <strong>Add phone number</strong></li>
+                    <li>Adicione números para teste (seu celular, parceiros, etc.)</li>
+                    <li>Cada número precisa receber um código de verificação</li>
+                  </ol>
+                </Step>
+
+                <Warning>
+                  <strong>Limite:</strong> No modo teste, você pode ter até 5 números de teste. 
+                  Para enviar para qualquer número, complete a verificação do negócio.
+                </Warning>
+              </div>
+
+              {/* PARTE 7: Testar */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">7</span>
+                  PARTE 7: Fazer o Primeiro Teste
+                </h3>
+
+                <Step number={1} title="Crie um lead de teste">
+                  <p>Vá em <strong>Prospecção AI</strong>, faça uma busca e salve um lead com um número de WhatsApp que está nos seus Test Numbers.</p>
+                </Step>
+
+                <Step number={2} title="Envie uma mensagem de teste">
+                  <p>No <strong>CRM</strong>, clique no lead e depois em <strong className="text-green-500">📱 Enviar WhatsApp</strong>.</p>
+                </Step>
+
+                <Step number={3} title="Verifique o recebimento">
+                  <p>A mensagem deve chegar no WhatsApp do número de teste em segundos.</p>
+                </Step>
+
+                <Step number={4} title="Responda a mensagem">
+                  <p>Responda pelo WhatsApp e verifique se a resposta aparece na <strong>Caixa de Entrada</strong> do app!</p>
+                </Step>
+
+                <Tip>
+                  <strong>Sucesso!</strong> Se a resposta aparecer na Caixa de Entrada, seu webhook está funcionando perfeitamente.
+                </Tip>
+              </div>
+
+              {/* Verificação de Negócio */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-purple-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">+</span>
+                  BÔNUS: Verificação de Negócio (Para Produção)
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  Para sair do modo teste e enviar mensagens para qualquer número, você precisa verificar seu negócio.
+                </p>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-2">📄 Documentos Necessários:</h4>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• CNPJ da empresa</li>
+                      <li>• Contrato Social ou equivalente</li>
+                      <li>• Conta de luz/telefone em nome da empresa</li>
+                      <li>• Site da empresa (opcional mas recomendado)</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-2">⏱️ Tempo de Aprovação:</h4>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• Geralmente 1-3 dias úteis</li>
+                      <li>• Pode demorar mais se houver pendências</li>
+                      <li>• Meta pode solicitar documentos adicionais</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <Step number={1} title="Inicie a verificação">
+                  <p>Acesse <a href="https://business.facebook.com/settings/security" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">business.facebook.com/settings/security <ExternalLink className="h-3 w-3" /></a> e clique em "Start Verification"</p>
+                </Step>
+              </div>
+
+              {/* Custos */}
+              <div className="bg-gradient-to-r from-muted/50 to-muted/30 border rounded-lg p-5 mt-4">
+                <h4 className="font-bold mb-4">💰 Custos do WhatsApp Business API:</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Conversas Iniciadas pelo Negócio</p>
+                      <p className="text-muted-foreground">~$0.05 USD por conversa (varia por país)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Conversas Iniciadas pelo Cliente</p>
+                      <p className="text-muted-foreground">~$0.03 USD por conversa (mais barato)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">1.000 conversas GRÁTIS/mês</p>
+                      <p className="text-muted-foreground">Meta oferece 1.000 conversas gratuitas todo mês</p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-4">
+                  * Preços podem variar. Consulte a <a href="https://developers.facebook.com/docs/whatsapp/pricing" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">tabela oficial da Meta</a>.
+                </p>
+              </div>
 
               {/* Video Tutorial Section */}
               <div className="border-t pt-6 mt-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Video className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold">Vídeo Tutorial</h3>
+                  <h3 className="font-semibold">Vídeos Tutoriais</h3>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <VideoTutorial
-                    title="WhatsApp Cloud API - Configuração Completa"
-                    description="Tutorial oficial da Meta sobre como configurar webhooks no WhatsApp Business API"
+                    title="WhatsApp Cloud API - Configuração Completa 2024"
+                    description="Tutorial atualizado sobre como criar app e configurar a API do WhatsApp"
                     youtubeId="CEt_KMMv3V8"
                   />
                   <VideoTutorial
-                    title="WhatsApp Webhooks - Passo a Passo"
-                    description="Como configurar webhooks no Meta for Developers para receber mensagens"
+                    title="Criar System User e Token Permanente"
+                    description="Como gerar um token que não expira para a API do WhatsApp"
+                    youtubeId="MBoghE9Y-9c"
+                  />
+                  <VideoTutorial
+                    title="Configurar Webhooks no WhatsApp Business API"
+                    description="Passo a passo para receber mensagens via webhook"
                     youtubeId="DBNiWopmqcw"
                   />
+                  <VideoTutorial
+                    title="Verificação de Negócio na Meta"
+                    description="Como verificar sua empresa para sair do modo teste"
+                    youtubeId="Jl3tuY4v1FI"
+                  />
+                </div>
+
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-medium mb-3">🔗 Links Úteis:</h4>
+                  <div className="grid md:grid-cols-2 gap-2 text-sm">
+                    <a href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      📘 Documentação Oficial WhatsApp Cloud API <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      🔔 Documentação de Webhooks <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://business.facebook.com/settings" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      ⚙️ Meta Business Settings <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://developers.facebook.com/docs/whatsapp/pricing" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      💰 Tabela de Preços WhatsApp <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </CardContent>
