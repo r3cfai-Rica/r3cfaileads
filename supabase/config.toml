@@ -37,7 +37,13 @@ verify_jwt = false
 [functions.send-whatsapp]
 verify_jwt = false
 
+[functions.send-whatsapp-evolution]
+verify_jwt = false
+
 [functions.webhook-whatsapp]
+verify_jwt = false
+
+[functions.webhook-whatsapp-evolution]
 verify_jwt = false
 
 [functions.webhook-sms]
