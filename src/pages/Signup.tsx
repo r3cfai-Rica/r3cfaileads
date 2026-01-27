@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, Mail, Lock, User, ArrowRight, Check } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { usePasswordValidation } from '@/hooks/usePasswordValidation';
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 
 
 export const Signup: React.FC = () => {
@@ -19,6 +21,7 @@ export const Signup: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
+  const passwordStrength = usePasswordValidation(password);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -29,13 +32,14 @@ export const Signup: React.FC = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      toast.error('As senhas não coincidem');
+    
+    if (!passwordStrength.isValid) {
+      toast.error('A senha não atende aos requisitos mínimos de segurança');
       return;
     }
     
-    if (password.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres');
+    if (password !== confirmPassword) {
+      toast.error('As senhas não coincidem');
       return;
     }
     
@@ -195,6 +199,7 @@ export const Signup: React.FC = () => {
                     required
                   />
                 </div>
+                <PasswordStrengthIndicator strength={passwordStrength} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">{t.auth.confirmPassword}</Label>
@@ -216,7 +221,7 @@ export const Signup: React.FC = () => {
                 variant="hero"
                 className="w-full"
                 size="lg"
-                disabled={isLoading || password !== confirmPassword}
+                disabled={isLoading || password !== confirmPassword || !passwordStrength.isValid}
               >
                 {isLoading ? t.common.loading : t.plans.startFree}
                 {!isLoading && <ArrowRight className="w-4 h-4 ml-2" />}
