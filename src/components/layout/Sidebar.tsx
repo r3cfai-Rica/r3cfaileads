@@ -19,6 +19,7 @@ import {
   Inbox,
   HelpCircle,
   Wrench,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -145,6 +146,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
             >
               <Wrench className="w-5 h-5 flex-shrink-0" />
               {!isCollapsed && <span className="truncate">{language === 'pt-BR' ? 'Ferramentas' : 'Tools'}</span>}
+            </Link>
+            <Link
+              to="/admin/customers"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+                location.pathname === '/admin/customers'
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
+                  : 'hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground'
+              )}
+            >
+              <Users className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && <span className="truncate">{language === 'pt-BR' ? 'CRM Clientes' : 'Customer CRM'}</span>}
             </Link>
           </div>
         )}

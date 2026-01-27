@@ -24,6 +24,7 @@ import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import AdminTools from "./pages/AdminTools";
 import UsageMonitorPage from "./pages/UsageMonitorPage";
+import AdminCustomers from "./pages/AdminCustomers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/tools" element={<AdminTools />} />
               <Route path="/admin/usage" element={<UsageMonitorPage />} />
+              <Route path="/admin/customers" element={<AdminCustomers />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
