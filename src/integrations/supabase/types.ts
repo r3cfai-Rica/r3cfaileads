@@ -465,6 +465,7 @@ export type Database = {
           email_from_address: string | null
           email_from_name: string | null
           id: string
+          metadata: Json | null
           resend_api_key: string | null
           sms_configured: boolean
           twilio_account_sid: string | null
@@ -482,6 +483,7 @@ export type Database = {
           email_from_address?: string | null
           email_from_name?: string | null
           id?: string
+          metadata?: Json | null
           resend_api_key?: string | null
           sms_configured?: boolean
           twilio_account_sid?: string | null
@@ -499,6 +501,7 @@ export type Database = {
           email_from_address?: string | null
           email_from_name?: string | null
           id?: string
+          metadata?: Json | null
           resend_api_key?: string | null
           sms_configured?: boolean
           twilio_account_sid?: string | null
