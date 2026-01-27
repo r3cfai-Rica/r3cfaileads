@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp, MessageLog } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,36 @@ export const Messaging: React.FC = () => {
   const [senderCompany, setSenderCompany] = useState('');
   const [emailTone, setEmailTone] = useState<'formal' | 'casual' | 'persuasive' | 'friendly'>('persuasive');
   const [selectedCTAId, setSelectedCTAId] = useState<string>('');
+  
+  // WhatsApp provider detection
+  const [whatsappProvider, setWhatsappProvider] = useState<'meta' | 'evolution'>('meta');
+
+  // Load user's WhatsApp provider preference
+  useEffect(() => {
+    const loadWhatsAppProvider = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data } = await supabase
+          .from('user_messaging_credentials')
+          .select('metadata')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (data?.metadata && typeof data.metadata === 'object') {
+          const metadata = data.metadata as Record<string, unknown>;
+          if (metadata.whatsapp_provider === 'evolution') {
+            setWhatsappProvider('evolution');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading WhatsApp provider:', error);
+      }
+    };
+
+    loadWhatsAppProvider();
+  }, []);
 
   const folderLeads = leads.filter(l => l.folderId === selectedFolderId);
   const eligibleLeads = folderLeads.filter(l => {
@@ -265,12 +295,18 @@ export const Messaging: React.FC = () => {
             whatsappMessage = `${whatsappMessage}\n\n📷 ${selectedCTA.imageUrl}`;
           }
           
-          const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+          // Route to correct WhatsApp provider
+          const functionName = whatsappProvider === 'evolution' 
+            ? 'send-whatsapp-evolution' 
+            : 'send-whatsapp';
+          
+          const { data, error } = await supabase.functions.invoke(functionName, {
             body: {
               to: lead.whatsapp,
               message: whatsappMessage,
               leadId: lead.id,
               leadName: lead.name,
+              imageUrl: selectedCTA?.imageUrl,
             },
           });
 
