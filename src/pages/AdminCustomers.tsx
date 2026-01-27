@@ -73,7 +73,7 @@ interface Customer {
   searches_used: number;
 }
 
-type PlanFilter = 'all' | 'basic' | 'premium';
+type PlanFilter = 'all' | 'free' | 'basic' | 'premium';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export default function AdminCustomers() {
@@ -88,7 +88,7 @@ export default function AdminCustomers() {
   const [contactMessage, setContactMessage] = useState('');
   const [contactSubject, setContactSubject] = useState('');
 
-  // Fetch paid customers from database
+  // Fetch all customers from database (free trial + paid)
   useEffect(() => {
     const fetchCustomers = async () => {
       setIsLoading(true);
@@ -96,7 +96,6 @@ export default function AdminCustomers() {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('plan', 'paid')
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -127,7 +126,10 @@ export default function AdminCustomers() {
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesPlan = planFilter === 'all' || customer.plan_type === planFilter;
+    const matchesPlan = planFilter === 'all' || 
+      (planFilter === 'free' && customer.plan === 'free') ||
+      (planFilter === 'basic' && customer.plan === 'paid' && customer.plan_type === 'basic') ||
+      (planFilter === 'premium' && customer.plan === 'paid' && customer.plan_type === 'premium');
 
     const matchesStatus =
       statusFilter === 'all' ||
@@ -177,9 +179,11 @@ export default function AdminCustomers() {
   const stats = {
     totalCustomers: customers.length,
     activeCustomers: customers.filter(c => c.is_active).length,
-    basicPlan: customers.filter(c => c.plan_type === 'basic').length,
-    premiumPlan: customers.filter(c => c.plan_type === 'premium').length,
+    freeTrial: customers.filter(c => c.plan === 'free').length,
+    basicPlan: customers.filter(c => c.plan === 'paid' && c.plan_type === 'basic').length,
+    premiumPlan: customers.filter(c => c.plan === 'paid' && c.plan_type === 'premium').length,
     totalRevenue: customers.reduce((acc, c) => {
+      if (c.plan !== 'paid') return acc;
       // Basic = R$150 one-time, Premium = R$350/month
       return acc + (c.plan_type === 'premium' ? 350 : 150);
     }, 0),
@@ -205,7 +209,7 @@ export default function AdminCustomers() {
             CRM de Clientes
           </h1>
           <p className="text-muted-foreground mt-1">
-            Gerencie e contate seus clientes pagantes
+            Gerencie e contate todos os seus usuários
           </p>
         </div>
         <Badge variant="gradient" className="w-fit">
@@ -239,6 +243,20 @@ export default function AdminCustomers() {
               <div>
                 <p className="text-2xl font-bold">{stats.activeCustomers}</p>
                 <p className="text-xs text-muted-foreground">Ativos</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant="stat">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.freeTrial}</p>
+                <p className="text-xs text-muted-foreground">Teste Grátis</p>
               </div>
             </div>
           </CardContent>
@@ -324,6 +342,7 @@ export default function AdminCustomers() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="free">Teste Grátis</SelectItem>
                 <SelectItem value="basic">Basic</SelectItem>
                 <SelectItem value="premium">Premium</SelectItem>
               </SelectContent>
@@ -352,7 +371,7 @@ export default function AdminCustomers() {
               <p className="text-muted-foreground">
                 {hasActiveFilters
                   ? 'Nenhum cliente encontrado com os filtros aplicados'
-                  : 'Nenhum cliente pagante ainda'}
+                  : 'Nenhum usuário cadastrado ainda'}
               </p>
             </div>
           ) : (
@@ -380,9 +399,19 @@ export default function AdminCustomers() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={customer.plan_type === 'premium' ? 'gradient' : 'secondary'}
+                          variant={
+                            customer.plan === 'free' 
+                              ? 'outline' 
+                              : customer.plan_type === 'premium' 
+                                ? 'gradient' 
+                                : 'secondary'
+                          }
                         >
-                          {customer.plan_type === 'premium' ? 'Premium' : 'Basic'}
+                          {customer.plan === 'free' 
+                            ? 'Teste Grátis' 
+                            : customer.plan_type === 'premium' 
+                              ? 'Premium' 
+                              : 'Basic'}
                         </Badge>
                       </TableCell>
                       <TableCell>
