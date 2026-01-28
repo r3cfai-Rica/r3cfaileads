@@ -73,10 +73,13 @@ serve(async (req) => {
     // Format phone number (remove non-digits)
     const formattedPhone = to.replace(/\D/g, '');
     
+    // Remove trailing slash from URL if present
+    const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
+    
     console.log(`Sending WhatsApp via Evolution API to: ${formattedPhone}`);
 
     // Send text message
-    const textResponse = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE_NAME}`, {
+    const textResponse = await fetch(`${baseUrl}/message/sendText/${EVOLUTION_INSTANCE_NAME}`, {
       method: 'POST',
       headers: {
         'apikey': EVOLUTION_API_KEY,
@@ -100,7 +103,7 @@ serve(async (req) => {
     // Send image if provided
     if (imageUrl) {
       console.log(`Sending image: ${imageUrl}`);
-      const imageResponse = await fetch(`${EVOLUTION_API_URL}/message/sendMedia/${EVOLUTION_INSTANCE_NAME}`, {
+      const imageResponse = await fetch(`${baseUrl}/message/sendMedia/${EVOLUTION_INSTANCE_NAME}`, {
         method: 'POST',
         headers: {
           'apikey': EVOLUTION_API_KEY,
