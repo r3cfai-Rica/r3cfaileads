@@ -51,3 +51,9 @@ verify_jwt = false
 
 [functions.webhook-email]
 verify_jwt = false
+
+[functions.send-telegram]
+verify_jwt = false
+
+[functions.webhook-telegram]
+verify_jwt = false
