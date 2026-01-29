@@ -78,7 +78,7 @@ export interface MessageLog {
   id: string;
   leadId: string;
   leadName: string;
-  channel: 'whatsapp' | 'sms' | 'email';
+  channel: 'whatsapp' | 'sms' | 'email' | 'telegram';
   message: string;
   status: 'sent' | 'failed' | 'replied';
   sentAt: Date;

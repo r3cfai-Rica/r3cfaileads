@@ -35,6 +35,7 @@ import {
   Copy,
   RefreshCw,
   Image as ImageIcon,
+  BotMessageSquare,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateEmailWithAI, GeneratedEmail } from '@/lib/ai-api';
@@ -48,7 +49,7 @@ export const Messaging: React.FC = () => {
   
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
-  const [channel, setChannel] = useState<'whatsapp' | 'sms' | 'email'>('email');
+  const [channel, setChannel] = useState<'whatsapp' | 'sms' | 'email' | 'telegram'>('email');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   
@@ -95,6 +96,7 @@ export const Messaging: React.FC = () => {
     if (channel === 'whatsapp') return !!l.whatsapp;
     if (channel === 'sms') return !!l.phone;
     if (channel === 'email') return !!l.email;
+    if (channel === 'telegram') return !!(l as any).telegram;
     return false;
   });
 
@@ -354,6 +356,37 @@ export const Messaging: React.FC = () => {
             sentAt: new Date(),
           });
           successCount++;
+        } else if (channel === 'telegram' && (lead as any).telegram) {
+          // Send Telegram message
+          let telegramMessage = message.trim();
+          if (selectedCTA?.imageUrl) {
+            telegramMessage = `${telegramMessage}\n\n📷 ${selectedCTA.imageUrl}`;
+          }
+          
+          const { data, error } = await supabase.functions.invoke('send-telegram', {
+            body: {
+              chatId: (lead as any).telegram,
+              message: telegramMessage,
+              leadId: lead.id,
+              leadName: lead.name,
+              imageUrl: selectedCTA?.imageUrl,
+            },
+          });
+
+          if (error || !data?.success) {
+            throw new Error(error?.message || data?.error || 'Failed to send Telegram');
+          }
+
+          newLogs.push({
+            id: `log-${Date.now()}-${leadId}`,
+            leadId,
+            leadName: lead.name,
+            channel: 'telegram',
+            message: telegramMessage,
+            status: 'sent',
+            sentAt: new Date(),
+          });
+          successCount++;
         }
       } catch (error) {
         console.error(`Error sending to ${lead.name}:`, error);
@@ -396,6 +429,7 @@ export const Messaging: React.FC = () => {
     whatsapp: MessageCircle,
     sms: Smartphone,
     email: Mail,
+    telegram: BotMessageSquare,
   };
 
   const statusIcon = {
@@ -881,6 +915,12 @@ export const Messaging: React.FC = () => {
                               {t.messaging.email}
                             </div>
                           </SelectItem>
+                          <SelectItem value="telegram">
+                            <div className="flex items-center gap-2">
+                              <BotMessageSquare className="w-4 h-4 text-[#0088cc]" />
+                              {t.messaging.telegram}
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -926,6 +966,7 @@ export const Messaging: React.FC = () => {
                               {channel === 'whatsapp' && lead.whatsapp}
                               {channel === 'sms' && lead.phone}
                               {channel === 'email' && lead.email}
+                              {channel === 'telegram' && (lead as any).telegram}
                             </Badge>
                           </div>
                         ))}
