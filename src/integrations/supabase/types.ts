@@ -256,6 +256,7 @@ export type Database = {
           position: string | null
           sources: string[] | null
           status: string
+          telegram: string | null
           urgency: string
           user_id: string
           whatsapp: string | null
@@ -273,6 +274,7 @@ export type Database = {
           position?: string | null
           sources?: string[] | null
           status?: string
+          telegram?: string | null
           urgency?: string
           user_id: string
           whatsapp?: string | null
@@ -290,6 +292,7 @@ export type Database = {
           position?: string | null
           sources?: string[] | null
           status?: string
+          telegram?: string | null
           urgency?: string
           user_id?: string
           whatsapp?: string | null
