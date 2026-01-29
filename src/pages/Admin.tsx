@@ -63,6 +63,7 @@ import {
 } from 'recharts';
 import { AdminNotifications } from '@/components/admin/AdminNotifications';
 import { useAdminStats } from '@/hooks/useAdminStats';
+import { TrialSlotsManager } from '@/components/admin/TrialSlotsManager';
 
 // Mock users for demo
 const mockUsers: User[] = [
@@ -465,6 +466,9 @@ export const Admin: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Trial Slots Manager */}
+      <TrialSlotsManager />
 
       {/* New Users Chart */}
       <Card>

@@ -461,6 +461,45 @@ export type Database = {
           },
         ]
       }
+      trial_slots: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          granted_at: string | null
+          id: string
+          slot_number: number
+          updated_at: string
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          granted_at?: string | null
+          id?: string
+          slot_number: number
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          granted_at?: string | null
+          id?: string
+          slot_number?: number
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       user_messaging_credentials: {
         Row: {
           created_at: string
