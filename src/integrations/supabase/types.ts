@@ -500,6 +500,65 @@ export type Database = {
         }
         Relationships: []
       }
+      trial_slots_audit: {
+        Row: {
+          action: string
+          admin_email: string
+          admin_id: string
+          created_at: string
+          days_granted: number | null
+          id: string
+          new_expires_at: string | null
+          notes: string | null
+          previous_expires_at: string | null
+          slot_id: string | null
+          slot_number: number
+          target_user_email: string | null
+          target_user_id: string | null
+          target_user_name: string | null
+        }
+        Insert: {
+          action: string
+          admin_email: string
+          admin_id: string
+          created_at?: string
+          days_granted?: number | null
+          id?: string
+          new_expires_at?: string | null
+          notes?: string | null
+          previous_expires_at?: string | null
+          slot_id?: string | null
+          slot_number: number
+          target_user_email?: string | null
+          target_user_id?: string | null
+          target_user_name?: string | null
+        }
+        Update: {
+          action?: string
+          admin_email?: string
+          admin_id?: string
+          created_at?: string
+          days_granted?: number | null
+          id?: string
+          new_expires_at?: string | null
+          notes?: string | null
+          previous_expires_at?: string | null
+          slot_id?: string | null
+          slot_number?: number
+          target_user_email?: string | null
+          target_user_id?: string | null
+          target_user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_slots_audit_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "trial_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_messaging_credentials: {
         Row: {
           created_at: string
