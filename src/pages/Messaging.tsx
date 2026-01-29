@@ -899,6 +899,62 @@ export const Messaging: React.FC = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Saved CTAs Panel for AI Email Tab */}
+              {selectedFolderId && folderCTAs.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">
+                      {language === 'pt-BR' ? 'Gerenciar CTAs' : 'Manage CTAs'}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {language === 'pt-BR' 
+                        ? 'Edite ou exclua CTAs salvos' 
+                        : 'Edit or delete saved CTAs'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2 max-h-60 overflow-y-auto">
+                    {folderCTAs.map((cta) => (
+                      <div
+                        key={cta.id}
+                        className={`group p-2 rounded-lg border transition-colors ${
+                          selectedCTAId === cta.id ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div 
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => setSelectedCTAId(cta.id)}
+                          >
+                            <h4 className="font-medium text-xs mb-0.5 truncate">{cta.title}</h4>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{cta.text}</p>
+                          </div>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => handleEditCTA(cta, e)}
+                              title={language === 'pt-BR' ? 'Editar CTA' : 'Edit CTA'}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={(e) => handleDeleteCTAClick(cta.id, e)}
+                              title={language === 'pt-BR' ? 'Excluir CTA' : 'Delete CTA'}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </TabsContent>
