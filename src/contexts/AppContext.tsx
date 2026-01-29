@@ -187,11 +187,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const role: UserRole = roleData?.role === 'admin' ? 'admin' : 'user';
 
+    // Check for active trial slot
+    const { data: trialSlot } = await supabase
+      .from('trial_slots')
+      .select('*')
+      .eq('user_id', supaUser.id)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    const hasActiveTrial = !!trialSlot;
+
+    // If user has active trial, treat as paid for access purposes
+    const effectivePlan = hasActiveTrial ? 'paid' : (effectiveProfile?.plan === 'paid' ? 'paid' : 'free');
+
     setUser({
       id: supaUser.id,
       name: effectiveProfile?.name || derivedName,
       email,
-      plan: effectiveProfile?.plan === 'paid' ? 'paid' : 'free',
+      plan: effectivePlan as 'free' | 'paid',
       role,
       searchesUsed: effectiveProfile?.searches_used ?? 0,
       leadsUsed: effectiveProfile?.leads_used ?? 0,
