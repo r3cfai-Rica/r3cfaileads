@@ -80,6 +80,13 @@ export const Messaging: React.FC = () => {
   const [deletingCTAId, setDeletingCTAId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
+  // Email Preview Edit States
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [editedSubject, setEditedSubject] = useState('');
+  const [editedBody, setEditedBody] = useState('');
+  const [editedGreeting, setEditedGreeting] = useState('');
+  const [editedSignature, setEditedSignature] = useState('');
+  
   // WhatsApp provider detection
   const [whatsappProvider, setWhatsappProvider] = useState<'meta' | 'evolution'>('meta');
 
@@ -758,6 +765,57 @@ export const Messaging: React.FC = () => {
                               : (language === 'pt-BR' ? 'Preview do Email' : 'Email Preview')}
                           </Badge>
                           <div className="flex gap-2">
+                            {!isEditingEmail ? (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => {
+                                  setIsEditingEmail(true);
+                                  setEditedSubject(generatedEmail.subject);
+                                  setEditedGreeting(generatedEmail.greeting);
+                                  setEditedBody(generatedEmail.body.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?strong>/gi, '**'));
+                                  setEditedSignature(generatedEmail.signature.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?strong>/gi, '**'));
+                                }}
+                                title={language === 'pt-BR' ? 'Editar email' : 'Edit email'}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            ) : (
+                              <>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    // Save the edited email
+                                    setGeneratedEmail({
+                                      ...generatedEmail,
+                                      subject: editedSubject,
+                                      greeting: editedGreeting,
+                                      body: editedBody.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'),
+                                      signature: editedSignature.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'),
+                                    });
+                                    setIsEditingEmail(false);
+                                    toast({
+                                      title: language === 'pt-BR' ? 'Email atualizado!' : 'Email updated!',
+                                      description: language === 'pt-BR' ? 'Suas alterações foram salvas.' : 'Your changes have been saved.',
+                                    });
+                                  }}
+                                  className="text-primary hover:text-primary"
+                                  title={language === 'pt-BR' ? 'Salvar alterações' : 'Save changes'}
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => setIsEditingEmail(false)}
+                                  className="text-destructive hover:text-destructive"
+                                  title={language === 'pt-BR' ? 'Cancelar edição' : 'Cancel editing'}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
                             <Button variant="ghost" size="sm" onClick={handleCopyEmail}>
                               <Copy className="w-4 h-4" />
                             </Button>
@@ -768,38 +826,88 @@ export const Messaging: React.FC = () => {
                         </div>
                         
                         <div className="bg-background rounded-lg p-4 border space-y-3">
-                          <div className="border-b pb-2">
-                            <p className="text-xs text-muted-foreground">{language === 'pt-BR' ? 'Assunto:' : 'Subject:'}</p>
-                            <p className="font-semibold">{generatedEmail.subject}</p>
-                          </div>
-                          <div>
-                            <p className="font-medium">{generatedEmail.greeting}</p>
-                          </div>
-                          <div 
-                            className="prose prose-sm max-w-none text-foreground"
-                            dangerouslySetInnerHTML={{ __html: generatedEmail.body }}
-                          />
-                          
-                          {/* CTA Image Preview */}
-                          {selectedCTA?.imageUrl && (
-                            <div className="py-4">
-                              <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-                                <ImageIcon className="w-4 h-4" />
-                                <span>{language === 'pt-BR' ? 'Imagem do CTA incluída no email:' : 'CTA image included in email:'}</span>
+                          {isEditingEmail ? (
+                            <>
+                              {/* Editable Subject */}
+                              <div className="border-b pb-2">
+                                <p className="text-xs text-muted-foreground mb-1">{language === 'pt-BR' ? 'Assunto:' : 'Subject:'}</p>
+                                <Input
+                                  value={editedSubject}
+                                  onChange={(e) => setEditedSubject(e.target.value)}
+                                  className="font-semibold"
+                                  placeholder={language === 'pt-BR' ? 'Digite o assunto do email' : 'Enter email subject'}
+                                />
                               </div>
-                              <img 
-                                src={selectedCTA.imageUrl} 
-                                alt={selectedCTA.title}
-                                className="max-w-full h-auto rounded-lg shadow-md mx-auto"
-                                style={{ maxHeight: '200px' }}
+                              {/* Editable Greeting */}
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">{language === 'pt-BR' ? 'Saudação:' : 'Greeting:'}</p>
+                                <Input
+                                  value={editedGreeting}
+                                  onChange={(e) => setEditedGreeting(e.target.value)}
+                                  className="font-medium"
+                                  placeholder={language === 'pt-BR' ? 'Ex: Olá, João!' : 'Ex: Hello, John!'}
+                                />
+                              </div>
+                              {/* Editable Body */}
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">{language === 'pt-BR' ? 'Corpo do email:' : 'Email body:'}</p>
+                                <Textarea
+                                  value={editedBody}
+                                  onChange={(e) => setEditedBody(e.target.value)}
+                                  className="min-h-[200px] text-sm"
+                                  placeholder={language === 'pt-BR' ? 'Digite o corpo do email...' : 'Enter email body...'}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {language === 'pt-BR' ? 'Use **texto** para negrito' : 'Use **text** for bold'}
+                                </p>
+                              </div>
+                              {/* Editable Signature */}
+                              <div className="pt-2 border-t">
+                                <p className="text-xs text-muted-foreground mb-1">{language === 'pt-BR' ? 'Assinatura:' : 'Signature:'}</p>
+                                <Textarea
+                                  value={editedSignature}
+                                  onChange={(e) => setEditedSignature(e.target.value)}
+                                  className="min-h-[60px] text-sm"
+                                  placeholder={language === 'pt-BR' ? 'Ex: Atenciosamente, João' : 'Ex: Best regards, John'}
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="border-b pb-2">
+                                <p className="text-xs text-muted-foreground">{language === 'pt-BR' ? 'Assunto:' : 'Subject:'}</p>
+                                <p className="font-semibold">{generatedEmail.subject}</p>
+                              </div>
+                              <div>
+                                <p className="font-medium">{generatedEmail.greeting}</p>
+                              </div>
+                              <div 
+                                className="prose prose-sm max-w-none text-foreground"
+                                dangerouslySetInnerHTML={{ __html: generatedEmail.body }}
                               />
-                            </div>
+                              
+                              {/* CTA Image Preview */}
+                              {selectedCTA?.imageUrl && (
+                                <div className="py-4">
+                                  <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span>{language === 'pt-BR' ? 'Imagem do CTA incluída no email:' : 'CTA image included in email:'}</span>
+                                  </div>
+                                  <img 
+                                    src={selectedCTA.imageUrl} 
+                                    alt={selectedCTA.title}
+                                    className="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                                    style={{ maxHeight: '200px' }}
+                                  />
+                                </div>
+                              )}
+                              
+                              <div 
+                                className="pt-2 border-t text-sm"
+                                dangerouslySetInnerHTML={{ __html: generatedEmail.signature }}
+                              />
+                            </>
                           )}
-                          
-                          <div 
-                            className="pt-2 border-t text-sm"
-                            dangerouslySetInnerHTML={{ __html: generatedEmail.signature }}
-                          />
                         </div>
                         
                         {selectedLeadIds.size > 1 && (
