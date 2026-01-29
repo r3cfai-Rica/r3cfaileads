@@ -13,7 +13,10 @@ import {
   RefreshCw,
   Search,
   AlertCircle,
-  CalendarPlus
+  CalendarPlus,
+  History,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import {
   Dialog,
@@ -30,6 +33,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { formatDistanceToNow, addDays, isPast, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -50,6 +58,19 @@ interface UserSearchResult {
   plan: string;
 }
 
+interface AuditLogEntry {
+  id: string;
+  slot_number: number;
+  action: string;
+  admin_email: string;
+  target_user_email: string | null;
+  target_user_name: string | null;
+  days_granted: number | null;
+  previous_expires_at: string | null;
+  new_expires_at: string | null;
+  created_at: string;
+}
+
 export const TrialSlotsManager: React.FC = () => {
   const [slots, setSlots] = useState<TrialSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +84,10 @@ export const TrialSlotsManager: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [trialDays, setTrialDays] = useState('2');
   const [extendDays, setExtendDays] = useState('2');
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [isAuditOpen, setIsAuditOpen] = useState(false);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState<{ id: string; email: string } | null>(null);
 
   const fetchSlots = async () => {
     try {
@@ -81,9 +106,73 @@ export const TrialSlotsManager: React.FC = () => {
     }
   };
 
+  const fetchAuditLog = async () => {
+    setLoadingAudit(true);
+    try {
+      const { data, error } = await supabase
+        .from('trial_slots_audit')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setAuditLog(data || []);
+    } catch (error) {
+      console.error('Error fetching audit log:', error);
+      toast.error('Erro ao carregar histórico');
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  const fetchCurrentAdmin = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setCurrentAdmin({ id: user.id, email: user.email || '' });
+    }
+  };
+
   useEffect(() => {
     fetchSlots();
+    fetchCurrentAdmin();
   }, []);
+
+  useEffect(() => {
+    if (isAuditOpen && auditLog.length === 0) {
+      fetchAuditLog();
+    }
+  }, [isAuditOpen]);
+
+  const logAuditEntry = async (
+    action: string,
+    slot: TrialSlot,
+    targetUser: { user_id: string; email: string; name: string } | null,
+    daysGranted: number | null,
+    previousExpiresAt: string | null,
+    newExpiresAt: string | null
+  ) => {
+    if (!currentAdmin) return;
+
+    try {
+      await supabase
+        .from('trial_slots_audit')
+        .insert({
+          slot_id: slot.id,
+          slot_number: slot.slot_number,
+          action,
+          admin_id: currentAdmin.id,
+          admin_email: currentAdmin.email,
+          target_user_id: targetUser?.user_id || slot.user_id,
+          target_user_email: targetUser?.email || slot.user_email,
+          target_user_name: targetUser?.name || slot.user_name,
+          days_granted: daysGranted,
+          previous_expires_at: previousExpiresAt,
+          new_expires_at: newExpiresAt,
+        });
+    } catch (error) {
+      console.error('Error logging audit entry:', error);
+    }
+  };
 
   const searchUsers = async () => {
     if (!searchEmail.trim()) return;
@@ -161,6 +250,16 @@ export const TrialSlotsManager: React.FC = () => {
 
       if (error) throw error;
 
+      // Log to audit
+      await logAuditEntry(
+        'grant',
+        selectedSlot,
+        { user_id: user.user_id, email: user.email, name: user.name },
+        days,
+        null,
+        expiresAt.toISOString()
+      );
+
       toast.success(`Acesso concedido a ${user.name} por ${days} dias!`);
       
       // Send notification email
@@ -172,6 +271,7 @@ export const TrialSlotsManager: React.FC = () => {
       setSearchResults([]);
       setTrialDays('2');
       fetchSlots();
+      if (isAuditOpen) fetchAuditLog();
     } catch (error) {
       console.error('Error assigning user:', error);
       toast.error('Erro ao conceder acesso');
@@ -199,6 +299,16 @@ export const TrialSlotsManager: React.FC = () => {
 
       if (error) throw error;
 
+      // Log to audit
+      await logAuditEntry(
+        'extend',
+        selectedSlot,
+        null,
+        days,
+        selectedSlot.expires_at,
+        newExpiresAt.toISOString()
+      );
+
       toast.success(`Trial estendido por mais ${days} dias!`);
       
       // Send notification about extension
@@ -215,6 +325,7 @@ export const TrialSlotsManager: React.FC = () => {
       setSelectedSlot(null);
       setExtendDays('2');
       fetchSlots();
+      if (isAuditOpen) fetchAuditLog();
     } catch (error) {
       console.error('Error extending trial:', error);
       toast.error('Erro ao estender trial');
@@ -228,6 +339,16 @@ export const TrialSlotsManager: React.FC = () => {
     
     setActionLoading(true);
     try {
+      // Log before removing (to capture the user data)
+      await logAuditEntry(
+        'remove',
+        selectedSlot,
+        null,
+        null,
+        selectedSlot.expires_at,
+        null
+      );
+
       const { error } = await supabase
         .from('trial_slots')
         .update({
@@ -245,6 +366,7 @@ export const TrialSlotsManager: React.FC = () => {
       setIsRemoveDialogOpen(false);
       setSelectedSlot(null);
       fetchSlots();
+      if (isAuditOpen) fetchAuditLog();
     } catch (error) {
       console.error('Error removing user:', error);
       toast.error('Erro ao remover acesso');
@@ -263,6 +385,15 @@ export const TrialSlotsManager: React.FC = () => {
     const expDate = new Date(expiresAt);
     if (isPast(expDate)) return 'Expirado';
     return formatDistanceToNow(expDate, { addSuffix: true, locale: ptBR });
+  };
+
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case 'grant': return { label: 'Acesso Concedido', color: 'bg-green-500' };
+      case 'extend': return { label: 'Trial Estendido', color: 'bg-blue-500' };
+      case 'remove': return { label: 'Acesso Removido', color: 'bg-red-500' };
+      default: return { label: action, color: 'bg-gray-500' };
+    }
   };
 
   if (loading) {
@@ -407,6 +538,73 @@ export const TrialSlotsManager: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Audit Log Section */}
+          <Collapsible open={isAuditOpen} onOpenChange={setIsAuditOpen} className="mt-6">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  Histórico de Auditoria
+                </span>
+                {isAuditOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              {loadingAudit ? (
+                <div className="flex items-center justify-center py-4">
+                  <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : auditLog.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  Nenhum registro de auditoria encontrado
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {auditLog.map((entry) => {
+                    const actionInfo = getActionLabel(entry.action);
+                    return (
+                      <div key={entry.id} className="p-3 border rounded-lg text-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge className={actionInfo.color}>{actionInfo.label}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(entry.created_at), "dd/MM/yyyy 'às' HH:mm")}
+                          </span>
+                        </div>
+                        <div className="space-y-1 text-muted-foreground">
+                          <p>
+                            <span className="font-medium text-foreground">Slot {entry.slot_number}</span>
+                            {entry.target_user_name && (
+                              <> • {entry.target_user_name} ({entry.target_user_email})</>
+                            )}
+                          </p>
+                          {entry.days_granted && (
+                            <p>Duração: {entry.days_granted} dias</p>
+                          )}
+                          {entry.new_expires_at && (
+                            <p>
+                              {entry.previous_expires_at ? 'Nova expiração' : 'Expira em'}: {format(new Date(entry.new_expires_at), "dd/MM/yyyy 'às' HH:mm")}
+                            </p>
+                          )}
+                          <p className="text-xs">Por: {entry.admin_email}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full mt-2" 
+                onClick={fetchAuditLog}
+                disabled={loadingAudit}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loadingAudit ? 'animate-spin' : ''}`} />
+                Atualizar Histórico
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 
