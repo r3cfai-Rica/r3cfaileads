@@ -20,7 +20,8 @@ import {
   Globe,
   Play,
   Video,
-  FileText
+  FileText,
+  BotMessageSquare
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -157,22 +158,26 @@ export default function Help() {
       </div>
 
       <p className="text-muted-foreground">
-        Aprenda como configurar os webhooks para receber respostas de <span className="font-bold text-green-600">WhatsApp</span>, <span className="font-bold text-blue-600">SMS</span> e <span className="font-bold text-orange-500">Email</span> diretamente na sua Caixa de Entrada.
+        Aprenda como configurar os webhooks para receber respostas de <span className="font-bold text-green-600">WhatsApp</span>, <span className="font-bold text-blue-600">SMS</span>, <span className="font-bold text-orange-500">Email</span> e <span className="font-bold text-[#0088cc]">Telegram</span> diretamente na sua Caixa de Entrada.
       </p>
 
       <Tabs defaultValue="whatsapp" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="whatsapp" className="gap-2">
             <MessageSquare className="h-4 w-4 text-green-600" />
             <span className="font-bold text-green-600">WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger value="sms" className="gap-2">
             <Phone className="h-4 w-4 text-blue-600" />
-            <span className="font-bold text-blue-600">SMS (Twilio)</span>
+            <span className="font-bold text-blue-600">SMS</span>
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4 text-orange-500" />
             <span className="font-bold text-orange-500">Email</span>
+          </TabsTrigger>
+          <TabsTrigger value="telegram" className="gap-2">
+            <BotMessageSquare className="h-4 w-4 text-[#0088cc]" />
+            <span className="font-bold text-[#0088cc]">Telegram</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1660,6 +1665,360 @@ export default function Help() {
                     </a>
                     <a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                       📙 Guia Cloudflare DNS <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Telegram Configuration */}
+        <TabsContent value="telegram">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <BotMessageSquare className="h-5 w-5 text-[#0088cc]" />
+                <CardTitle>Guia COMPLETO: Configurar Telegram Bot API</CardTitle>
+              </div>
+              <CardDescription>
+                Tutorial detalhado DO ZERO - Criação de bot, configuração de webhook e primeiro teste
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* Resumo Executivo */}
+              <div className="bg-gradient-to-r from-[#0088cc]/10 to-cyan-500/10 border border-[#0088cc]/20 rounded-lg p-5">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-[#0088cc]" />
+                  Resumo: O que você vai configurar
+                </h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-[#0088cc] mb-1">🤖 Bot do Telegram</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• Criar bot via @BotFather</li>
+                      <li>• Token de acesso</li>
+                      <li>• Nome e username do bot</li>
+                    </ul>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-[#0088cc] mb-1">🔗 Webhook</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• URL de callback</li>
+                      <li>• Receber mensagens</li>
+                      <li>• Respostas na Caixa de Entrada</li>
+                    </ul>
+                  </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="font-medium text-sm text-[#0088cc] mb-1">💬 Chat ID</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>• Lead inicia conversa</li>
+                      <li>• Sistema captura ID</li>
+                      <li>• Você envia mensagens</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-[#0088cc]/10 border border-[#0088cc]/20 rounded-lg">
+                  <p className="text-sm"><strong>⏱️ Tempo estimado:</strong> 10-15 minutos (mais rápido que os outros canais!)</p>
+                </div>
+              </div>
+
+              {/* Importante sobre Telegram */}
+              <div className="border border-yellow-500/30 bg-yellow-500/5 rounded-lg p-5">
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-yellow-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  ⚠️ IMPORTANTE: Como funciona o Telegram
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Diferente do WhatsApp e SMS, no Telegram <strong>o lead precisa iniciar a conversa primeiro</strong> com seu bot. Isso acontece porque:
+                </p>
+                <div className="grid md:grid-cols-2 gap-3 mt-4">
+                  <div className="p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">🔒 Proteção contra Spam</p>
+                    <p className="text-xs text-muted-foreground">O Telegram não permite que bots enviem a primeira mensagem para evitar spam</p>
+                  </div>
+                  <div className="p-3 bg-background rounded-lg">
+                    <p className="font-bold text-sm">✅ Após o /start</p>
+                    <p className="text-xs text-muted-foreground">Uma vez que o lead envia /start, você pode enviar mensagens ilimitadas</p>
+                  </div>
+                </div>
+                <Tip>
+                  <strong>Estratégia:</strong> Compartilhe o link do seu bot (t.me/seubotname) em materiais de marketing, 
+                  assinaturas de email, cartões de visita, etc. Quando o lead clicar e enviar /start, você poderá contatá-lo!
+                </Tip>
+              </div>
+
+              {/* URLs importantes */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Globe className="h-4 w-4 text-primary" />
+                    <span className="font-medium">URL do Webhook (copie!)</span>
+                  </div>
+                  <CopyableUrl url={`${WEBHOOK_BASE_URL}/webhook-telegram`} />
+                </div>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BotMessageSquare className="h-4 w-4 text-[#0088cc]" />
+                    <span className="font-medium">Acesse o BotFather</span>
+                  </div>
+                  <Button asChild variant="outline" className="w-full mt-2">
+                    <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="gap-2">
+                      Abrir @BotFather <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+
+              {/* PARTE 1: Criar Bot */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-[#0088cc] text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">1</span>
+                  PARTE 1: Criar Bot no Telegram
+                </h3>
+                
+                <Step number={1} title="Abra o Telegram e busque @BotFather">
+                  <p>O BotFather é o bot oficial do Telegram para criar e gerenciar bots.</p>
+                  <p className="mt-2">Você pode acessar diretamente: <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 font-medium">t.me/BotFather <ExternalLink className="h-3 w-3" /></a></p>
+                </Step>
+
+                <Step number={2} title="Inicie a conversa e crie um novo bot">
+                  <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Clique em <strong>START</strong> ou envie <code className="bg-muted px-2 py-1 rounded">/start</code></li>
+                    <li>Envie o comando <code className="bg-muted px-2 py-1 rounded">/newbot</code></li>
+                    <li>O BotFather vai pedir um <strong>nome</strong> para seu bot (pode ter espaços)</li>
+                    <li>Depois, vai pedir um <strong>username</strong> (deve terminar em "bot")</li>
+                  </ol>
+                  <div className="bg-muted/50 rounded-lg p-4 mt-3">
+                    <p className="text-sm font-medium mb-2">Exemplo:</p>
+                    <div className="space-y-1 text-sm">
+                      <p><span className="text-muted-foreground">Nome:</span> <code className="bg-background px-2 py-1 rounded">Minha Empresa Suporte</code></p>
+                      <p><span className="text-muted-foreground">Username:</span> <code className="bg-background px-2 py-1 rounded">minhaempresa_bot</code></p>
+                    </div>
+                  </div>
+                </Step>
+
+                <Step number={3} title="Copie o Token de Acesso">
+                  <p>Após criar o bot, o BotFather vai enviar uma mensagem com o <strong>token de acesso</strong>.</p>
+                  <div className="bg-muted/50 rounded-lg p-4 mt-3">
+                    <p className="text-sm font-medium mb-2">Exemplo de Token:</p>
+                    <code className="text-xs bg-background p-2 rounded block break-all">7123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw</code>
+                    <p className="text-xs text-muted-foreground mt-2">O token é no formato: NUMERO:CARACTERES_ALEATORIOS</p>
+                  </div>
+                </Step>
+
+                <Warning>
+                  <strong className="text-red-500">🚨 GUARDE O TOKEN COM SEGURANÇA!</strong> Qualquer pessoa com seu token 
+                  pode controlar seu bot. Nunca compartilhe publicamente!
+                </Warning>
+              </div>
+
+              {/* PARTE 2: Configurar Webhook */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">2</span>
+                  PARTE 2: Configurar Webhook (Receber Mensagens)
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  O webhook permite que seu bot receba mensagens quando leads respondem no Telegram.
+                </p>
+
+                <Step number={1} title="Configure o webhook usando a URL abaixo">
+                  <p>Abra seu navegador e acesse a seguinte URL (substitua SEU_TOKEN pelo token do seu bot):</p>
+                  <div className="bg-muted/50 rounded-lg p-4 mt-3">
+                    <code className="text-xs break-all block">
+                      https://api.telegram.org/bot<span className="text-[#0088cc] font-bold">SEU_TOKEN</span>/setWebhook?url={WEBHOOK_BASE_URL}/webhook-telegram
+                    </code>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Exemplo completo: <code className="text-xs bg-muted px-1 rounded">https://api.telegram.org/bot7123456789:AAHdqTc.../setWebhook?url=https://gylx...supabase.co/functions/v1/webhook-telegram</code>
+                  </p>
+                </Step>
+
+                <Step number={2} title="Verifique a resposta">
+                  <p>Você deve ver uma resposta JSON como:</p>
+                  <div className="bg-muted/50 rounded-lg p-3 mt-2">
+                    <code className="text-xs text-green-500">{`{"ok":true,"result":true,"description":"Webhook was set"}`}</code>
+                  </div>
+                </Step>
+
+                <Tip>
+                  Se precisar verificar o webhook atual, acesse: <code className="text-xs bg-muted px-1 rounded">https://api.telegram.org/botSEU_TOKEN/getWebhookInfo</code>
+                </Tip>
+              </div>
+
+              {/* PARTE 3: Configurar no App */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center text-sm">3</span>
+                  PARTE 3: Solicitar Configuração do Token
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  O token do bot precisa ser configurado no sistema. Entre em contato com o administrador para adicionar o token.
+                </p>
+
+                <div className="bg-muted/50 rounded-lg p-5 mt-3 space-y-4">
+                  <div>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <Key className="h-4 w-4 text-primary" />
+                      Bot Token
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">O token fornecido pelo @BotFather</p>
+                    <code className="text-xs bg-background p-2 rounded block mt-2 break-all">7123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw</code>
+                  </div>
+                </div>
+
+                <Warning>
+                  Por segurança, o token do Telegram é configurado como um <strong>secret do sistema</strong> e não fica visível na interface.
+                </Warning>
+              </div>
+
+              {/* PARTE 4: Testar */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">4</span>
+                  PARTE 4: Fazer o Primeiro Teste
+                </h3>
+
+                <Step number={1} title="Encontre seu bot no Telegram">
+                  <p>Busque pelo username do seu bot (ex: @minhaempresa_bot) e clique em <strong>START</strong>.</p>
+                </Step>
+
+                <Step number={2} title="Envie uma mensagem de teste">
+                  <p>Escreva qualquer mensagem para o bot. Isso vai:</p>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                    <li>Criar seu <strong>Chat ID</strong> no sistema</li>
+                    <li>Aparecer na <strong>Caixa de Entrada</strong> do app</li>
+                  </ul>
+                </Step>
+
+                <Step number={3} title="Verifique na Caixa de Entrada">
+                  <p>Vá na página <strong>Caixa de Entrada</strong> do app e veja se a mensagem apareceu!</p>
+                </Step>
+
+                <Step number={4} title="Adicione o Chat ID ao lead">
+                  <p>Para enviar mensagens para um lead via Telegram, você precisa adicionar o <strong>Chat ID</strong> dele no cadastro do lead.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    O Chat ID é um número como <code className="bg-muted px-1 rounded">123456789</code> que identifica a conversa.
+                  </p>
+                </Step>
+
+                <Tip>
+                  <strong>Sucesso!</strong> Se a mensagem aparecer na Caixa de Entrada, seu bot está configurado corretamente!
+                </Tip>
+              </div>
+
+              {/* Como conseguir Chat IDs */}
+              <div className="border-t pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-purple-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">+</span>
+                  BÔNUS: Como Conseguir Chat IDs dos Leads
+                </h3>
+
+                <p className="text-muted-foreground mb-4">
+                  O Chat ID é gerado automaticamente quando o lead envia a primeira mensagem para seu bot. 
+                  Aqui estão estratégias para conseguir que leads iniciem contato:
+                </p>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-2">🔗 Link Direto do Bot</h4>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• Adicione em assinaturas de email</li>
+                      <li>• Coloque no site/landing page</li>
+                      <li>• Inclua em cartões de visita</li>
+                      <li>• Compartilhe em redes sociais</li>
+                    </ul>
+                    <div className="mt-3 p-2 bg-muted rounded text-xs">
+                      t.me/seubotname
+                    </div>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-2">📱 QR Code</h4>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• Gere um QR code do link do bot</li>
+                      <li>• Use em materiais impressos</li>
+                      <li>• Adicione em apresentações</li>
+                      <li>• Exiba em eventos/feiras</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-4 bg-[#0088cc]/10 border border-[#0088cc]/20 rounded-lg">
+                  <h4 className="font-medium mb-2">💡 Dica Pro: Mensagem de Boas-Vindas</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Configure uma mensagem automática de boas-vindas quando o lead enviar /start. 
+                    Isso cria uma experiência profissional e pode coletar informações do lead automaticamente.
+                  </p>
+                </div>
+              </div>
+
+              {/* Custos */}
+              <div className="bg-gradient-to-r from-muted/50 to-muted/30 border rounded-lg p-5 mt-4">
+                <h4 className="font-bold mb-4">💰 Custos do Telegram Bot API:</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">100% GRATUITO</p>
+                      <p className="text-muted-foreground">O Telegram não cobra pelo uso da Bot API</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Mensagens Ilimitadas</p>
+                      <p className="text-muted-foreground">Não há limite de mensagens enviadas ou recebidas</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Suporte a Mídia</p>
+                      <p className="text-muted-foreground">Envie imagens, documentos, áudios e vídeos sem custo adicional</p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-4 p-3 bg-green-500/10 rounded-lg">
+                  🎉 <strong>Telegram é a opção mais econômica!</strong> Perfeito para começar sem custos operacionais.
+                </p>
+              </div>
+
+              {/* Video Tutorial Section */}
+              <div className="border-t pt-6 mt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Video className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Vídeos Tutoriais</h3>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <VideoTutorial
+                    title="Como criar um Bot no Telegram (BotFather)"
+                    description="Tutorial completo para criar e configurar seu primeiro bot"
+                    youtubeId="aNmRNjME6mE"
+                  />
+                  <VideoTutorial
+                    title="Telegram Bot API - Guia Completo"
+                    description="Como usar a API do Telegram para enviar mensagens"
+                    youtubeId="UQrcOj63S2o"
+                  />
+                </div>
+
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-medium mb-3">🔗 Links Úteis:</h4>
+                  <div className="grid md:grid-cols-2 gap-2 text-sm">
+                    <a href="https://core.telegram.org/bots#how-do-i-create-a-bot" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      📘 Documentação Oficial de Bots <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://core.telegram.org/bots/api" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      🔧 Referência da Bot API <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      🤖 @BotFather no Telegram <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a href="https://core.telegram.org/bots/webhooks" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      🔔 Documentação de Webhooks <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                 </div>
