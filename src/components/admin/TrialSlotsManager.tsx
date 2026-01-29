@@ -12,7 +12,8 @@ import {
   Crown,
   RefreshCw,
   Search,
-  AlertCircle
+  AlertCircle,
+  CalendarPlus
 } from 'lucide-react';
 import {
   Dialog,
@@ -22,7 +23,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { formatDistanceToNow, addDays, isPast } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { formatDistanceToNow, addDays, isPast, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface TrialSlot {
@@ -48,10 +56,13 @@ export const TrialSlotsManager: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<TrialSlot | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [isExtendDialogOpen, setIsExtendDialogOpen] = useState(false);
   const [searchEmail, setSearchEmail] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [trialDays, setTrialDays] = useState('2');
+  const [extendDays, setExtendDays] = useState('2');
 
   const fetchSlots = async () => {
     try {
@@ -95,13 +106,47 @@ export const TrialSlotsManager: React.FC = () => {
     }
   };
 
+  const sendVipNotification = async (
+    userEmail: string, 
+    userName: string, 
+    expiresAt: string, 
+    daysGranted: number
+  ) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-vip-notification', {
+        body: {
+          userEmail,
+          userName,
+          expiresAt,
+          daysGranted
+        }
+      });
+
+      if (error) {
+        console.error('Error sending VIP notification:', error);
+        toast.warning('Acesso concedido, mas houve um erro ao enviar o email de notificação.');
+        return;
+      }
+
+      if (data?.success) {
+        toast.success('Email de notificação enviado!');
+      } else {
+        toast.warning(data?.error || 'Acesso concedido, mas houve um erro ao enviar o email.');
+      }
+    } catch (error) {
+      console.error('Error calling VIP notification function:', error);
+      toast.warning('Acesso concedido, mas houve um erro ao enviar o email de notificação.');
+    }
+  };
+
   const assignUserToSlot = async (user: UserSearchResult) => {
     if (!selectedSlot) return;
     
     setActionLoading(true);
     try {
+      const days = parseInt(trialDays);
       const now = new Date();
-      const expiresAt = addDays(now, 2);
+      const expiresAt = addDays(now, days);
 
       const { error } = await supabase
         .from('trial_slots')
@@ -116,15 +161,63 @@ export const TrialSlotsManager: React.FC = () => {
 
       if (error) throw error;
 
-      toast.success(`Acesso concedido a ${user.name} por 2 dias!`);
+      toast.success(`Acesso concedido a ${user.name} por ${days} dias!`);
+      
+      // Send notification email
+      await sendVipNotification(user.email, user.name, expiresAt.toISOString(), days);
+      
       setIsAddDialogOpen(false);
       setSelectedSlot(null);
       setSearchEmail('');
       setSearchResults([]);
+      setTrialDays('2');
       fetchSlots();
     } catch (error) {
       console.error('Error assigning user:', error);
       toast.error('Erro ao conceder acesso');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const extendUserTrial = async () => {
+    if (!selectedSlot || !selectedSlot.expires_at) return;
+    
+    setActionLoading(true);
+    try {
+      const days = parseInt(extendDays);
+      const currentExpiry = new Date(selectedSlot.expires_at);
+      const baseDate = isPast(currentExpiry) ? new Date() : currentExpiry;
+      const newExpiresAt = addDays(baseDate, days);
+
+      const { error } = await supabase
+        .from('trial_slots')
+        .update({
+          expires_at: newExpiresAt.toISOString(),
+        })
+        .eq('id', selectedSlot.id);
+
+      if (error) throw error;
+
+      toast.success(`Trial estendido por mais ${days} dias!`);
+      
+      // Send notification about extension
+      if (selectedSlot.user_email && selectedSlot.user_name) {
+        await sendVipNotification(
+          selectedSlot.user_email, 
+          selectedSlot.user_name, 
+          newExpiresAt.toISOString(), 
+          days
+        );
+      }
+      
+      setIsExtendDialogOpen(false);
+      setSelectedSlot(null);
+      setExtendDays('2');
+      fetchSlots();
+    } catch (error) {
+      console.error('Error extending trial:', error);
+      toast.error('Erro ao estender trial');
     } finally {
       setActionLoading(false);
     }
@@ -195,7 +288,7 @@ export const TrialSlotsManager: React.FC = () => {
                 Slots de Teste VIP
               </CardTitle>
               <CardDescription>
-                Gerencie até 5 usuários com acesso ilimitado por 2 dias
+                Gerencie até 5 usuários com acesso ilimitado
               </CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={fetchSlots}>
@@ -244,6 +337,9 @@ export const TrialSlotsManager: React.FC = () => {
                               }`}>
                                 {getTimeRemaining(slot.expires_at)}
                               </span>
+                              <span className="text-xs text-muted-foreground ml-1">
+                                ({format(new Date(slot.expires_at), "dd/MM/yyyy HH:mm")})
+                              </span>
                             </div>
                           )}
                         </div>
@@ -268,17 +364,30 @@ export const TrialSlotsManager: React.FC = () => {
                       )}
                       
                       {slot.user_id ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedSlot(slot);
-                            setIsRemoveDialogOpen(true);
-                          }}
-                        >
-                          <UserMinus className="w-4 h-4 mr-1" />
-                          Remover
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSlot(slot);
+                              setIsExtendDialogOpen(true);
+                            }}
+                          >
+                            <CalendarPlus className="w-4 h-4 mr-1" />
+                            Estender
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSlot(slot);
+                              setIsRemoveDialogOpen(true);
+                            }}
+                          >
+                            <UserMinus className="w-4 h-4 mr-1" />
+                            Remover
+                          </Button>
+                        </div>
                       ) : (
                         <Button
                           variant="default"
@@ -307,11 +416,29 @@ export const TrialSlotsManager: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Adicionar Usuário ao Slot {selectedSlot?.slot_number}</DialogTitle>
             <DialogDescription>
-              Busque um usuário pelo e-mail para conceder acesso ilimitado por 2 dias.
+              Busque um usuário pelo e-mail para conceder acesso VIP.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Duração do Trial</label>
+              <Select value={trialDays} onValueChange={setTrialDays}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a duração" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 dia</SelectItem>
+                  <SelectItem value="2">2 dias</SelectItem>
+                  <SelectItem value="3">3 dias</SelectItem>
+                  <SelectItem value="5">5 dias</SelectItem>
+                  <SelectItem value="7">7 dias (1 semana)</SelectItem>
+                  <SelectItem value="14">14 dias (2 semanas)</SelectItem>
+                  <SelectItem value="30">30 dias (1 mês)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex gap-2">
               <Input
                 placeholder="Digite o e-mail do usuário..."
@@ -355,6 +482,54 @@ export const TrialSlotsManager: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extend Trial Dialog */}
+      <Dialog open={isExtendDialogOpen} onOpenChange={setIsExtendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Estender Trial de {selectedSlot?.user_name}</DialogTitle>
+            <DialogDescription>
+              {selectedSlot?.expires_at && (
+                isPast(new Date(selectedSlot.expires_at)) 
+                  ? 'O trial expirou. A extensão será calculada a partir de agora.'
+                  : `Trial atual expira em ${format(new Date(selectedSlot.expires_at), "dd/MM/yyyy 'às' HH:mm")}`
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Estender por</label>
+              <Select value={extendDays} onValueChange={setExtendDays}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a duração" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">+1 dia</SelectItem>
+                  <SelectItem value="2">+2 dias</SelectItem>
+                  <SelectItem value="3">+3 dias</SelectItem>
+                  <SelectItem value="5">+5 dias</SelectItem>
+                  <SelectItem value="7">+7 dias (1 semana)</SelectItem>
+                  <SelectItem value="14">+14 dias (2 semanas)</SelectItem>
+                  <SelectItem value="30">+30 dias (1 mês)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExtendDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={extendUserTrial}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Estendendo...' : 'Estender Trial'}
             </Button>
           </DialogFooter>
         </DialogContent>
