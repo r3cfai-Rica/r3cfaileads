@@ -99,6 +99,63 @@ export const useCTAs = () => {
     }
   }, [user, setCTAs, toast, language]);
 
+  // Update a CTA in database
+  const updateCTA = useCallback(async (ctaId: string, updates: Partial<Pick<CTA, 'title' | 'text' | 'imageUrl'>>) => {
+    if (!user) {
+      toast({
+        title: language === 'pt-BR' ? 'Erro' : 'Error',
+        description: language === 'pt-BR' ? 'Usuário não autenticado' : 'User not authenticated',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.text !== undefined) updateData.text = updates.text;
+      if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl || null;
+
+      const { error } = await supabase
+        .from('ctas')
+        .update(updateData)
+        .eq('id', ctaId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating CTA:', error);
+        toast({
+          title: language === 'pt-BR' ? 'Erro ao atualizar CTA' : 'Error updating CTA',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      setCTAs((prev) =>
+        prev.map((c) =>
+          c.id === ctaId
+            ? { ...c, ...updates }
+            : c
+        )
+      );
+
+      toast({
+        title: language === 'pt-BR' ? 'CTA atualizado!' : 'CTA updated!',
+        description: language === 'pt-BR' ? 'As alterações foram salvas.' : 'Changes have been saved.',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error updating CTA:', error);
+      toast({
+        title: language === 'pt-BR' ? 'Erro ao atualizar CTA' : 'Error updating CTA',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [user, setCTAs, toast, language]);
+
   // Delete a CTA from database
   const deleteCTA = useCallback(async (ctaId: string) => {
     if (!user) return false;
@@ -145,6 +202,7 @@ export const useCTAs = () => {
     ctas,
     loadCTAs,
     saveCTA,
+    updateCTA,
     deleteCTA,
   };
 };

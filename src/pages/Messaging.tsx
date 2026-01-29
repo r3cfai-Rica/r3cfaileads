@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useApp, MessageLog } from '@/contexts/AppContext';
+import { useApp, MessageLog, CTA } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,15 +36,28 @@ import {
   RefreshCw,
   Image as ImageIcon,
   BotMessageSquare,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateEmailWithAI, GeneratedEmail } from '@/lib/ai-api';
 import { supabase } from '@/integrations/supabase/client';
 import { useCTAs } from '@/hooks/useCTAs';
+import { CTAEditDialog } from '@/components/messaging/CTAEditDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export const Messaging: React.FC = () => {
   const { t, leads, folders, messageLogs, setMessageLogs, language } = useApp();
-  const { ctas } = useCTAs();
+  const { ctas, updateCTA, deleteCTA } = useCTAs();
   const { toast } = useToast();
   
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
@@ -60,6 +73,12 @@ export const Messaging: React.FC = () => {
   const [senderCompany, setSenderCompany] = useState('');
   const [emailTone, setEmailTone] = useState<'formal' | 'casual' | 'persuasive' | 'friendly'>('persuasive');
   const [selectedCTAId, setSelectedCTAId] = useState<string>('');
+  
+  // CTA Edit/Delete States
+  const [editingCTA, setEditingCTA] = useState<CTA | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deletingCTAId, setDeletingCTAId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // WhatsApp provider detection
   const [whatsappProvider, setWhatsappProvider] = useState<'meta' | 'evolution'>('meta');
@@ -124,6 +143,30 @@ export const Messaging: React.FC = () => {
 
   const handleUseCTA = (text: string) => {
     setMessage(text);
+  };
+
+  const handleEditCTA = (cta: CTA, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCTA(cta);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveCTAEdit = async (ctaId: string, updates: { title: string; text: string }) => {
+    return await updateCTA(ctaId, updates);
+  };
+
+  const handleDeleteCTAClick = (ctaId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingCTAId(ctaId);
+  };
+
+  const handleConfirmDeleteCTA = async () => {
+    if (!deletingCTAId) return;
+    
+    setIsDeleting(true);
+    await deleteCTA(deletingCTAId);
+    setIsDeleting(false);
+    setDeletingCTAId(null);
   };
 
   const handleGenerateEmail = async () => {
@@ -1023,8 +1066,14 @@ export const Messaging: React.FC = () => {
             <div>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">CTAs Salvos</CardTitle>
-                  <CardDescription>Clique para usar como mensagem</CardDescription>
+                  <CardTitle className="text-lg">
+                    {language === 'pt-BR' ? 'CTAs Salvos' : 'Saved CTAs'}
+                  </CardTitle>
+                  <CardDescription>
+                    {language === 'pt-BR' 
+                      ? 'Clique para usar como mensagem. Use os ícones para editar ou excluir.' 
+                      : 'Click to use as message. Use icons to edit or delete.'}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {folderCTAs.length > 0 ? (
@@ -1032,18 +1081,53 @@ export const Messaging: React.FC = () => {
                       {folderCTAs.map((cta) => (
                         <div
                           key={cta.id}
-                          className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                          className="group p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors relative"
                           onClick={() => handleUseCTA(cta.text)}
                         >
-                          <h4 className="font-medium text-sm mb-1">{cta.title}</h4>
-                          <p className="text-xs text-muted-foreground line-clamp-2">{cta.text}</p>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm mb-1">{cta.title}</h4>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{cta.text}</p>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={(e) => handleEditCTA(cta, e)}
+                                title={language === 'pt-BR' ? 'Editar CTA' : 'Edit CTA'}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={(e) => handleDeleteCTAClick(cta.id, e)}
+                                title={language === 'pt-BR' ? 'Excluir CTA' : 'Delete CTA'}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                          {cta.imageUrl && (
+                            <div className="mt-2">
+                              <img 
+                                src={cta.imageUrl} 
+                                alt={cta.title}
+                                className="w-full h-16 object-cover rounded border opacity-70"
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Nenhum CTA salvo</p>
+                      <p className="text-sm">
+                        {language === 'pt-BR' ? 'Nenhum CTA salvo' : 'No saved CTAs'}
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -1096,6 +1180,50 @@ export const Messaging: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* CTA Edit Dialog */}
+      <CTAEditDialog
+        cta={editingCTA}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSave={handleSaveCTAEdit}
+        language={language}
+      />
+
+      {/* CTA Delete Confirmation */}
+      <AlertDialog open={!!deletingCTAId} onOpenChange={(open) => !open && setDeletingCTAId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'pt-BR' ? 'Excluir CTA?' : 'Delete CTA?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'pt-BR' 
+                ? 'Esta ação não pode ser desfeita. O CTA será permanentemente removido.' 
+                : 'This action cannot be undone. The CTA will be permanently removed.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              {language === 'pt-BR' ? 'Cancelar' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteCTA}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {language === 'pt-BR' ? 'Excluindo...' : 'Deleting...'}
+                </>
+              ) : (
+                language === 'pt-BR' ? 'Excluir' : 'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
