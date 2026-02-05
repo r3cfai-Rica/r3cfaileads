@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp, CTA } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ import {
   Monitor,
   RefreshCw,
   Check,
+  X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { generateCTAsWithAI, generateImageWithAI } from '@/lib/ai-api';
@@ -48,17 +49,67 @@ interface GeneratedCTA {
 
 type ImageFormat = '1:1' | '9:16' | '16:9';
 
+const CAMPAIGNS_STORAGE_KEY = 'campaigns_state';
+
+interface CampaignsState {
+  companyName: string;
+  companyLogo: string | null;
+  messageTone: string;
+  selectedSearch: string;
+  imageFormat: ImageFormat;
+  generatedCTAs: GeneratedCTA[];
+}
+
 export const Campaigns: React.FC = () => {
   const { t, folders, searchHistory, user, language } = useApp();
   const { ctas, saveCTA } = useCTAs();
   
-  const [companyName, setCompanyName] = useState('');
-  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [messageTone, setMessageTone] = useState('professional');
-  const [selectedSearch, setSelectedSearch] = useState<string>('');
-  const [imageFormat, setImageFormat] = useState<ImageFormat>('1:1');
+  // Load persisted state
+  const loadPersistedState = useCallback((): CampaignsState | null => {
+    try {
+      const saved = sessionStorage.getItem(CAMPAIGNS_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading campaigns state:', e);
+    }
+    return null;
+  }, []);
+
+  const persistedState = loadPersistedState();
+
+  const [companyName, setCompanyName] = useState(persistedState?.companyName || '');
+  const [companyLogo, setCompanyLogo] = useState<string | null>(persistedState?.companyLogo || null);
+  const [messageTone, setMessageTone] = useState(persistedState?.messageTone || 'professional');
+  const [selectedSearch, setSelectedSearch] = useState<string>(persistedState?.selectedSearch || '');
+  const [imageFormat, setImageFormat] = useState<ImageFormat>(persistedState?.imageFormat || '1:1');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedCTAs, setGeneratedCTAs] = useState<GeneratedCTA[]>([]);
+  const [generatedCTAs, setGeneratedCTAs] = useState<GeneratedCTA[]>(persistedState?.generatedCTAs || []);
+
+  // Persist state to sessionStorage
+  useEffect(() => {
+    const stateToSave: CampaignsState = {
+      companyName,
+      companyLogo,
+      messageTone,
+      selectedSearch,
+      imageFormat,
+      generatedCTAs,
+    };
+    sessionStorage.setItem(CAMPAIGNS_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [companyName, companyLogo, messageTone, selectedSearch, imageFormat, generatedCTAs]);
+
+  // Clear campaign state
+  const handleClearCampaign = useCallback(() => {
+    setCompanyName('');
+    setCompanyLogo(null);
+    setMessageTone('professional');
+    setSelectedSearch('');
+    setImageFormat('1:1');
+    setGeneratedCTAs([]);
+    sessionStorage.removeItem(CAMPAIGNS_STORAGE_KEY);
+  }, []);
 
   const translations = {
     'pt-BR': {
@@ -399,6 +450,18 @@ export const Campaigns: React.FC = () => {
                   );
                 })}
               </div>
+
+              {(generatedCTAs.length > 0 || companyName || selectedSearch) && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleClearCampaign}
+                  title={language === 'pt-BR' ? 'Limpar campanha' : 'Clear campaign'}
+                  className="h-12 w-12"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              )}
 
               <Button
                 variant="gradient"

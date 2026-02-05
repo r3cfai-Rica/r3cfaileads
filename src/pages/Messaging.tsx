@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp, MessageLog, CTA } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ import {
   BotMessageSquare,
   Pencil,
   Trash2,
+  X,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateEmailWithAI, GeneratedEmail } from '@/lib/ai-api';
@@ -55,24 +56,52 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const MESSAGING_STORAGE_KEY = 'messaging_compose_state';
+
+interface MessagingState {
+  selectedFolderId: string;
+  selectedLeadIds: string[];
+  channel: 'whatsapp' | 'sms' | 'email' | 'telegram';
+  message: string;
+  senderName: string;
+  senderCompany: string;
+  emailTone: 'formal' | 'casual' | 'persuasive' | 'friendly';
+  selectedCTAId: string;
+}
+
 export const Messaging: React.FC = () => {
   const { t, leads, folders, messageLogs, setMessageLogs, language } = useApp();
   const { ctas, updateCTA, deleteCTA } = useCTAs();
   const { toast } = useToast();
   
-  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
-  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
-  const [channel, setChannel] = useState<'whatsapp' | 'sms' | 'email' | 'telegram'>('email');
-  const [message, setMessage] = useState('');
+  // Load persisted state
+  const loadPersistedState = useCallback((): MessagingState | null => {
+    try {
+      const saved = sessionStorage.getItem(MESSAGING_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading messaging state:', e);
+    }
+    return null;
+  }, []);
+
+  const persistedState = loadPersistedState();
+
+  const [selectedFolderId, setSelectedFolderId] = useState<string>(persistedState?.selectedFolderId || '');
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set(persistedState?.selectedLeadIds || []));
+  const [channel, setChannel] = useState<'whatsapp' | 'sms' | 'email' | 'telegram'>(persistedState?.channel || 'email');
+  const [message, setMessage] = useState(persistedState?.message || '');
   const [isSending, setIsSending] = useState(false);
   
   // AI Email Generation States
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
-  const [senderName, setSenderName] = useState('');
-  const [senderCompany, setSenderCompany] = useState('');
-  const [emailTone, setEmailTone] = useState<'formal' | 'casual' | 'persuasive' | 'friendly'>('persuasive');
-  const [selectedCTAId, setSelectedCTAId] = useState<string>('');
+  const [senderName, setSenderName] = useState(persistedState?.senderName || '');
+  const [senderCompany, setSenderCompany] = useState(persistedState?.senderCompany || '');
+  const [emailTone, setEmailTone] = useState<'formal' | 'casual' | 'persuasive' | 'friendly'>(persistedState?.emailTone || 'persuasive');
+  const [selectedCTAId, setSelectedCTAId] = useState<string>(persistedState?.selectedCTAId || '');
   
   // CTA Edit/Delete States
   const [editingCTA, setEditingCTA] = useState<CTA | null>(null);
@@ -89,6 +118,30 @@ export const Messaging: React.FC = () => {
   
   // WhatsApp provider detection
   const [whatsappProvider, setWhatsappProvider] = useState<'meta' | 'evolution'>('meta');
+
+  // Persist state to sessionStorage
+  useEffect(() => {
+    const stateToSave: MessagingState = {
+      selectedFolderId,
+      selectedLeadIds: Array.from(selectedLeadIds),
+      channel,
+      message,
+      senderName,
+      senderCompany,
+      emailTone,
+      selectedCTAId,
+    };
+    sessionStorage.setItem(MESSAGING_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [selectedFolderId, selectedLeadIds, channel, message, senderName, senderCompany, emailTone, selectedCTAId]);
+
+  // Clear compose state
+  const handleClearCompose = useCallback(() => {
+    setMessage('');
+    setSelectedLeadIds(new Set());
+    setGeneratedEmail(null);
+    setSelectedCTAId('');
+    sessionStorage.removeItem(MESSAGING_STORAGE_KEY);
+  }, []);
 
   // Load user's WhatsApp provider preference
   useEffect(() => {
@@ -497,14 +550,27 @@ export const Messaging: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-            <Send className="w-5 h-5 text-primary-foreground" />
-          </div>
-          {t.messaging.title}
-        </h1>
-        <p className="text-muted-foreground mt-1">{t.messaging.subtitle}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+              <Send className="w-5 h-5 text-primary-foreground" />
+            </div>
+            {t.messaging.title}
+          </h1>
+          <p className="text-muted-foreground mt-1">{t.messaging.subtitle}</p>
+        </div>
+        {(message || selectedLeadIds.size > 0 || generatedEmail) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearCompose}
+            className="gap-2"
+          >
+            <X className="w-4 h-4" />
+            {language === 'pt-BR' ? 'Limpar' : 'Clear'}
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="compose" className="space-y-6">
