@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Bot, Plus, Settings2, Trash2, Clock, Target, Users, Zap } from 'lucide-react';
+import { Bot, Plus, Settings2, Trash2, Clock, Target, Users, Zap, X } from 'lucide-react';
 
 interface AutomationBot {
   id: string;
@@ -35,16 +35,58 @@ interface AutomationBot {
   createdAt: Date;
 }
 
+const AUTOMATIONS_STORAGE_KEY = 'automations_bots_state';
+
+interface AutomationsState {
+  bots: AutomationBot[];
+}
+
 export const Automations: React.FC = () => {
   const { folders, language } = useApp();
   
-  const [bots, setBots] = useState<AutomationBot[]>([]);
+  // Load persisted state
+  const loadPersistedState = useCallback((): AutomationsState | null => {
+    try {
+      const saved = sessionStorage.getItem(AUTOMATIONS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Restore Date objects
+        if (parsed.bots) {
+          parsed.bots = parsed.bots.map((bot: AutomationBot) => ({
+            ...bot,
+            createdAt: new Date(bot.createdAt),
+            lastRun: bot.lastRun ? new Date(bot.lastRun) : undefined,
+          }));
+        }
+        return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading automations state:', e);
+    }
+    return null;
+  }, []);
+
+  const persistedState = loadPersistedState();
+  
+  const [bots, setBots] = useState<AutomationBot[]>(persistedState?.bots || []);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newBotName, setNewBotName] = useState('');
   const [newBotNiche, setNewBotNiche] = useState('');
   const [newBotFolderId, setNewBotFolderId] = useState('');
   const [newBotFrequency, setNewBotFrequency] = useState<'hourly' | 'daily' | 'weekly'>('daily');
   const [newBotMaxLeads, setNewBotMaxLeads] = useState(50);
+
+  // Persist bots to sessionStorage
+  useEffect(() => {
+    const stateToSave: AutomationsState = { bots };
+    sessionStorage.setItem(AUTOMATIONS_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [bots]);
+
+  // Clear all bots
+  const handleClearBots = useCallback(() => {
+    setBots([]);
+    sessionStorage.removeItem(AUTOMATIONS_STORAGE_KEY);
+  }, []);
 
   const tt = language === 'pt-BR' ? {
     title: 'Automações AI',

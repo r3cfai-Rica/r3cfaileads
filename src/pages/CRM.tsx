@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp, Folder, Lead } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ import {
   Eye,
   Download,
   FileSpreadsheet,
+  X,
 } from 'lucide-react';
 import { LeadDetailDialog } from '@/components/crm/LeadDetailDialog';
 import { toast } from 'sonner';
@@ -51,20 +52,69 @@ import ExcelJS from 'exceljs';
 import { useFolders } from '@/hooks/useFolders';
 import { useLeads } from '@/hooks/useLeads';
 
+const CRM_STORAGE_KEY = 'crm_view_state';
+
+interface CRMState {
+  selectedFolderId: string | null;
+  statusFilter: string;
+  searchQuery: string;
+}
+
 export const CRM: React.FC = () => {
   const { t, language, ctas, searchHistory } = useApp();
   const { folders, createFolder, updateFolder, deleteFolder } = useFolders();
   const { leads, deleteLead } = useLeads();
   
-  
-  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+  // Load persisted state from sessionStorage
+  const loadPersistedState = useCallback((): CRMState | null => {
+    try {
+      const saved = sessionStorage.getItem(CRM_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading CRM state:', e);
+    }
+    return null;
+  }, []);
+
+  const persistedState = loadPersistedState();
+  const initialFolder = persistedState?.selectedFolderId 
+    ? folders.find(f => f.id === persistedState.selectedFolderId) || null
+    : null;
+
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(initialFolder);
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>(persistedState?.statusFilter || 'all');
+  const [searchQuery, setSearchQuery] = useState(persistedState?.searchQuery || '');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
+
+  // Sync selectedFolder when folders load (for initial page load)
+  useEffect(() => {
+    if (!selectedFolder && persistedState?.selectedFolderId && folders.length > 0) {
+      const folder = folders.find(f => f.id === persistedState.selectedFolderId);
+      if (folder) setSelectedFolder(folder);
+    }
+  }, [folders, persistedState?.selectedFolderId, selectedFolder]);
+
+  // Persist state to sessionStorage whenever it changes
+  useEffect(() => {
+    const stateToSave: CRMState = {
+      selectedFolderId: selectedFolder?.id || null,
+      statusFilter,
+      searchQuery,
+    };
+    sessionStorage.setItem(CRM_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [selectedFolder, statusFilter, searchQuery]);
+
+  // Clear search/filters
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery('');
+    setStatusFilter('all');
+  }, []);
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
@@ -340,6 +390,16 @@ export const CRM: React.FC = () => {
               <SelectItem value="converted">{t.crm.converted}</SelectItem>
             </SelectContent>
           </Select>
+          {(searchQuery || statusFilter !== 'all') && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleClearFilters}
+              title={language === 'pt-BR' ? 'Limpar filtros' : 'Clear filters'}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         {/* Leads Grid */}
