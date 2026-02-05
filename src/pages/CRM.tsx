@@ -92,13 +92,17 @@ export const CRM: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
 
-  // Sync selectedFolder when folders load (for initial page load)
+  // Sync selectedFolder when folders load (only on initial mount)
+  const hasInitializedRef = React.useRef(false);
   useEffect(() => {
-    if (!selectedFolder && persistedState?.selectedFolderId && folders.length > 0) {
+    if (!hasInitializedRef.current && persistedState?.selectedFolderId && folders.length > 0) {
       const folder = folders.find(f => f.id === persistedState.selectedFolderId);
-      if (folder) setSelectedFolder(folder);
+      if (folder) {
+        setSelectedFolder(folder);
+      }
+      hasInitializedRef.current = true;
     }
-  }, [folders, persistedState?.selectedFolderId, selectedFolder]);
+  }, [folders, persistedState?.selectedFolderId]);
 
   // Persist state to sessionStorage whenever it changes
   useEffect(() => {
