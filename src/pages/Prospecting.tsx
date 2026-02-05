@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp, Lead, NicheInsights } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,7 @@ import {
   Hash,
   Flag,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { generateLeadsWithAI } from '@/lib/ai-api';
@@ -49,6 +50,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useFolders } from '@/hooks/useFolders';
 import { useLeads } from '@/hooks/useLeads';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
+
+const STORAGE_KEY = 'prospecting_search_state';
+
+interface ProspectingState {
+  searchQuery: string;
+  country: string;
+  city: string;
+  postalCode: string;
+  searchResults: Lead[];
+  insights: NicheInsights | null;
+  selectedLeads: string[];
+}
 
 const countries = [
   { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
@@ -77,17 +90,66 @@ export const Prospecting: React.FC = () => {
   const { createSearchHistory } = useSearchHistory();
   const navigate = useNavigate();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [country, setCountry] = useState('BR');
-  const [city, setCity] = useState('');
-  const [postalCode, setPostalCode] = useState('');
+  // Load persisted state from sessionStorage
+  const loadPersistedState = useCallback((): ProspectingState | null => {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Restore Date objects for leads
+        if (parsed.searchResults) {
+          parsed.searchResults = parsed.searchResults.map((l: Lead) => ({
+            ...l,
+            createdAt: new Date(l.createdAt),
+          }));
+        }
+        return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading prospecting state:', e);
+    }
+    return null;
+  }, []);
+
+  const persistedState = loadPersistedState();
+
+  const [searchQuery, setSearchQuery] = useState(persistedState?.searchQuery || '');
+  const [country, setCountry] = useState(persistedState?.country || 'BR');
+  const [city, setCity] = useState(persistedState?.city || '');
+  const [postalCode, setPostalCode] = useState(persistedState?.postalCode || '');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Lead[]>([]);
-  const [insights, setInsights] = useState<NicheInsights | null>(null);
-  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [searchResults, setSearchResults] = useState<Lead[]>(persistedState?.searchResults || []);
+  const [insights, setInsights] = useState<NicheInsights | null>(persistedState?.insights || null);
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set(persistedState?.selectedLeads || []));
   const [targetFolder, setTargetFolder] = useState<string>('');
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+
+  // Persist state to sessionStorage whenever it changes
+  useEffect(() => {
+    const stateToSave: ProspectingState = {
+      searchQuery,
+      country,
+      city,
+      postalCode,
+      searchResults,
+      insights,
+      selectedLeads: Array.from(selectedLeads),
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads]);
+
+  // Clear all search state
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+    setCity('');
+    setPostalCode('');
+    setSearchResults([]);
+    setInsights(null);
+    setSelectedLeads(new Set());
+    setTargetFolder('');
+    sessionStorage.removeItem(STORAGE_KEY);
+  }, []);
 
   const translations = {
     'pt-BR': {
@@ -334,7 +396,7 @@ export const Prospecting: React.FC = () => {
               />
             </div>
 
-            {/* Postal Code + Search Button */}
+            {/* Postal Code + Search + Clear Buttons */}
             <div className="flex gap-3">
               <div className="relative flex-1">
                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -361,6 +423,17 @@ export const Prospecting: React.FC = () => {
                   tt.searchButton
                 )}
               </Button>
+              {(searchResults.length > 0 || searchQuery.trim()) && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleClearSearch}
+                  className="h-12 px-4"
+                  title={language === 'pt-BR' ? 'Limpar busca' : 'Clear search'}
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
