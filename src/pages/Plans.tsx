@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckoutAccessDialog } from '@/components/billing/CheckoutAccessDialog';
-import { Check, Zap, Crown, Sparkles, Loader2, Star, Settings, Headphones } from 'lucide-react';
+import { Check, Zap, Crown, Sparkles, Loader2, Star, AlertTriangle, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-type PlanType = 'free' | 'basic' | 'premium';
+type PlanType = 'free' | 'premium';
 
 export const Plans: React.FC = () => {
   const { t, user, setUser } = useApp();
@@ -110,7 +111,7 @@ export const Plans: React.FC = () => {
 
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl animate-slide-up">
+      <div className="w-full max-w-4xl animate-slide-up">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary shadow-glow mb-4">
@@ -120,15 +121,19 @@ export const Plans: React.FC = () => {
           <p className="text-xl text-primary-foreground/70">{t.plans.subtitle}</p>
         </div>
 
-        {/* Plans Grid - 3 columns */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* Free Plan */}
+        {/* Plans Grid - 2 columns */}
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Demo/Free Plan */}
           <Card variant="glass" className="backdrop-blur-xl relative">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
                   <Sparkles className="w-6 h-6 text-muted-foreground" />
                 </div>
+                <Badge variant="secondary">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  Demo
+                </Badge>
               </div>
               <CardTitle className="text-2xl mt-4">{t.plans.freeTrial}</CardTitle>
               <CardDescription>{t.plans.freeTrialDesc}</CardDescription>
@@ -137,11 +142,20 @@ export const Plans: React.FC = () => {
               <div className="text-4xl font-bold">
                 R$ 0
               </div>
+              
+              {/* Warning about demo leads */}
+              <Alert variant="default" className="bg-warning/10 border-warning/30">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-sm text-warning">
+                  {t.plans.freeNote}
+                </AlertDescription>
+              </Alert>
+
               <ul className="space-y-3">
                 {t.plans.freeFeatures.map((feature, index) => (
                   <li key={index} className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{feature}</span>
+                    <Check className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -158,62 +172,12 @@ export const Plans: React.FC = () => {
             </CardFooter>
           </Card>
 
-          {/* Basic Plan */}
-          <Card variant="glass" className="backdrop-blur-xl relative border-2 border-primary/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <Settings className="w-6 h-6 text-primary" />
-                </div>
-                <Badge variant="outline" className="border-primary text-primary">
-                  Vitalício
-                </Badge>
-              </div>
-              <CardTitle className="text-2xl mt-4">{t.plans.basic}</CardTitle>
-              <CardDescription>{t.plans.basicDesc}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">{t.plans.basicPrice}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{t.plans.basicPriceNote}</p>
-              </div>
-              <ul className="space-y-3">
-                {t.plans.basicFeatures.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter>
-              <Button
-                variant="default"
-                className="w-full"
-                size="lg"
-                onClick={() => handleCheckout('basic')}
-                disabled={isLoading !== null}
-              >
-                {isLoading === 'basic' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  t.plans.selectBasic
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-
           {/* Premium Plan */}
-          <Card variant="glass" className="backdrop-blur-xl relative border-2 border-warning/50">
-            {/* Promo Badge */}
+          <Card variant="glass" className="backdrop-blur-xl relative border-2 border-success/50">
+            {/* Real Leads Badge */}
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
               <Badge variant="gradientCTA" className="gradient-cta px-4 py-1 text-sm shadow-lg">
-                <Star className="w-3 h-3 mr-1" />
+                <MapPin className="w-3 h-3 mr-1" />
                 {t.plans.promo}
               </Badge>
             </div>
@@ -224,7 +188,7 @@ export const Plans: React.FC = () => {
                   <Crown className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <Badge variant="gradient">
-                  <Headphones className="w-3 h-3 mr-1" />
+                  <Star className="w-3 h-3 mr-1" />
                   VIP
                 </Badge>
               </div>
@@ -234,7 +198,7 @@ export const Plans: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="space-y-1">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-warning">{t.plans.premiumPrice}</span>
+                  <span className="text-4xl font-bold text-success">{t.plans.premiumPrice}</span>
                   <span className="text-lg text-muted-foreground">{t.plans.premiumPriceNote}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">{t.plans.premiumFirstPayment}</p>
@@ -276,7 +240,7 @@ export const Plans: React.FC = () => {
             className="text-primary-foreground/60 hover:text-primary-foreground"
             onClick={() => navigate('/dashboard')}
           >
-            Continuar com plano gratuito por enquanto
+            Continuar com demonstração gratuita
           </Button>
         </div>
 
