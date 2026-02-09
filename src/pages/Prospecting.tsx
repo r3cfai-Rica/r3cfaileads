@@ -193,12 +193,14 @@ export const Prospecting: React.FC = () => {
 
     try {
       const selectedCountryData = countries.find(c => c.code === country);
+      const isPaidUser = user?.plan === 'paid';
       const result = await generateLeadsWithAI({
         niche: searchQuery,
         country: selectedCountryData?.name || 'Brazil',
         city: city,
         postalCode: postalCode,
         language: language,
+        useRealData: isPaidUser,
       });
 
       const limitedLeads = user?.plan === 'free' ? result.leads.slice(0, 10) : result.leads;
