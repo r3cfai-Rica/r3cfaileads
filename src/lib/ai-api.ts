@@ -34,13 +34,15 @@ interface GenerateCTAsResponse {
   ctas: GeneratedCTA[];
 }
 
-export async function generateLeadsWithAI(params: GenerateLeadsParams): Promise<GenerateLeadsResponse> {
-  const { data, error } = await supabase.functions.invoke('generate-leads', {
+export async function generateLeadsWithAI(params: GenerateLeadsParams & { useRealData?: boolean }): Promise<GenerateLeadsResponse> {
+  const functionName = params.useRealData ? 'generate-leads-google' : 'generate-leads';
+  
+  const { data, error } = await supabase.functions.invoke(functionName, {
     body: params
   });
 
   if (error) {
-    console.error('Error calling generate-leads:', error);
+    console.error(`Error calling ${functionName}:`, error);
     throw new Error(error.message || 'Failed to generate leads');
   }
 
