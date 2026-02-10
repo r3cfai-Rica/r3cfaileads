@@ -27,6 +27,24 @@ interface TelegramUpdate {
   };
 }
 
+// Verify Telegram webhook using the secret_token header
+// Telegram sends X-Telegram-Bot-Api-Secret-Token when setWebhook is called with secret_token
+function verifyTelegramSignature(req: Request): boolean {
+  const secretToken = Deno.env.get('TELEGRAM_WEBHOOK_SECRET') || Deno.env.get('TELEGRAM_BOT_TOKEN');
+  if (!secretToken) {
+    console.warn('No TELEGRAM_WEBHOOK_SECRET or TELEGRAM_BOT_TOKEN configured, skipping verification');
+    return true; // Fail open if not configured (log warning)
+  }
+
+  const headerToken = req.headers.get('x-telegram-bot-api-secret-token');
+  if (!headerToken) {
+    console.error('Missing X-Telegram-Bot-Api-Secret-Token header');
+    return false;
+  }
+
+  return headerToken === secretToken;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -38,10 +56,19 @@ serve(async (req) => {
     return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   }
 
+  // Verify Telegram signature
+  if (!verifyTelegramSignature(req)) {
+    console.error('Telegram webhook signature verification failed');
+    return new Response(
+      JSON.stringify({ error: 'Invalid signature' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const update: TelegramUpdate = await req.json();
     
-    console.log('Telegram webhook received:', JSON.stringify(update, null, 2));
+    console.log('Telegram webhook received (verified)');
 
     // Only process messages
     if (!update.message) {
@@ -76,7 +103,7 @@ serve(async (req) => {
       messageText = '[Mensagem não suportada]';
     }
 
-    console.log(`Incoming Telegram from ${senderName} (${chatId}): ${messageText}`);
+    console.log(`Incoming Telegram from ${senderName} (${chatId})`);
 
     // Find existing conversation by chat ID
     const { data: existingConvo, error: convoError } = await supabase
@@ -93,7 +120,6 @@ serve(async (req) => {
     }
 
     if (existingConvo) {
-      // Update existing conversation
       await supabase
         .from('conversations')
         .update({
@@ -104,7 +130,6 @@ serve(async (req) => {
         })
         .eq('id', existingConvo.id);
 
-      // Insert the incoming message
       await supabase.from('inbox_messages').insert({
         conversation_id: existingConvo.id,
         user_id: existingConvo.user_id,
@@ -124,7 +149,6 @@ serve(async (req) => {
 
       console.log(`Message added to existing conversation: ${existingConvo.id}`);
     } else {
-      // Try to find a lead with this telegram chat ID
       const { data: leadData } = await supabase
         .from('leads')
         .select('id, user_id, name')
@@ -133,7 +157,6 @@ serve(async (req) => {
         .maybeSingle();
 
       if (leadData) {
-        // Create new conversation linked to lead
         const { data: newConvo } = await supabase
           .from('conversations')
           .insert({
@@ -183,7 +206,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing Telegram webhook:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Webhook processing failed' }),
+      JSON.stringify({ error: 'Webhook processing failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -30,23 +30,66 @@ interface EvolutionWebhookPayload {
   };
 }
 
+// Verify Evolution API webhook by validating the API key header
+function verifyEvolutionWebhook(req: Request): boolean {
+  const apiKey = Deno.env.get('EVOLUTION_API_KEY');
+  if (!apiKey) {
+    console.warn('No EVOLUTION_API_KEY configured, skipping verification');
+    return true;
+  }
+
+  // Evolution API can send an apikey header for webhook authentication
+  const headerApiKey = req.headers.get('apikey') || req.headers.get('x-api-key');
+  if (headerApiKey && headerApiKey === apiKey) {
+    return true;
+  }
+
+  // Also check instance name matches configured instance
+  // This provides an additional layer of validation
+  const instanceName = Deno.env.get('EVOLUTION_INSTANCE_NAME');
+  if (instanceName) {
+    // We'll verify instance name from the payload later
+    // For now, allow if no apikey header but instance matches
+    return !headerApiKey; // Allow if no header (backward compat), reject if wrong header
+  }
+
+  console.error('Evolution webhook API key verification failed');
+  return false;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Only accept POST requests
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+  }
+
+  // Verify Evolution API webhook
+  if (!verifyEvolutionWebhook(req)) {
+    console.error('Evolution webhook verification failed');
+    return new Response(
+      JSON.stringify({ error: 'Invalid API key' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
     const payload: EvolutionWebhookPayload = await req.json();
     
-    console.log('Evolution webhook received:', JSON.stringify(payload, null, 2));
+    // Verify instance name matches
+    const expectedInstance = Deno.env.get('EVOLUTION_INSTANCE_NAME');
+    if (expectedInstance && payload.instance !== expectedInstance) {
+      console.error(`Instance mismatch: expected ${expectedInstance}, got ${payload.instance}`);
+      return new Response(
+        JSON.stringify({ error: 'Instance mismatch' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Only process incoming messages (MESSAGES_UPSERT event, not from us)
+    console.log('Evolution webhook received (verified)');
+
     if (payload.event !== 'messages.upsert' || payload.data?.key?.fromMe) {
       console.log('Skipping event:', payload.event, 'fromMe:', payload.data?.key?.fromMe);
       return new Response(
@@ -60,14 +103,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Extract message content
     const messageData = payload.data;
     const remoteJid = messageData.key.remoteJid;
     const phoneNumber = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
     const senderName = messageData.pushName || phoneNumber;
     const messageId = messageData.key.id;
 
-    // Get message text from various message types
     let messageText = '';
     if (messageData.message?.conversation) {
       messageText = messageData.message.conversation;
@@ -79,9 +120,8 @@ serve(async (req) => {
       messageText = `[${messageData.messageType || 'Mensagem não suportada'}]`;
     }
 
-    console.log(`Incoming WhatsApp from ${phoneNumber}: ${messageText}`);
+    console.log(`Incoming WhatsApp from ${phoneNumber}`);
 
-    // Find existing conversation by phone number
     const { data: existingConvo, error: convoError } = await supabase
       .from('conversations')
       .select('id, user_id')
@@ -96,18 +136,16 @@ serve(async (req) => {
     }
 
     if (existingConvo) {
-      // Update existing conversation
       await supabase
         .from('conversations')
         .update({
           last_message: messageText,
           last_message_at: new Date().toISOString(),
-          unread_count: existingConvo.user_id ? 1 : 0, // Increment handled by trigger
+          unread_count: existingConvo.user_id ? 1 : 0,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingConvo.id);
 
-      // Insert the incoming message
       await supabase.from('inbox_messages').insert({
         conversation_id: existingConvo.id,
         user_id: existingConvo.user_id,
@@ -124,7 +162,6 @@ serve(async (req) => {
         },
       });
 
-      // Update message_logs if exists
       await supabase
         .from('message_logs')
         .update({ status: 'replied' })
@@ -136,7 +173,6 @@ serve(async (req) => {
 
       console.log(`Message added to existing conversation: ${existingConvo.id}`);
     } else {
-      // Try to find a lead with this phone number to get user context
       const { data: leadData } = await supabase
         .from('leads')
         .select('id, user_id, name')
@@ -145,7 +181,6 @@ serve(async (req) => {
         .maybeSingle();
 
       if (leadData) {
-        // Create new conversation linked to lead
         const { data: newConvo } = await supabase
           .from('conversations')
           .insert({
@@ -193,7 +228,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing Evolution webhook:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Webhook processing failed' }),
+      JSON.stringify({ error: 'Webhook processing failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
