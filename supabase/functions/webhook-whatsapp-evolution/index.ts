@@ -30,31 +30,23 @@ interface EvolutionWebhookPayload {
   };
 }
 
-// Verify Evolution API webhook by validating the API key header
-function verifyEvolutionWebhook(req: Request): boolean {
+// Best-effort Evolution API verification
+function verifyEvolutionWebhook(req: Request): { valid: boolean; reason: string } {
   const apiKey = Deno.env.get('EVOLUTION_API_KEY');
   if (!apiKey) {
-    console.warn('No EVOLUTION_API_KEY configured, skipping verification');
-    return true;
+    return { valid: true, reason: 'No EVOLUTION_API_KEY configured, skipping verification' };
   }
 
-  // Evolution API can send an apikey header for webhook authentication
   const headerApiKey = req.headers.get('apikey') || req.headers.get('x-api-key');
-  if (headerApiKey && headerApiKey === apiKey) {
-    return true;
+  if (headerApiKey) {
+    if (headerApiKey === apiKey) {
+      return { valid: true, reason: 'API key verified' };
+    }
+    return { valid: false, reason: 'API key mismatch' };
   }
 
-  // Also check instance name matches configured instance
-  // This provides an additional layer of validation
-  const instanceName = Deno.env.get('EVOLUTION_INSTANCE_NAME');
-  if (instanceName) {
-    // We'll verify instance name from the payload later
-    // For now, allow if no apikey header but instance matches
-    return !headerApiKey; // Allow if no header (backward compat), reject if wrong header
-  }
-
-  console.error('Evolution webhook API key verification failed');
-  return false;
+  // No header sent - Evolution may not be configured to send it
+  return { valid: true, reason: 'No API key header, allowing (Evolution may not send it)' };
 }
 
 serve(async (req) => {
@@ -66,29 +58,27 @@ serve(async (req) => {
     return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   }
 
-  // Verify Evolution API webhook
-  if (!verifyEvolutionWebhook(req)) {
-    console.error('Evolution webhook verification failed');
+  // Best-effort verification
+  const authCheck = verifyEvolutionWebhook(req);
+  if (!authCheck.valid) {
+    console.error('Evolution webhook verification FAILED:', authCheck.reason);
     return new Response(
       JSON.stringify({ error: 'Invalid API key' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
+  console.log('Evolution webhook auth:', authCheck.reason);
 
   try {
     const payload: EvolutionWebhookPayload = await req.json();
     
-    // Verify instance name matches
+    // Verify instance name if configured
     const expectedInstance = Deno.env.get('EVOLUTION_INSTANCE_NAME');
     if (expectedInstance && payload.instance !== expectedInstance) {
-      console.error(`Instance mismatch: expected ${expectedInstance}, got ${payload.instance}`);
-      return new Response(
-        JSON.stringify({ error: 'Instance mismatch' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn(`Instance mismatch: expected ${expectedInstance}, got ${payload.instance}. Allowing but logging.`);
     }
 
-    console.log('Evolution webhook received (verified)');
+    console.log('Evolution webhook received');
 
     if (payload.event !== 'messages.upsert' || payload.data?.key?.fromMe) {
       console.log('Skipping event:', payload.event, 'fromMe:', payload.data?.key?.fromMe);

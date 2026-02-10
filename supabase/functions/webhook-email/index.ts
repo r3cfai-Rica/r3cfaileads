@@ -6,49 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Verify Resend webhook signature using HMAC-SHA256
-// https://resend.com/docs/dashboard/webhooks/introduction#verify-webhooks
-async function verifyResendSignature(body: string, signatureHeader: string | null, webhookSecret: string): Promise<boolean> {
-  if (!signatureHeader) {
-    console.error('Missing svix-signature header');
-    return false;
-  }
-
-  // Resend uses Svix for webhooks
-  // Headers: svix-id, svix-timestamp, svix-signature
-  // For simplicity, we verify the svix-signature
-  // The signature is a base64-encoded HMAC-SHA256 of "{svix-id}.{svix-timestamp}.{body}"
-  return true; // Svix verification is complex; we validate via webhook ID matching below
-}
-
-// Simple webhook validation: verify the request has proper Resend/Svix headers
-function validateResendHeaders(req: Request): boolean {
+// Best-effort Resend/Svix header validation
+function validateResendHeaders(req: Request): { valid: boolean; reason: string } {
   const svixId = req.headers.get('svix-id');
   const svixTimestamp = req.headers.get('svix-timestamp');
   const svixSignature = req.headers.get('svix-signature');
 
-  // If Svix headers are present, the request is from Resend
   if (svixId && svixTimestamp && svixSignature) {
-    // Validate timestamp is within 5 minutes to prevent replay attacks
-    const timestampSeconds = parseInt(svixTimestamp, 10);
+    // Validate timestamp to prevent replay attacks (5 min window)
+    const ts = parseInt(svixTimestamp, 10);
     const now = Math.floor(Date.now() / 1000);
-    if (Math.abs(now - timestampSeconds) > 300) {
-      console.error('Webhook timestamp too old, possible replay attack');
-      return false;
+    if (Math.abs(now - ts) > 300) {
+      return { valid: false, reason: 'Svix timestamp too old, possible replay attack' };
     }
-    return true;
+    return { valid: true, reason: 'Svix headers present and timestamp valid' };
   }
 
-  // If no Svix headers, check for other known webhook formats
-  const contentType = req.headers.get('content-type');
-  if (contentType?.includes('application/json')) {
-    // Could be a direct webhook - allow but log warning
-    console.warn('Webhook received without Svix headers - limited verification');
-    return true;
-  }
-
-  console.error('Invalid webhook request - missing required headers');
-  return false;
+  // No Svix headers - allow but log (could be direct webhook or other format)
+  return { valid: true, reason: 'No Svix headers, allowing request (best-effort)' };
 }
 
 serve(async (req) => {
@@ -58,17 +33,19 @@ serve(async (req) => {
 
   try {
     if (req.method === 'POST') {
-      // Validate Resend webhook headers
-      if (!validateResendHeaders(req)) {
-        console.error('Email webhook header validation failed');
+      // Best-effort header validation
+      const headerCheck = validateResendHeaders(req);
+      if (!headerCheck.valid) {
+        console.error('Email webhook validation failed:', headerCheck.reason);
         return new Response(JSON.stringify({ error: 'Invalid webhook request' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      console.log('Email webhook auth:', headerCheck.reason);
 
       const body = await req.json();
-      console.log('Email webhook received (verified)');
+      console.log('Email webhook received:', JSON.stringify(body));
 
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
