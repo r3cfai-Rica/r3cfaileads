@@ -681,12 +681,86 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_messaging_credentials_safe: {
+        Row: {
+          created_at: string | null
+          email_configured: boolean | null
+          email_from_address: string | null
+          email_from_name: string | null
+          id: string | null
+          metadata: Json | null
+          resend_api_key_masked: string | null
+          sms_configured: boolean | null
+          twilio_account_sid_masked: string | null
+          twilio_auth_token_masked: string | null
+          twilio_phone_number: string | null
+          updated_at: string | null
+          user_id: string | null
+          whatsapp_access_token_masked: string | null
+          whatsapp_configured: boolean | null
+          whatsapp_phone_number_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_configured?: boolean | null
+          email_from_address?: string | null
+          email_from_name?: string | null
+          id?: string | null
+          metadata?: Json | null
+          resend_api_key_masked?: never
+          sms_configured?: boolean | null
+          twilio_account_sid_masked?: never
+          twilio_auth_token_masked?: never
+          twilio_phone_number?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp_access_token_masked?: never
+          whatsapp_configured?: boolean | null
+          whatsapp_phone_number_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_configured?: boolean | null
+          email_from_address?: string | null
+          email_from_name?: string | null
+          id?: string | null
+          metadata?: Json | null
+          resend_api_key_masked?: never
+          sms_configured?: boolean | null
+          twilio_account_sid_masked?: never
+          twilio_auth_token_masked?: never
+          twilio_phone_number?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp_access_token_masked?: never
+          whatsapp_configured?: boolean | null
+          whatsapp_phone_number_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_messaging_limit: {
         Args: { _channel: string; _user_id: string }
         Returns: boolean
+      }
+      decrypt_credential: { Args: { encrypted_text: string }; Returns: string }
+      encrypt_credential: { Args: { plain_text: string }; Returns: string }
+      get_decrypted_credentials: {
+        Args: { _user_id: string }
+        Returns: {
+          email_configured: boolean
+          email_from_address: string
+          email_from_name: string
+          resend_api_key: string
+          sms_configured: boolean
+          twilio_account_sid: string
+          twilio_auth_token: string
+          twilio_phone_number: string
+          whatsapp_access_token: string
+          whatsapp_configured: boolean
+          whatsapp_phone_number_id: string
+        }[]
       }
       has_role: {
         Args: {
@@ -705,6 +779,23 @@ export type Database = {
       }
       owns_resource: { Args: { _resource_user_id: string }; Returns: boolean }
       reset_monthly_usage: { Args: never; Returns: undefined }
+      save_encrypted_credentials: {
+        Args: {
+          _email_configured?: boolean
+          _email_from_address?: string
+          _email_from_name?: string
+          _resend_api_key?: string
+          _sms_configured?: boolean
+          _twilio_account_sid?: string
+          _twilio_auth_token?: string
+          _twilio_phone_number?: string
+          _user_id: string
+          _whatsapp_access_token?: string
+          _whatsapp_configured?: boolean
+          _whatsapp_phone_number_id?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
