@@ -83,6 +83,52 @@ serve(async (req) => {
 
       console.log(`Successfully updated user plan to 'paid' with type '${planType}'`);
 
+      // Detect payment method from Stripe session
+      let paymentMethod = 'credit_card';
+      let installments = 1;
+      try {
+        if (session.payment_intent) {
+          const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+          if (pi.payment_method) {
+            const pm = await stripe.paymentMethods.retrieve(pi.payment_method as string);
+            if (pm.type === 'pix') paymentMethod = 'pix';
+            else if (pm.type === 'boleto') paymentMethod = 'boleto';
+            else if (pm.type === 'card') {
+              paymentMethod = 'credit_card';
+              installments = (pm.card as any)?.installments?.plan?.count || 1;
+            }
+          }
+        }
+      } catch (pmError) {
+        console.error("Error detecting payment method:", pmError);
+      }
+
+      // Save payment record
+      const { error: paymentError } = await supabaseAdmin
+        .from("payments")
+        .insert({
+          user_id: userId,
+          stripe_payment_intent: session.payment_intent as string || null,
+          stripe_session_id: session.id,
+          amount: session.amount_total || 0,
+          currency: session.currency || 'brl',
+          payment_method: paymentMethod,
+          payment_type: setupSubscription ? 'subscription' : 'one_time',
+          installments,
+          plan_type: planType,
+          status: 'completed',
+          metadata: {
+            customer_email: session.customer_email,
+            setup_subscription: setupSubscription,
+          },
+        });
+
+      if (paymentError) {
+        console.error("Error saving payment record:", paymentError);
+      } else {
+        console.log("Payment record saved successfully");
+      }
+
       if (planType === 'premium') {
         const { error: usageError } = await supabaseAdmin
           .from("user_messaging_usage")
