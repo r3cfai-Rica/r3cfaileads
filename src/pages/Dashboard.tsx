@@ -15,11 +15,12 @@ import {
   Zap,
   Clock,
   Target,
+  Globe,
 } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/dashboard/AnalyticsDashboard';
 
 export const Dashboard: React.FC = () => {
-  const { t, user, leads, folders, messageLogs, canSearch, remainingSearches, remainingLeads } = useApp();
+  const { t, language, setLanguage, user, leads, folders, messageLogs, canSearch, remainingSearches, remainingLeads } = useApp();
 
   const stats = [
     {
@@ -93,6 +94,15 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setLanguage(language === 'pt-BR' ? 'en-US' : 'pt-BR')}
+          >
+            <Globe className="w-4 h-4" />
+            {language === 'pt-BR' ? 'EN' : 'PT'}
+          </Button>
           <Badge variant={user?.plan === 'paid' ? 'gradient' : 'muted'} className="px-3 py-1">
             {user?.plan === 'paid' ? 'PRO' : 'FREE'}
           </Badge>
@@ -117,15 +127,15 @@ export const Dashboard: React.FC = () => {
                   <Target className="w-5 h-5 text-warning" />
                 </div>
                 <div>
-                  <p className="font-medium">Plano Gratuito</p>
+                  <p className="font-medium">{t.dashboard.freePlan}</p>
                   <p className="text-sm text-muted-foreground">
-                    {remainingSearches} busca(s) • {remainingLeads} leads restantes
+                    {remainingSearches} {t.dashboard.searchesRemaining} • {remainingLeads} {t.dashboard.leadsRemaining}
                   </p>
                 </div>
               </div>
               <Link to="/plans">
                 <Button variant="warning" size="sm" className="gap-2">
-                  Fazer Upgrade <ArrowRight className="w-4 h-4" />
+                  {t.dashboard.upgrade} <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
             </div>
@@ -166,7 +176,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">{action.label}</p>
-                      <p className="text-sm text-muted-foreground">Clique para acessar</p>
+                      <p className="text-sm text-muted-foreground">{t.dashboard.clickToAccess}</p>
                     </div>
                     <ArrowRight className="w-5 h-5 text-muted-foreground" />
                   </div>
@@ -187,9 +197,9 @@ export const Dashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              Leads Recentes
+              {t.dashboard.recentLeads}
             </CardTitle>
-            <CardDescription>Últimos leads adicionados ao CRM</CardDescription>
+            <CardDescription>{t.dashboard.recentLeadsDesc}</CardDescription>
           </CardHeader>
           <CardContent>
             {leads.length > 0 ? (
@@ -207,10 +217,10 @@ export const Dashboard: React.FC = () => {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Nenhum lead ainda</p>
+                <p>{t.dashboard.noLeadsYet}</p>
                 <Link to="/prospecting">
                   <Button variant="link" className="mt-2">
-                    Iniciar Prospecção
+                    {t.dashboard.startProspecting}
                   </Button>
                 </Link>
               </div>
@@ -225,7 +235,7 @@ export const Dashboard: React.FC = () => {
               <Clock className="w-5 h-5 text-secondary" />
               {t.dashboard.recentActivity}
             </CardTitle>
-            <CardDescription>Últimas mensagens enviadas</CardDescription>
+            <CardDescription>{t.dashboard.recentMessagesDesc}</CardDescription>
           </CardHeader>
           <CardContent>
             {messageLogs.length > 0 ? (
@@ -252,10 +262,10 @@ export const Dashboard: React.FC = () => {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Send className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Nenhuma mensagem enviada</p>
+                <p>{t.dashboard.noMessagesSent}</p>
                 <Link to="/messaging">
                   <Button variant="link" className="mt-2">
-                    Enviar Mensagem
+                    {t.dashboard.sendMessage}
                   </Button>
                 </Link>
               </div>
