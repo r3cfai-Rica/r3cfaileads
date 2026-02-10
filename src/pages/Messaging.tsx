@@ -230,10 +230,11 @@ export const Messaging: React.FC = () => {
   };
 
   const handleGenerateEmail = async () => {
+    const pt = language === 'pt-BR';
     if (!selectedFolderId || selectedLeadIds.size === 0) {
       toast({
-        title: "Selecione um lead",
-        description: "Escolha pelo menos um lead para gerar o email personalizado",
+        title: pt ? "Selecione um lead" : "Select a lead",
+        description: pt ? "Escolha pelo menos um lead para gerar o email personalizado" : "Choose at least one lead to generate a personalized email",
         variant: "destructive",
       });
       return;
@@ -241,8 +242,8 @@ export const Messaging: React.FC = () => {
 
     if (!senderName || !senderCompany) {
       toast({
-        title: "Dados do remetente",
-        description: "Preencha seu nome e empresa para gerar o email",
+        title: pt ? "Dados do remetente" : "Sender info",
+        description: pt ? "Preencha seu nome e empresa para gerar o email" : "Fill in your name and company to generate the email",
         variant: "destructive",
       });
       return;
@@ -281,14 +282,14 @@ export const Messaging: React.FC = () => {
       setMessage(fullEmail);
 
       toast({
-        title: "Email gerado com sucesso! ✨",
-        description: "O email está pronto para envio. Revise e clique em Enviar.",
+        title: pt ? "Email gerado com sucesso! ✨" : "Email generated! ✨",
+        description: pt ? "O email está pronto para envio. Revise e clique em Enviar." : "The email is ready. Review and click Send.",
       });
     } catch (error) {
       console.error('Error generating email:', error);
       toast({
-        title: "Erro ao gerar email",
-        description: error instanceof Error ? error.message : "Tente novamente mais tarde",
+        title: pt ? "Erro ao gerar email" : "Error generating email",
+        description: error instanceof Error ? error.message : (pt ? "Tente novamente mais tarde" : "Try again later"),
         variant: "destructive",
       });
     } finally {
@@ -298,11 +299,11 @@ export const Messaging: React.FC = () => {
 
   const handleCopyEmail = () => {
     if (generatedEmail) {
-      const fullEmail = `Assunto: ${generatedEmail.subject}\n\n${generatedEmail.greeting}\n\n${generatedEmail.body.replace(/<[^>]*>/g, '')}\n\n${generatedEmail.signature.replace(/<[^>]*>/g, '')}`;
+      const fullEmail = `${language === 'pt-BR' ? 'Assunto' : 'Subject'}: ${generatedEmail.subject}\n\n${generatedEmail.greeting}\n\n${generatedEmail.body.replace(/<[^>]*>/g, '')}\n\n${generatedEmail.signature.replace(/<[^>]*>/g, '')}`;
       navigator.clipboard.writeText(fullEmail);
       toast({
-        title: "Email copiado!",
-        description: "O email foi copiado para a área de transferência",
+        title: language === 'pt-BR' ? "Email copiado!" : "Email copied!",
+        description: language === 'pt-BR' ? "O email foi copiado para a área de transferência" : "Email copied to clipboard",
       });
     }
   };
@@ -577,11 +578,11 @@ export const Messaging: React.FC = () => {
         <TabsList>
           <TabsTrigger value="compose" className="gap-2">
             <Sparkles className="w-4 h-4" />
-            Email com IA
+            {language === 'pt-BR' ? 'Email com IA' : 'AI Email'}
           </TabsTrigger>
           <TabsTrigger value="manual" className="gap-2">
             <Send className="w-4 h-4" />
-            Compor Manual
+            {language === 'pt-BR' ? 'Compor Manual' : 'Manual Compose'}
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <Clock className="w-4 h-4" />
@@ -599,16 +600,16 @@ export const Messaging: React.FC = () => {
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">1</div>
-                    <div>
-                      <CardTitle className="text-lg">Selecione o Nicho e Lead</CardTitle>
-                      <CardDescription>Escolha para quem você quer enviar</CardDescription>
-                    </div>
+                     <div>
+                       <CardTitle className="text-lg">{language === 'pt-BR' ? 'Selecione o Nicho e Lead' : 'Select Niche and Lead'}</CardTitle>
+                       <CardDescription>{language === 'pt-BR' ? 'Escolha para quem você quer enviar' : 'Choose who you want to send to'}</CardDescription>
+                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Nicho</label>
+                      <label className="text-sm font-medium mb-2 block">{language === 'pt-BR' ? 'Nicho' : 'Niche'}</label>
                       <Select value={selectedFolderId} onValueChange={(v) => {
                         setSelectedFolderId(v);
                         setSelectedLeadIds(new Set());
@@ -616,7 +617,7 @@ export const Messaging: React.FC = () => {
                         setGeneratedEmail(null);
                       }}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Escolha um nicho" />
+                           <SelectValue placeholder={language === 'pt-BR' ? 'Escolha um nicho' : 'Choose a niche'} />
                         </SelectTrigger>
                         <SelectContent>
                           {folders.map(folder => (
@@ -628,13 +629,13 @@ export const Messaging: React.FC = () => {
                       </Select>
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-2 block">CTA Base (opcional)</label>
+                      <label className="text-sm font-medium mb-2 block">{language === 'pt-BR' ? 'CTA Base (opcional)' : 'Base CTA (optional)'}</label>
                       <Select value={selectedCTAId} onValueChange={(v) => setSelectedCTAId(v === 'auto' ? '' : v)}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Usar CTA existente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto">Gerar CTA automático</SelectItem>
+                           <SelectValue placeholder={language === 'pt-BR' ? 'Usar CTA existente' : 'Use existing CTA'} />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="auto">{language === 'pt-BR' ? 'Gerar CTA automático' : 'Auto-generate CTA'}</SelectItem>
                           {folderCTAs.map(cta => (
                             <SelectItem key={cta.id} value={cta.id}>
                               {cta.title}
@@ -648,10 +649,10 @@ export const Messaging: React.FC = () => {
                   {selectedFolderId && eligibleLeads.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">Leads com email ({eligibleLeads.length})</label>
-                        <Button variant="ghost" size="sm" onClick={handleSelectAll}>
-                          {selectedLeadIds.size === eligibleLeads.length ? 'Desmarcar todos' : 'Selecionar todos'}
-                        </Button>
+                         <label className="text-sm font-medium">{language === 'pt-BR' ? `Leads com email (${eligibleLeads.length})` : `Leads with email (${eligibleLeads.length})`}</label>
+                         <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                           {selectedLeadIds.size === eligibleLeads.length ? (language === 'pt-BR' ? 'Desmarcar todos' : 'Deselect all') : (language === 'pt-BR' ? 'Selecionar todos' : 'Select all')}
+                         </Button>
                       </div>
                       <div className="grid sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
                         {eligibleLeads.map((lead) => (
@@ -684,15 +685,15 @@ export const Messaging: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">2</div>
                     <div>
-                      <CardTitle className="text-lg">Seus Dados e Tom</CardTitle>
-                      <CardDescription>Configure como você quer se apresentar</CardDescription>
+                       <CardTitle className="text-lg">{language === 'pt-BR' ? 'Seus Dados e Tom' : 'Your Info & Tone'}</CardTitle>
+                       <CardDescription>{language === 'pt-BR' ? 'Configure como você quer se apresentar' : 'Set up how you want to present yourself'}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Seu Nome</label>
+                      <label className="text-sm font-medium mb-2 block">{language === 'pt-BR' ? 'Seu Nome' : 'Your Name'}</label>
                       <Input 
                         value={senderName} 
                         onChange={(e) => setSenderName(e.target.value)}
@@ -700,7 +701,7 @@ export const Messaging: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Sua Empresa</label>
+                      <label className="text-sm font-medium mb-2 block">{language === 'pt-BR' ? 'Sua Empresa' : 'Your Company'}</label>
                       <Input 
                         value={senderCompany} 
                         onChange={(e) => setSenderCompany(e.target.value)}
@@ -709,14 +710,19 @@ export const Messaging: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Tom da Mensagem</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        { value: 'formal', label: '🎩 Formal', desc: 'Corporativo' },
-                        { value: 'casual', label: '😊 Casual', desc: 'Descontraído' },
-                        { value: 'persuasive', label: '🎯 Persuasivo', desc: 'Gatilhos mentais' },
-                        { value: 'friendly', label: '🤝 Amigável', desc: 'Empático' },
-                      ].map((tone) => (
+                     <label className="text-sm font-medium mb-2 block">{language === 'pt-BR' ? 'Tom da Mensagem' : 'Message Tone'}</label>
+                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                       {(language === 'pt-BR' ? [
+                         { value: 'formal', label: '🎩 Formal', desc: 'Corporativo' },
+                         { value: 'casual', label: '😊 Casual', desc: 'Descontraído' },
+                         { value: 'persuasive', label: '🎯 Persuasivo', desc: 'Gatilhos mentais' },
+                         { value: 'friendly', label: '🤝 Amigável', desc: 'Empático' },
+                       ] : [
+                         { value: 'formal', label: '🎩 Formal', desc: 'Corporate' },
+                         { value: 'casual', label: '😊 Casual', desc: 'Relaxed' },
+                         { value: 'persuasive', label: '🎯 Persuasive', desc: 'Mental triggers' },
+                         { value: 'friendly', label: '🤝 Friendly', desc: 'Empathetic' },
+                       ]).map((tone) => (
                         <Button
                           key={tone.value}
                           variant={emailTone === tone.value ? 'default' : 'outline'}
@@ -739,8 +745,8 @@ export const Messaging: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">3</div>
                       <div>
-                        <CardTitle className="text-lg">Gerar Email com IA</CardTitle>
-                        <CardDescription>A IA criará um email personalizado e persuasivo</CardDescription>
+                         <CardTitle className="text-lg">{language === 'pt-BR' ? 'Gerar Email com IA' : 'Generate Email with AI'}</CardTitle>
+                         <CardDescription>{language === 'pt-BR' ? 'A IA criará um email personalizado e persuasivo' : 'AI will create a personalized and persuasive email'}</CardDescription>
                       </div>
                     </div>
                     <Button 
@@ -748,18 +754,18 @@ export const Messaging: React.FC = () => {
                       onClick={handleGenerateEmail}
                       disabled={isGeneratingEmail || selectedLeadIds.size === 0 || !senderName || !senderCompany}
                     >
-                      {isGeneratingEmail ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Gerando...
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="w-4 h-4" />
-                          Gerar Email
-                        </>
-                      )}
-                    </Button>
+                       {isGeneratingEmail ? (
+                         <>
+                           <Loader2 className="w-4 h-4 animate-spin" />
+                           {language === 'pt-BR' ? 'Gerando...' : 'Generating...'}
+                         </>
+                       ) : (
+                         <>
+                           <Wand2 className="w-4 h-4" />
+                           {language === 'pt-BR' ? 'Gerar Email' : 'Generate Email'}
+                         </>
+                       )}
+                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1024,55 +1030,55 @@ export const Messaging: React.FC = () => {
 
             {/* Tips Panel */}
             <div className="space-y-4">
-              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    Dicas de IA
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="flex gap-2">
-                    <span className="text-primary">✓</span>
-                    <p>Selecione um CTA existente para emails ainda mais direcionados</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-primary">✓</span>
-                    <p>O tom "Persuasivo" usa gatilhos mentais como escassez e urgência</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-primary">✓</span>
-                    <p>Cada email é personalizado com o nome e cargo do lead</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-primary">✓</span>
-                    <p>Clique em ↻ para gerar uma nova versão do email</p>
-                  </div>
-                </CardContent>
-              </Card>
+               <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                 <CardHeader>
+                   <CardTitle className="text-lg flex items-center gap-2">
+                     <Sparkles className="w-5 h-5 text-primary" />
+                     {language === 'pt-BR' ? 'Dicas de IA' : 'AI Tips'}
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent className="space-y-3 text-sm">
+                   <div className="flex gap-2">
+                     <span className="text-primary">✓</span>
+                     <p>{language === 'pt-BR' ? 'Selecione um CTA existente para emails ainda mais direcionados' : 'Select an existing CTA for more targeted emails'}</p>
+                   </div>
+                   <div className="flex gap-2">
+                     <span className="text-primary">✓</span>
+                     <p>{language === 'pt-BR' ? 'O tom "Persuasivo" usa gatilhos mentais como escassez e urgência' : 'The "Persuasive" tone uses mental triggers like scarcity and urgency'}</p>
+                   </div>
+                   <div className="flex gap-2">
+                     <span className="text-primary">✓</span>
+                     <p>{language === 'pt-BR' ? 'Cada email é personalizado com o nome e cargo do lead' : 'Each email is personalized with the lead\'s name and position'}</p>
+                   </div>
+                   <div className="flex gap-2">
+                     <span className="text-primary">✓</span>
+                     <p>{language === 'pt-BR' ? 'Clique em ↻ para gerar uma nova versão do email' : 'Click ↻ to generate a new version of the email'}</p>
+                   </div>
+                 </CardContent>
+               </Card>
 
               {/* Quick Stats */}
               {selectedFolderId && (
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Estatísticas do Nicho</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Leads com email</span>
-                      <span className="font-medium">{eligibleLeads.length}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">CTAs salvos</span>
-                      <span className="font-medium">{folderCTAs.length}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Selecionados</span>
-                      <span className="font-medium text-primary">{selectedLeadIds.size}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                   <CardHeader className="pb-2">
+                     <CardTitle className="text-sm">{language === 'pt-BR' ? 'Estatísticas do Nicho' : 'Niche Stats'}</CardTitle>
+                   </CardHeader>
+                   <CardContent className="space-y-2">
+                     <div className="flex justify-between text-sm">
+                       <span className="text-muted-foreground">{language === 'pt-BR' ? 'Leads com email' : 'Leads with email'}</span>
+                       <span className="font-medium">{eligibleLeads.length}</span>
+                     </div>
+                     <div className="flex justify-between text-sm">
+                       <span className="text-muted-foreground">{language === 'pt-BR' ? 'CTAs salvos' : 'Saved CTAs'}</span>
+                       <span className="font-medium">{folderCTAs.length}</span>
+                     </div>
+                     <div className="flex justify-between text-sm">
+                       <span className="text-muted-foreground">{language === 'pt-BR' ? 'Selecionados' : 'Selected'}</span>
+                       <span className="font-medium text-primary">{selectedLeadIds.size}</span>
+                     </div>
+                   </CardContent>
+                 </Card>
+               )}
 
               {/* Saved CTAs Panel for AI Email Tab */}
               {selectedFolderId && folderCTAs.length > 0 && (
@@ -1143,13 +1149,13 @@ export const Messaging: React.FC = () => {
                 <CardContent className="pt-6">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Selecionar Nicho</label>
+                      <label className="text-sm font-medium mb-2 block">{language === 'pt-BR' ? 'Selecionar Nicho' : 'Select Niche'}</label>
                       <Select value={selectedFolderId} onValueChange={(v) => {
                         setSelectedFolderId(v);
                         setSelectedLeadIds(new Set());
                       }}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Escolha um nicho" />
+                          <SelectValue placeholder={language === 'pt-BR' ? 'Escolha um nicho' : 'Choose a niche'} />
                         </SelectTrigger>
                         <SelectContent>
                           {folders.map(folder => (
@@ -1209,7 +1215,7 @@ export const Messaging: React.FC = () => {
                       <div>
                         <CardTitle className="text-lg">{t.messaging.selectLeads}</CardTitle>
                         <CardDescription>
-                          {eligibleLeads.length} leads com {channel} disponível
+                          {eligibleLeads.length} {language === 'pt-BR' ? `leads com ${channel} disponível` : `leads with ${channel} available`}
                         </CardDescription>
                       </div>
                       <Button variant="outline" size="sm" onClick={handleSelectAll}>
@@ -1247,7 +1253,7 @@ export const Messaging: React.FC = () => {
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p>Nenhum lead com {channel} disponível neste nicho</p>
+                        <p>{language === 'pt-BR' ? `Nenhum lead com ${channel} disponível neste nicho` : `No leads with ${channel} available in this niche`}</p>
                       </div>
                     )}
                   </CardContent>
@@ -1263,12 +1269,12 @@ export const Messaging: React.FC = () => {
                   <Textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
+                    placeholder={language === 'pt-BR' ? 'Digite sua mensagem...' : 'Type your message...'}
                     className="min-h-[150px]"
                   />
                   <div className="flex justify-between items-center">
                     <p className="text-sm text-muted-foreground">
-                      {message.length} caracteres • {selectedLeadIds.size} destinatário(s)
+                      {message.length} {language === 'pt-BR' ? 'caracteres' : 'chars'} • {selectedLeadIds.size} {language === 'pt-BR' ? 'destinatário(s)' : 'recipient(s)'}
                     </p>
                     <Button
                       variant="gradient"
@@ -1370,7 +1376,7 @@ export const Messaging: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle>{t.messaging.history}</CardTitle>
-              <CardDescription>Últimas mensagens enviadas</CardDescription>
+              <CardDescription>{language === 'pt-BR' ? 'Últimas mensagens enviadas' : 'Latest messages sent'}</CardDescription>
             </CardHeader>
             <CardContent>
               {messageLogs.length > 0 ? (
@@ -1403,7 +1409,7 @@ export const Messaging: React.FC = () => {
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>Nenhuma mensagem enviada ainda</p>
+                  <p>{language === 'pt-BR' ? 'Nenhuma mensagem enviada ainda' : 'No messages sent yet'}</p>
                 </div>
               )}
             </CardContent>

@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR, enUS } from 'date-fns/locale';
 
 type ChannelType = 'email' | 'whatsapp' | 'sms';
 type DirectionType = 'inbound' | 'outbound';
@@ -85,6 +85,9 @@ const channelColors = {
 
 export default function Inbox() {
   const { t, user, language } = useApp();
+  const pt = language === 'pt-BR';
+  const dateLocale = pt ? ptBR : enUS;
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
@@ -110,8 +113,8 @@ export default function Inbox() {
       if (error) {
         console.error('Error fetching conversations:', error);
         toast({
-          title: 'Erro',
-          description: 'Não foi possível carregar as conversas',
+          title: pt ? 'Erro' : 'Error',
+          description: pt ? 'Não foi possível carregar as conversas' : 'Could not load conversations',
           variant: 'destructive',
         });
       } else {
@@ -145,7 +148,7 @@ export default function Inbox() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, pt]);
 
   // Fetch messages when conversation is selected
   useEffect(() => {
@@ -210,7 +213,6 @@ export default function Inbox() {
 
     setSending(true);
     try {
-      // Call the appropriate send function based on channel
       const functionName = `send-${selectedConversation.channel}`;
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
@@ -225,7 +227,6 @@ export default function Inbox() {
         throw new Error(error?.message || data?.error || 'Failed to send message');
       }
 
-      // Insert outbound message into inbox
       const { error: insertError } = await supabase.from('inbox_messages').insert({
         conversation_id: selectedConversation.id,
         user_id: user.id,
@@ -241,14 +242,14 @@ export default function Inbox() {
 
       setNewMessage('');
       toast({
-        title: 'Mensagem enviada',
-        description: 'Sua mensagem foi enviada com sucesso',
+        title: pt ? 'Mensagem enviada' : 'Message sent',
+        description: pt ? 'Sua mensagem foi enviada com sucesso' : 'Your message was sent successfully',
       });
     } catch (error: unknown) {
       console.error('Error sending message:', error);
       toast({
-        title: 'Erro ao enviar',
-        description: error instanceof Error ? error.message : 'Não foi possível enviar a mensagem',
+        title: pt ? 'Erro ao enviar' : 'Send failed',
+        description: error instanceof Error ? error.message : (pt ? 'Não foi possível enviar a mensagem' : 'Could not send message'),
         variant: 'destructive',
       });
     } finally {
@@ -264,8 +265,8 @@ export default function Inbox() {
 
     if (error) {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível arquivar a conversa',
+        title: pt ? 'Erro' : 'Error',
+        description: pt ? 'Não foi possível arquivar a conversa' : 'Could not archive conversation',
         variant: 'destructive',
       });
     } else {
@@ -273,7 +274,7 @@ export default function Inbox() {
       if (selectedConversation?.id === conversationId) {
         setSelectedConversation(null);
       }
-      toast({ title: 'Conversa arquivada' });
+      toast({ title: pt ? 'Conversa arquivada' : 'Conversation archived' });
     }
   };
 
@@ -282,8 +283,8 @@ export default function Inbox() {
 
     if (error) {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível excluir a conversa',
+        title: pt ? 'Erro' : 'Error',
+        description: pt ? 'Não foi possível excluir a conversa' : 'Could not delete conversation',
         variant: 'destructive',
       });
     } else {
@@ -291,29 +292,29 @@ export default function Inbox() {
       if (selectedConversation?.id === conversationId) {
         setSelectedConversation(null);
       }
-      toast({ title: 'Conversa excluída' });
+      toast({ title: pt ? 'Conversa excluída' : 'Conversation deleted' });
     }
   };
 
   const formatMessageTime = (dateString: string) => {
     const date = new Date(dateString);
     if (isToday(date)) {
-      return format(date, 'HH:mm', { locale: ptBR });
+      return format(date, 'HH:mm', { locale: dateLocale });
     } else if (isYesterday(date)) {
-      return 'Ontem ' + format(date, 'HH:mm', { locale: ptBR });
+      return (pt ? 'Ontem ' : 'Yesterday ') + format(date, 'HH:mm', { locale: dateLocale });
     } else {
-      return format(date, 'dd/MM HH:mm', { locale: ptBR });
+      return format(date, 'dd/MM HH:mm', { locale: dateLocale });
     }
   };
 
   const formatConversationTime = (dateString: string) => {
     const date = new Date(dateString);
     if (isToday(date)) {
-      return format(date, 'HH:mm', { locale: ptBR });
+      return format(date, 'HH:mm', { locale: dateLocale });
     } else if (isYesterday(date)) {
-      return 'Ontem';
+      return pt ? 'Ontem' : 'Yesterday';
     } else {
-      return format(date, 'dd/MM', { locale: ptBR });
+      return format(date, 'dd/MM', { locale: dateLocale });
     }
   };
 
@@ -334,10 +335,10 @@ export default function Inbox() {
         <div className="flex items-center gap-3">
           <InboxIcon className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">
-            {language === 'pt-BR' ? 'Caixa de Entrada' : 'Inbox'}
+            {pt ? 'Caixa de Entrada' : 'Inbox'}
           </h1>
           {totalUnread > 0 && (
-            <Badge variant="destructive">{totalUnread} não lidas</Badge>
+            <Badge variant="destructive">{totalUnread} {pt ? 'não lidas' : 'unread'}</Badge>
           )}
         </div>
         <Button
@@ -346,7 +347,7 @@ export default function Inbox() {
           onClick={() => window.location.reload()}
         >
           <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
+          {pt ? 'Atualizar' : 'Refresh'}
         </Button>
       </div>
 
@@ -357,7 +358,7 @@ export default function Inbox() {
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar conversas..."
+                placeholder={pt ? 'Buscar conversas...' : 'Search conversations...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-8"
@@ -369,7 +370,7 @@ export default function Inbox() {
             >
               <TabsList className="w-full">
                 <TabsTrigger value="all" className="flex-1">
-                  Todos
+                  {pt ? 'Todos' : 'All'}
                 </TabsTrigger>
                 <TabsTrigger value="email" className="flex-1">
                   <Mail className="h-3 w-3" />
@@ -387,14 +388,14 @@ export default function Inbox() {
             <ScrollArea className="h-full">
               {loading ? (
                 <div className="p-4 text-center text-muted-foreground">
-                  Carregando conversas...
+                  {pt ? 'Carregando conversas...' : 'Loading conversations...'}
                 </div>
               ) : filteredConversations.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   <InboxIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma conversa encontrada</p>
+                  <p>{pt ? 'Nenhuma conversa encontrada' : 'No conversations found'}</p>
                   <p className="text-sm mt-2">
-                    As conversas aparecerão aqui quando leads responderem
+                    {pt ? 'As conversas aparecerão aqui quando leads responderem' : 'Conversations will appear here when leads reply'}
                   </p>
                 </div>
               ) : (
@@ -425,7 +426,7 @@ export default function Inbox() {
                               </span>
                             </div>
                             <p className="text-sm text-muted-foreground truncate">
-                              {conv.last_message || 'Nova conversa'}
+                              {conv.last_message || (pt ? 'Nova conversa' : 'New conversation')}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-xs">
@@ -493,7 +494,7 @@ export default function Inbox() {
                         }
                       >
                         <Archive className="h-4 w-4 mr-2" />
-                        Arquivar
+                        {pt ? 'Arquivar' : 'Archive'}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"
@@ -502,7 +503,7 @@ export default function Inbox() {
                         }
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
+                        {pt ? 'Excluir' : 'Delete'}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -516,7 +517,7 @@ export default function Inbox() {
                     <div className="h-full flex items-center justify-center text-muted-foreground">
                       <div className="text-center">
                         <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Nenhuma mensagem ainda</p>
+                        <p>{pt ? 'Nenhuma mensagem ainda' : 'No messages yet'}</p>
                       </div>
                     </div>
                   ) : (
@@ -570,7 +571,7 @@ export default function Inbox() {
               <div className="p-4 border-t">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Digite sua mensagem..."
+                    placeholder={pt ? 'Digite sua mensagem...' : 'Type your message...'}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => {
@@ -595,10 +596,10 @@ export default function Inbox() {
               <div className="text-center">
                 <InboxIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
                 <h3 className="text-lg font-medium mb-2">
-                  Selecione uma conversa
+                  {pt ? 'Selecione uma conversa' : 'Select a conversation'}
                 </h3>
                 <p className="text-sm">
-                  Escolha uma conversa da lista para ver as mensagens
+                  {pt ? 'Escolha uma conversa da lista para ver as mensagens' : 'Choose a conversation from the list to see messages'}
                 </p>
               </div>
             </div>
