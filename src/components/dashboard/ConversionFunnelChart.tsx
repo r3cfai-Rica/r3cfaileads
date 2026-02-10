@@ -143,57 +143,87 @@ export const ConversionFunnelChart: React.FC<ConversionFunnelChartProps> = ({ pe
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="space-y-1">
-            {data?.funnel.map((step, index) => {
-              const maxValue = data.funnel[0].value || 1;
-              const widthPercentage = Math.max((step.value / maxValue) * 100, 20);
+          <div className="flex flex-col items-center w-full">
+            {/* SVG Funnel */}
+            <svg viewBox="0 0 300 260" className="w-full max-w-[350px]" preserveAspectRatio="xMidYMid meet">
+              {data?.funnel.map((step, index) => {
+                const totalSteps = data.funnel.length;
+                const yStart = index * 60;
+                const yEnd = yStart + 48;
 
-              return (
-                <React.Fragment key={step.label}>
-                  {/* Funnel Step */}
-                  <div className="relative flex items-center gap-3">
-                    {/* Trapezoid bar */}
-                    <div className="flex-1 relative">
-                      <div
-                        className="relative rounded-md px-4 py-3 transition-all duration-500 mx-auto"
-                        style={{
-                          width: `${widthPercentage}%`,
-                          background: step.color,
-                          clipPath: index < data.funnel.length - 1
-                            ? 'polygon(2% 0%, 98% 0%, 100% 100%, 0% 100%)'
-                            : 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
-                        }}
-                      >
-                        <div className="flex items-center justify-between text-white min-h-[28px]">
-                          <span className="font-semibold text-sm drop-shadow-sm">{step.label}</span>
-                          <span className="font-bold text-base drop-shadow-sm">{step.value.toLocaleString('pt-BR')}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                // Each step narrows: top=100% down to ~30%
+                const topWidthPct = 1 - (index * 0.22);
+                const bottomWidthPct = 1 - ((index + 1) * 0.22);
+                const cx = 150;
+                const halfTop = (topWidthPct * 260) / 2;
+                const halfBottom = (bottomWidthPct * 260) / 2;
 
-                  {/* Connector with conversion rate */}
-                  {index < data.funnel.length - 1 && (
-                    <div className="flex items-center justify-center gap-1.5 py-0.5">
-                      <div className="w-px h-3 bg-border" />
-                      <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {data.funnel[index + 1].percentage}%
-                      </span>
-                      <div className="w-px h-3 bg-border" />
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
+                const points = `${cx - halfTop},${yStart} ${cx + halfTop},${yStart} ${cx + halfBottom},${yEnd} ${cx - halfBottom},${yEnd}`;
+
+                // Parse HSL color
+                const colorMap: Record<number, string> = {
+                  0: 'hsl(var(--primary))',
+                  1: 'hsl(210, 70%, 50%)',
+                  2: 'hsl(160, 60%, 45%)',
+                  3: 'hsl(140, 65%, 40%)',
+                };
+
+                return (
+                  <React.Fragment key={step.label}>
+                    <polygon
+                      points={points}
+                      fill={colorMap[index] || step.color}
+                      opacity="0.9"
+                    />
+                    {/* Label */}
+                    <text
+                      x={cx}
+                      y={yStart + 20}
+                      textAnchor="middle"
+                      fill="white"
+                      fontSize="11"
+                      fontWeight="600"
+                    >
+                      {step.label}
+                    </text>
+                    {/* Value */}
+                    <text
+                      x={cx}
+                      y={yStart + 36}
+                      textAnchor="middle"
+                      fill="white"
+                      fontSize="14"
+                      fontWeight="700"
+                    >
+                      {step.value.toLocaleString('pt-BR')}
+                    </text>
+                    {/* Conversion arrow between steps */}
+                    {index < totalSteps - 1 && (
+                      <>
+                        <text
+                          x={cx}
+                          y={yEnd + 9}
+                          textAnchor="middle"
+                          fill="hsl(var(--muted-foreground))"
+                          fontSize="9"
+                          fontWeight="500"
+                        >
+                          ↓ {data.funnel[index + 1].percentage}%
+                        </text>
+                      </>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </svg>
 
             {/* Overall Conversion */}
-            <div className="mt-5 pt-4 border-t border-border">
+            <div className="mt-4 pt-3 border-t border-border w-full">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">
                   Conversão Total (Visitante → Mensagem)
                 </span>
-                <span className="text-xl font-bold text-primary">
+                <span className="text-lg font-bold text-primary">
                   {data?.overallConversion}%
                 </span>
               </div>
