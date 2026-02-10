@@ -46,23 +46,26 @@ serve(async (req) => {
 
     console.log(`Processing email request for user: ${user.id}`);
 
-    // Get user's email credentials
-    const { data: credentials, error: credentialsError } = await supabaseClient
-      .from('user_messaging_credentials')
-      .select('resend_api_key, email_from_address, email_from_name, email_configured')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Get user's decrypted email credentials via secure RPC
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: credentials, error: credentialsError } = await serviceClient
+      .rpc('get_decrypted_credentials', { _user_id: user.id });
 
     if (credentialsError) {
       console.error('Error fetching credentials:', credentialsError);
       throw new Error('Erro ao buscar credenciais');
     }
 
-    if (!credentials || !credentials.email_configured) {
+    const cred = credentials?.[0];
+    if (!cred || !cred.email_configured) {
       throw new Error('Email não configurado. Configure suas credenciais em Configurações.');
     }
 
-    const { resend_api_key, email_from_address, email_from_name } = credentials;
+    const { resend_api_key, email_from_address, email_from_name } = cred;
 
     // Parse request body
     const { to, subject, html, leadId, leadName }: SendEmailRequest = await req.json();
