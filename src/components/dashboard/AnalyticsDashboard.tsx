@@ -7,8 +7,10 @@ import { ConversionRateCard } from './ConversionRateCard';
 import { BarChart3 } from 'lucide-react';
 
 export const AnalyticsDashboard: React.FC = () => {
-  const { user } = useApp();
+  const { user, language } = useApp();
   const [period, setPeriod] = useState<PeriodOption>('30d');
+
+  const isPt = language === 'pt-BR';
 
   // Only show to admins
   if (user?.role !== 'admin') {
@@ -24,9 +26,11 @@ export const AnalyticsDashboard: React.FC = () => {
             <BarChart3 className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Analytics da Plataforma</h2>
+            <h2 className="text-xl font-semibold">
+              {isPt ? 'Analytics da Plataforma' : 'Platform Analytics'}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Métricas de visitantes e conversão
+              {isPt ? 'Métricas de visitantes e conversão' : 'Visitor and conversion metrics'}
             </p>
           </div>
         </div>
@@ -45,11 +49,10 @@ export const AnalyticsDashboard: React.FC = () => {
           <ConversionRateCard />
         </div>
         <div className="lg:col-span-2">
-          {/* Additional space for future metrics */}
           <div className="h-full min-h-[200px] rounded-lg border-2 border-dashed border-border flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Mais métricas em breve</p>
+              <p className="text-sm">{isPt ? 'Mais métricas em breve' : 'More metrics coming soon'}</p>
             </div>
           </div>
         </div>
