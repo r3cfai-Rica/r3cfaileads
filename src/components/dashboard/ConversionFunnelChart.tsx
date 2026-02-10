@@ -143,50 +143,57 @@ export const ConversionFunnelChart: React.FC<ConversionFunnelChartProps> = ({ pe
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-1">
             {data?.funnel.map((step, index) => {
-              // Calculate width based on first step
-              const widthPercentage = data.funnel[0].value > 0 
-                ? Math.max((step.value / data.funnel[0].value) * 100, 15) 
-                : 100;
-              
+              const maxValue = data.funnel[0].value || 1;
+              const widthPercentage = Math.max((step.value / maxValue) * 100, 20);
+
               return (
-                <div key={step.label} className="relative">
-                  {/* Funnel Bar */}
-                  <div
-                    className="relative rounded-lg p-3 transition-all duration-500"
-                    style={{
-                      width: `${widthPercentage}%`,
-                      background: step.color,
-                      marginLeft: `${(100 - widthPercentage) / 2}%`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between text-white">
-                      <span className="font-medium text-sm">{step.label}</span>
-                      <span className="font-bold">{step.value}</span>
+                <React.Fragment key={step.label}>
+                  {/* Funnel Step */}
+                  <div className="relative flex items-center gap-3">
+                    {/* Trapezoid bar */}
+                    <div className="flex-1 relative">
+                      <div
+                        className="relative rounded-md px-4 py-3 transition-all duration-500 mx-auto"
+                        style={{
+                          width: `${widthPercentage}%`,
+                          background: step.color,
+                          clipPath: index < data.funnel.length - 1
+                            ? 'polygon(2% 0%, 98% 0%, 100% 100%, 0% 100%)'
+                            : 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+                        }}
+                      >
+                        <div className="flex items-center justify-between text-white min-h-[28px]">
+                          <span className="font-semibold text-sm drop-shadow-sm">{step.label}</span>
+                          <span className="font-bold text-base drop-shadow-sm">{step.value.toLocaleString('pt-BR')}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Arrow and Conversion Rate */}
+
+                  {/* Connector with conversion rate */}
                   {index < data.funnel.length - 1 && (
-                    <div className="flex items-center justify-center gap-2 py-1">
-                      <ArrowDown className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {data.funnel[index + 1].percentage}% conversão
+                    <div className="flex items-center justify-center gap-1.5 py-0.5">
+                      <div className="w-px h-3 bg-border" />
+                      <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {data.funnel[index + 1].percentage}%
                       </span>
+                      <div className="w-px h-3 bg-border" />
                     </div>
                   )}
-                </div>
+                </React.Fragment>
               );
             })}
 
             {/* Overall Conversion */}
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-5 pt-4 border-t border-border">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm font-medium text-muted-foreground">
                   Conversão Total (Visitante → Mensagem)
                 </span>
-                <span className="text-lg font-bold text-primary">
+                <span className="text-xl font-bold text-primary">
                   {data?.overallConversion}%
                 </span>
               </div>
