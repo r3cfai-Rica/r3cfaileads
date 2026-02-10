@@ -158,7 +158,10 @@ export default function Help() {
       </div>
 
       <p className="text-muted-foreground">
-        Aprenda como configurar os webhooks para receber respostas de <span className="font-bold text-green-600">WhatsApp</span>, <span className="font-bold text-blue-600">SMS</span>, <span className="font-bold text-orange-500">Email</span> e <span className="font-bold text-[#0088cc]">Telegram</span> diretamente na sua Caixa de Entrada.
+        {language === 'pt-BR' 
+          ? <>Aprenda como configurar os webhooks para receber respostas de <span className="font-bold text-green-600">WhatsApp</span>, <span className="font-bold text-blue-600">SMS</span>, <span className="font-bold text-orange-500">Email</span> e <span className="font-bold text-[#0088cc]">Telegram</span> diretamente na sua Caixa de Entrada.</>
+          : <>Learn how to configure webhooks to receive responses from <span className="font-bold text-green-600">WhatsApp</span>, <span className="font-bold text-blue-600">SMS</span>, <span className="font-bold text-orange-500">Email</span> and <span className="font-bold text-[#0088cc]">Telegram</span> directly in your Inbox.</>
+        }
       </p>
 
       <Tabs defaultValue="whatsapp" className="space-y-6">

@@ -24,6 +24,7 @@ import { MessagingCredentialsForm } from '@/components/settings/MessagingCredent
 
 export const Settings: React.FC = () => {
   const { t, user, language, setLanguage } = useApp();
+  const pt = language === 'pt-BR';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -43,9 +44,9 @@ export const Settings: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
-              Perfil
+              {pt ? 'Perfil' : 'Profile'}
             </CardTitle>
-            <CardDescription>Suas informações de conta</CardDescription>
+            <CardDescription>{pt ? 'Suas informações de conta' : 'Your account information'}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
@@ -59,15 +60,15 @@ export const Settings: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-4 pt-4 border-t">
               <div>
-                <p className="text-sm text-muted-foreground">Membro desde</p>
+                <p className="text-sm text-muted-foreground">{pt ? 'Membro desde' : 'Member since'}</p>
                 <p className="font-medium">
-                  {user?.createdAt?.toLocaleDateString()}
+                  {user?.createdAt?.toLocaleDateString(language)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Último acesso</p>
+                <p className="text-sm text-muted-foreground">{pt ? 'Último acesso' : 'Last login'}</p>
                 <p className="font-medium">
-                  {user?.lastLogin?.toLocaleDateString()}
+                  {user?.lastLogin?.toLocaleDateString(language)}
                 </p>
               </div>
             </div>
@@ -79,9 +80,9 @@ export const Settings: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Globe className="w-5 h-5" />
-              Idioma / Language
+              {pt ? 'Idioma / Language' : 'Language / Idioma'}
             </CardTitle>
-            <CardDescription>Escolha o idioma do aplicativo</CardDescription>
+            <CardDescription>{pt ? 'Escolha o idioma do aplicativo' : 'Choose app language'}</CardDescription>
           </CardHeader>
           <CardContent>
             <Select value={language} onValueChange={(v: Language) => setLanguage(v)}>
@@ -109,9 +110,9 @@ export const Settings: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
-              Plano e Assinatura
+              {pt ? 'Plano e Assinatura' : 'Plan & Subscription'}
             </CardTitle>
-            <CardDescription>Gerencie seu plano de assinatura</CardDescription>
+            <CardDescription>{pt ? 'Gerencie seu plano de assinatura' : 'Manage your subscription plan'}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-xl bg-muted/50">
@@ -128,23 +129,29 @@ export const Settings: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-xl font-semibold">
-                      {user?.plan === 'paid' ? 'Plano PRO' : 'Plano Gratuito'}
+                      {user?.plan === 'paid' 
+                        ? (pt ? 'Plano PRO' : 'PRO Plan') 
+                        : (pt ? 'Plano Gratuito' : 'Free Plan')}
                     </h3>
                     <Badge variant={user?.plan === 'paid' ? 'gradient' : 'muted'}>
-                      {user?.plan === 'paid' ? 'ATIVO' : 'FREE'}
+                      {user?.plan === 'paid' 
+                        ? (pt ? 'ATIVO' : 'ACTIVE') 
+                        : 'FREE'}
                     </Badge>
                   </div>
                   <p className="text-muted-foreground">
                     {user?.plan === 'paid' 
-                      ? 'Acesso completo a todas as funcionalidades'
-                      : '1 busca • 10 leads máximo'}
+                      ? (pt ? 'Acesso completo a todas as funcionalidades' : 'Full access to all features')
+                      : (pt ? '1 busca • 10 leads máximo' : '1 search • 10 leads max')}
                   </p>
                 </div>
               </div>
               <Link to="/plans">
                 <Button variant={user?.plan === 'free' ? 'gradientCTA' : 'outline'} size="lg">
                   <Crown className="w-4 h-4 mr-2" />
-                  {user?.plan === 'free' ? 'Fazer Upgrade' : 'Ver Planos'}
+                  {user?.plan === 'free' 
+                    ? (pt ? 'Fazer Upgrade' : 'Upgrade Now') 
+                    : (pt ? 'Ver Planos' : 'View Plans')}
                 </Button>
               </Link>
             </div>
@@ -152,24 +159,24 @@ export const Settings: React.FC = () => {
             {/* Usage Stats */}
             <div className="grid md:grid-cols-3 gap-4 mt-6">
               <div className="p-4 rounded-lg border">
-                <p className="text-sm text-muted-foreground">Buscas Realizadas</p>
+                <p className="text-sm text-muted-foreground">{pt ? 'Buscas Realizadas' : 'Searches Made'}</p>
                 <p className="text-2xl font-bold">
                   {user?.searchesUsed || 0}
                   {user?.plan === 'free' && <span className="text-base font-normal text-muted-foreground"> / 1</span>}
                 </p>
               </div>
               <div className="p-4 rounded-lg border">
-                <p className="text-sm text-muted-foreground">Leads Salvos</p>
+                <p className="text-sm text-muted-foreground">{pt ? 'Leads Salvos' : 'Leads Saved'}</p>
                 <p className="text-2xl font-bold">
                   {user?.leadsUsed || 0}
                   {user?.plan === 'free' && <span className="text-base font-normal text-muted-foreground"> / 10</span>}
                 </p>
               </div>
               <div className="p-4 rounded-lg border">
-                <p className="text-sm text-muted-foreground">Status da Conta</p>
+                <p className="text-sm text-muted-foreground">{pt ? 'Status da Conta' : 'Account Status'}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Check className="w-5 h-5 text-success" />
-                  <span className="text-lg font-medium">Ativa</span>
+                  <span className="text-lg font-medium">{pt ? 'Ativa' : 'Active'}</span>
                 </div>
               </div>
             </div>
