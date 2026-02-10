@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useApp } from '@/contexts/AppContext';
 import { 
   MessageSquare, 
   Mail, 
@@ -61,6 +62,9 @@ const defaultCredentials: MessagingCredentials = {
 };
 
 export const MessagingCredentialsForm: React.FC = () => {
+  const { language } = useApp();
+  const pt = language === 'pt-BR';
+
   const [credentials, setCredentials] = useState<MessagingCredentials>(defaultCredentials);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -91,7 +95,6 @@ export const MessagingCredentialsForm: React.FC = () => {
       }
 
       if (data) {
-        // Parse metadata for evolution credentials if stored there
         const metadata = (data as any).metadata || {};
         
         setCredentials({
@@ -116,7 +119,7 @@ export const MessagingCredentialsForm: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading credentials:', error);
-      toast.error('Erro ao carregar credenciais');
+      toast.error(pt ? 'Erro ao carregar credenciais' : 'Error loading credentials');
     } finally {
       setLoading(false);
     }
@@ -126,28 +129,24 @@ export const MessagingCredentialsForm: React.FC = () => {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      if (!user) throw new Error(pt ? 'Usuário não autenticado' : 'User not authenticated');
 
-      // Build RPC params for encrypted save
       const rpcParams = { _user_id: user.id } as any;
 
       switch (channel) {
         case 'whatsapp':
           if (credentials.whatsapp_provider === 'evolution') {
             const isConfigured = !!(credentials.evolution_api_url && credentials.evolution_api_key && credentials.evolution_instance_name);
-            rpcParams._whatsapp_access_token = ''; // Clear Meta credentials
+            rpcParams._whatsapp_access_token = '';
             rpcParams._whatsapp_configured = isConfigured;
-            // Evolution credentials go via direct update for metadata
             const metadataUpdate = {
               whatsapp_provider: 'evolution',
               evolution_api_url: credentials.evolution_api_url,
               evolution_api_key: credentials.evolution_api_key,
               evolution_instance_name: credentials.evolution_instance_name,
             };
-            // Save encrypted fields via RPC first
             const { error: rpcError } = await supabase.rpc('save_encrypted_credentials', rpcParams);
             if (rpcError) throw rpcError;
-            // Then update metadata separately
             const { error: metaError } = await supabase
               .from('user_messaging_credentials')
               .update({ metadata: metadataUpdate, whatsapp_configured: isConfigured })
@@ -161,7 +160,6 @@ export const MessagingCredentialsForm: React.FC = () => {
             rpcParams._whatsapp_configured = isConfigured;
             const { error: rpcError } = await supabase.rpc('save_encrypted_credentials', rpcParams);
             if (rpcError) throw rpcError;
-            // Update metadata for provider
             await supabase
               .from('user_messaging_credentials')
               .update({ metadata: { whatsapp_provider: 'meta' } })
@@ -196,10 +194,10 @@ export const MessagingCredentialsForm: React.FC = () => {
       const providerName = channel === 'whatsapp' 
         ? (credentials.whatsapp_provider === 'evolution' ? 'Evolution API' : 'WhatsApp Cloud API')
         : channel === 'sms' ? 'SMS' : 'Email';
-      toast.success(`Configurações de ${providerName} salvas com criptografia!`);
+      toast.success(pt ? `Configurações de ${providerName} salvas com criptografia!` : `${providerName} settings saved with encryption!`);
     } catch (error) {
       console.error('Error saving credentials:', error);
-      toast.error('Erro ao salvar credenciais');
+      toast.error(pt ? 'Erro ao salvar credenciais' : 'Error saving credentials');
     } finally {
       setSaving(false);
     }
@@ -210,12 +208,12 @@ export const MessagingCredentialsForm: React.FC = () => {
       {configured ? (
         <>
           <CheckCircle2 className="w-3 h-3" />
-          Configurado
+          {pt ? 'Configurado' : 'Configured'}
         </>
       ) : (
         <>
           <XCircle className="w-3 h-3" />
-          Não configurado
+          {pt ? 'Não configurado' : 'Not configured'}
         </>
       )}
     </Badge>
@@ -236,10 +234,10 @@ export const MessagingCredentialsForm: React.FC = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
-          Configurações de Envio de Mensagens
+          {pt ? 'Configurações de Envio de Mensagens' : 'Messaging Settings'}
         </CardTitle>
         <CardDescription>
-          Configure suas APIs para enviar mensagens via WhatsApp, SMS e Email
+          {pt ? 'Configure suas APIs para enviar mensagens via WhatsApp, SMS e Email' : 'Configure your APIs to send messages via WhatsApp, SMS and Email'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -268,7 +266,7 @@ export const MessagingCredentialsForm: React.FC = () => {
             
             {/* Provider Selection */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Escolha o provedor:</Label>
+              <Label className="text-sm font-medium">{pt ? 'Escolha o provedor:' : 'Choose provider:'}</Label>
               <RadioGroup
                 value={credentials.whatsapp_provider}
                 onValueChange={(v: 'meta' | 'evolution') => setCredentials(prev => ({ ...prev, whatsapp_provider: v }))}
@@ -280,7 +278,7 @@ export const MessagingCredentialsForm: React.FC = () => {
                   <RadioGroupItem value="meta" id="meta" />
                   <Label htmlFor="meta" className="flex-1 cursor-pointer">
                     <div className="font-medium">Meta Cloud API</div>
-                    <div className="text-xs text-muted-foreground">WhatsApp Business oficial</div>
+                    <div className="text-xs text-muted-foreground">{pt ? 'WhatsApp Business oficial' : 'Official WhatsApp Business'}</div>
                   </Label>
                 </div>
                 <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-colors cursor-pointer ${
@@ -292,7 +290,7 @@ export const MessagingCredentialsForm: React.FC = () => {
                       <Zap className="w-4 h-4 text-yellow-500" />
                       Evolution API
                     </div>
-                    <div className="text-xs text-muted-foreground">Plataforma open-source</div>
+                    <div className="text-xs text-muted-foreground">{pt ? 'Plataforma open-source' : 'Open-source platform'}</div>
                   </Label>
                 </div>
               </RadioGroup>
@@ -302,13 +300,13 @@ export const MessagingCredentialsForm: React.FC = () => {
             {credentials.whatsapp_provider === 'meta' && (
               <>
                 <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
-                  <p className="font-medium">Como obter suas credenciais:</p>
+                  <p className="font-medium">{pt ? 'Como obter suas credenciais:' : 'How to get your credentials:'}</p>
                   <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                    <li>Acesse o <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Meta for Developers <ExternalLink className="w-3 h-3" /></a></li>
-                    <li>Crie um app do tipo "Business"</li>
-                    <li>Adicione o produto "WhatsApp" ao seu app</li>
-                    <li>Em "API Setup", copie o Access Token temporário ou gere um permanente</li>
-                    <li>Copie o Phone Number ID</li>
+                    <li>{pt ? 'Acesse o' : 'Go to'} <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Meta for Developers <ExternalLink className="w-3 h-3" /></a></li>
+                    <li>{pt ? 'Crie um app do tipo "Business"' : 'Create a "Business" type app'}</li>
+                    <li>{pt ? 'Adicione o produto "WhatsApp" ao seu app' : 'Add the "WhatsApp" product to your app'}</li>
+                    <li>{pt ? 'Em "API Setup", copie o Access Token temporário ou gere um permanente' : 'In "API Setup", copy the temporary Access Token or generate a permanent one'}</li>
+                    <li>{pt ? 'Copie o Phone Number ID' : 'Copy the Phone Number ID'}</li>
                   </ol>
                 </div>
 
@@ -355,13 +353,13 @@ export const MessagingCredentialsForm: React.FC = () => {
                 <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 p-4 rounded-lg text-sm space-y-2 border border-yellow-500/20">
                   <p className="font-medium flex items-center gap-2">
                     <Zap className="w-4 h-4 text-yellow-500" />
-                    Evolution API - Configuração
+                    {pt ? 'Evolution API - Configuração' : 'Evolution API - Setup'}
                   </p>
                   <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                    <li>Tenha sua instância Evolution API rodando</li>
-                    <li>Copie a URL base da sua API (ex: https://api.seudominio.com)</li>
-                    <li>Copie sua API Key de autenticação</li>
-                    <li>Informe o nome da instância conectada ao WhatsApp</li>
+                    <li>{pt ? 'Tenha sua instância Evolution API rodando' : 'Have your Evolution API instance running'}</li>
+                    <li>{pt ? 'Copie a URL base da sua API (ex: https://api.seudominio.com)' : 'Copy the base URL of your API (e.g.: https://api.yourdomain.com)'}</li>
+                    <li>{pt ? 'Copie sua API Key de autenticação' : 'Copy your authentication API Key'}</li>
+                    <li>{pt ? 'Informe o nome da instância conectada ao WhatsApp' : 'Enter the name of the instance connected to WhatsApp'}</li>
                   </ol>
                   <a 
                     href="https://doc.evolution-api.com/" 
@@ -369,19 +367,19 @@ export const MessagingCredentialsForm: React.FC = () => {
                     rel="noopener noreferrer" 
                     className="inline-flex items-center gap-1 text-primary hover:underline mt-2"
                   >
-                    Ver documentação <ExternalLink className="w-3 h-3" />
+                    {pt ? 'Ver documentação' : 'View documentation'} <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="evolution_api_url">URL da API</Label>
+                    <Label htmlFor="evolution_api_url">{pt ? 'URL da API' : 'API URL'}</Label>
                     <Input
                       id="evolution_api_url"
                       type="url"
                       value={credentials.evolution_api_url}
                       onChange={(e) => setCredentials(prev => ({ ...prev, evolution_api_url: e.target.value }))}
-                      placeholder="https://api.seudominio.com"
+                      placeholder={pt ? 'https://api.seudominio.com' : 'https://api.yourdomain.com'}
                     />
                   </div>
 
@@ -393,7 +391,7 @@ export const MessagingCredentialsForm: React.FC = () => {
                         type={showTokens.evolution ? 'text' : 'password'}
                         value={credentials.evolution_api_key}
                         onChange={(e) => setCredentials(prev => ({ ...prev, evolution_api_key: e.target.value }))}
-                        placeholder="Sua API Key"
+                        placeholder={pt ? 'Sua API Key' : 'Your API Key'}
                         className="pr-10"
                       />
                       <Button
@@ -409,12 +407,12 @@ export const MessagingCredentialsForm: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="evolution_instance_name">Nome da Instância</Label>
+                    <Label htmlFor="evolution_instance_name">{pt ? 'Nome da Instância' : 'Instance Name'}</Label>
                     <Input
                       id="evolution_instance_name"
                       value={credentials.evolution_instance_name}
                       onChange={(e) => setCredentials(prev => ({ ...prev, evolution_instance_name: e.target.value }))}
-                      placeholder="minha-instancia"
+                      placeholder={pt ? 'minha-instancia' : 'my-instance'}
                     />
                   </div>
                 </div>
@@ -423,7 +421,7 @@ export const MessagingCredentialsForm: React.FC = () => {
 
             <Button onClick={() => handleSave('whatsapp')} disabled={saving} className="w-full">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Salvar Configurações WhatsApp
+              {pt ? 'Salvar Configurações WhatsApp' : 'Save WhatsApp Settings'}
             </Button>
           </TabsContent>
 
@@ -435,11 +433,11 @@ export const MessagingCredentialsForm: React.FC = () => {
             </div>
 
             <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
-              <p className="font-medium">Como obter suas credenciais:</p>
+              <p className="font-medium">{pt ? 'Como obter suas credenciais:' : 'How to get your credentials:'}</p>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                <li>Crie uma conta em <a href="https://www.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Twilio <ExternalLink className="w-3 h-3" /></a></li>
-                <li>Copie o Account SID e Auth Token do Console</li>
-                <li>Compre um número de telefone para envio</li>
+                <li>{pt ? 'Crie uma conta em' : 'Create an account at'} <a href="https://www.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Twilio <ExternalLink className="w-3 h-3" /></a></li>
+                <li>{pt ? 'Copie o Account SID e Auth Token do Console' : 'Copy the Account SID and Auth Token from the Console'}</li>
+                <li>{pt ? 'Compre um número de telefone para envio' : 'Buy a phone number for sending'}</li>
               </ol>
             </div>
 
@@ -462,7 +460,7 @@ export const MessagingCredentialsForm: React.FC = () => {
                     type={showTokens.twilio ? 'text' : 'password'}
                     value={credentials.twilio_auth_token}
                     onChange={(e) => setCredentials(prev => ({ ...prev, twilio_auth_token: e.target.value }))}
-                    placeholder="Seu Auth Token"
+                    placeholder={pt ? 'Seu Auth Token' : 'Your Auth Token'}
                     className="pr-10"
                   />
                   <Button
@@ -478,18 +476,18 @@ export const MessagingCredentialsForm: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="twilio_phone_number">Número de Telefone (formato: +5511999999999)</Label>
+                <Label htmlFor="twilio_phone_number">{pt ? 'Número de Telefone (formato: +5511999999999)' : 'Phone Number (format: +15551234567)'}</Label>
                 <Input
                   id="twilio_phone_number"
                   value={credentials.twilio_phone_number}
                   onChange={(e) => setCredentials(prev => ({ ...prev, twilio_phone_number: e.target.value }))}
-                  placeholder="+5511999999999"
+                  placeholder={pt ? '+5511999999999' : '+15551234567'}
                 />
               </div>
 
               <Button onClick={() => handleSave('sms')} disabled={saving} className="w-full">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Salvar Configurações SMS
+                {pt ? 'Salvar Configurações SMS' : 'Save SMS Settings'}
               </Button>
             </div>
           </TabsContent>
@@ -502,11 +500,11 @@ export const MessagingCredentialsForm: React.FC = () => {
             </div>
 
             <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
-              <p className="font-medium">Como obter suas credenciais:</p>
+              <p className="font-medium">{pt ? 'Como obter suas credenciais:' : 'How to get your credentials:'}</p>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                <li>Crie uma conta em <a href="https://resend.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Resend <ExternalLink className="w-3 h-3" /></a></li>
-                <li>Verifique seu domínio de email</li>
-                <li>Gere uma API Key</li>
+                <li>{pt ? 'Crie uma conta em' : 'Create an account at'} <a href="https://resend.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Resend <ExternalLink className="w-3 h-3" /></a></li>
+                <li>{pt ? 'Verifique seu domínio de email' : 'Verify your email domain'}</li>
+                <li>{pt ? 'Gere uma API Key' : 'Generate an API Key'}</li>
               </ol>
             </div>
 
@@ -535,29 +533,29 @@ export const MessagingCredentialsForm: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email_from_address">Email de Envio</Label>
+                <Label htmlFor="email_from_address">{pt ? 'Email de Envio' : 'Sender Email'}</Label>
                 <Input
                   id="email_from_address"
                   type="email"
                   value={credentials.email_from_address}
                   onChange={(e) => setCredentials(prev => ({ ...prev, email_from_address: e.target.value }))}
-                  placeholder="contato@seudominio.com"
+                  placeholder={pt ? 'contato@seudominio.com' : 'contact@yourdomain.com'}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email_from_name">Nome do Remetente</Label>
+                <Label htmlFor="email_from_name">{pt ? 'Nome do Remetente' : 'Sender Name'}</Label>
                 <Input
                   id="email_from_name"
                   value={credentials.email_from_name}
                   onChange={(e) => setCredentials(prev => ({ ...prev, email_from_name: e.target.value }))}
-                  placeholder="Sua Empresa"
+                  placeholder={pt ? 'Sua Empresa' : 'Your Company'}
                 />
               </div>
 
               <Button onClick={() => handleSave('email')} disabled={saving} className="w-full">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Salvar Configurações Email
+                {pt ? 'Salvar Configurações Email' : 'Save Email Settings'}
               </Button>
             </div>
           </TabsContent>
