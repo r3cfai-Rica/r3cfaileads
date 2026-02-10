@@ -85,7 +85,7 @@ export const Dashboard: React.FC = () => {
             {t.dashboard.welcome}, {user?.name?.split(' ')[0]}! 👋
           </h1>
           <p className="text-muted-foreground mt-1">
-            {new Date().toLocaleDateString(user?.email.includes('en') ? 'en-US' : 'pt-BR', {
+            {new Date().toLocaleDateString(language, {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
