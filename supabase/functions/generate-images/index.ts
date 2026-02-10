@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -12,6 +12,24 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const { prompt, format, saveToStorage = true } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -19,7 +37,7 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log(`Generating image for prompt: ${prompt}, format: ${format}`);
+    console.log(`Generating image for prompt: ${prompt}, format: ${format}, user: ${claimsData.claims.sub}`);
 
     const aspectRatioText = format === '1:1' 
       ? 'square 1:1 aspect ratio' 
@@ -76,29 +94,24 @@ serve(async (req) => {
 
     let finalImageUrl = base64ImageUrl;
 
-    // If saveToStorage is true, upload the base64 image to Supabase Storage
     if (saveToStorage && base64ImageUrl.startsWith('data:image')) {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        // Extract base64 data
         const base64Data = base64ImageUrl.split(',')[1];
         const mimeType = base64ImageUrl.match(/data:([^;]+);/)?.[1] || 'image/png';
         const extension = mimeType.split('/')[1] || 'png';
         
-        // Decode base64 to bytes
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
 
-        // Generate unique filename
         const fileName = `cta-${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
         
-        // Upload to campaign-images bucket
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('campaign-images')
           .upload(fileName, bytes, {
@@ -108,9 +121,7 @@ serve(async (req) => {
 
         if (uploadError) {
           console.error('Error uploading to storage:', uploadError);
-          // Return base64 as fallback
         } else {
-          // Get public URL
           const { data: { publicUrl } } = supabase.storage
             .from('campaign-images')
             .getPublicUrl(fileName);
@@ -120,7 +131,6 @@ serve(async (req) => {
         }
       } catch (storageError) {
         console.error('Storage error:', storageError);
-        // Return base64 as fallback
       }
     }
 

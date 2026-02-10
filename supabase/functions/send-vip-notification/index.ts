@@ -53,23 +53,36 @@ serve(async (req) => {
 
     console.log(`Admin ${user.id} sending VIP notification`);
 
-    // Get admin's email credentials
-    const { data: credentials, error: credentialsError } = await supabaseClient
-      .from('user_messaging_credentials')
-      .select('resend_api_key, email_from_address, email_from_name, email_configured')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Use service role client to call get_decrypted_credentials RPC
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+
+    const { data: credentials, error: credentialsError } = await supabaseAdmin
+      .rpc('get_decrypted_credentials', { _user_id: user.id });
 
     if (credentialsError) {
-      console.error('Error fetching credentials:', credentialsError);
+      console.error('Error fetching decrypted credentials:', credentialsError);
       throw new Error('Erro ao buscar credenciais de email');
     }
 
-    if (!credentials || !credentials.email_configured) {
+    const cred = credentials?.[0];
+    if (!cred || !cred.email_configured) {
       throw new Error('Configure suas credenciais de email em Configurações para enviar notificações VIP.');
     }
 
-    const { resend_api_key, email_from_address, email_from_name } = credentials;
+    const { resend_api_key, email_from_address, email_from_name } = cred;
+
+    if (!resend_api_key) {
+      throw new Error('Chave de API do Resend não configurada.');
+    }
 
     const { userEmail, userName, expiresAt, daysGranted }: SendVipNotificationRequest = await req.json();
 

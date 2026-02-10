@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -11,6 +12,24 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !data?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const { niche, country, city, postalCode, language } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -18,7 +37,7 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log(`Generating leads for niche: ${niche}, country: ${country}, city: ${city}`);
+    console.log(`Generating leads for niche: ${niche}, country: ${country}, city: ${city}, user: ${data.claims.sub}`);
 
     const systemPrompt = language === 'pt-BR' 
       ? `Você é um especialista em geração de leads B2B. Sua tarefa é gerar leads realistas e qualificados para o nicho especificado.
@@ -136,10 +155,8 @@ Return a JSON with this exact structure:
 
     console.log('AI response content:', content);
 
-    // Parse the JSON from the response
     let parsedContent;
     try {
-      // Extract JSON from the response (handle markdown code blocks)
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
       const jsonStr = jsonMatch[1]?.trim() || content.trim();
       parsedContent = JSON.parse(jsonStr);
@@ -148,7 +165,6 @@ Return a JSON with this exact structure:
       throw new Error('Failed to parse AI response');
     }
 
-    // Add IDs and timestamps to leads
     const leads = parsedContent.leads.map((lead: any, index: number) => ({
       ...lead,
       id: `lead-${Date.now()}-${index}`,

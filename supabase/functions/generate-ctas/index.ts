@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -11,6 +12,24 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !data?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const { niche, insights, companyName, messageTone, imageFormat, language } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -18,7 +37,7 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log(`Generating CTAs for niche: ${niche}, tone: ${messageTone}, format: ${imageFormat}`);
+    console.log(`Generating CTAs for niche: ${niche}, tone: ${messageTone}, format: ${imageFormat}, user: ${data.claims.sub}`);
 
     const toneDescriptions: Record<string, string> = {
       professional: language === 'pt-BR' ? 'profissional e sério' : 'professional and serious',
@@ -81,18 +100,9 @@ GUIDELINES:
                     items: {
                       type: "object",
                       properties: {
-                        title: { 
-                          type: "string", 
-                          description: "Catchy title with emoji (max 60 characters)" 
-                        },
-                        text: { 
-                          type: "string", 
-                          description: "Complete persuasive text for WhatsApp/Email (150-300 characters)" 
-                        },
-                        imagePrompt: { 
-                          type: "string", 
-                          description: "Detailed description to generate a professional image related to the niche and CTA" 
-                        }
+                        title: { type: "string", description: "Catchy title with emoji (max 60 characters)" },
+                        text: { type: "string", description: "Complete persuasive text for WhatsApp/Email (150-300 characters)" },
+                        imagePrompt: { type: "string", description: "Detailed description to generate a professional image related to the niche and CTA" }
                       },
                       required: ["title", "text", "imagePrompt"],
                       additionalProperties: false
@@ -132,7 +142,6 @@ GUIDELINES:
     const aiResponse = await response.json();
     console.log('AI response:', JSON.stringify(aiResponse, null, 2));
 
-    // Extract tool call result
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall || toolCall.function.name !== 'generate_ctas') {
       throw new Error('No valid tool call in AI response');
@@ -146,7 +155,6 @@ GUIDELINES:
       throw new Error('Failed to parse AI response');
     }
 
-    // Validate the response structure
     if (!parsedContent.ctas || !Array.isArray(parsedContent.ctas)) {
       throw new Error('Invalid CTA structure in response');
     }
