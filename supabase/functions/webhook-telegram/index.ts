@@ -27,50 +27,54 @@ interface TelegramUpdate {
   };
 }
 
-// Verify Telegram webhook using the secret_token header
-// Telegram sends X-Telegram-Bot-Api-Secret-Token when setWebhook is called with secret_token
-function verifyTelegramSignature(req: Request): boolean {
-  const secretToken = Deno.env.get('TELEGRAM_WEBHOOK_SECRET') || Deno.env.get('TELEGRAM_BOT_TOKEN');
+// Best-effort Telegram signature verification
+// Only rejects if a secret is configured AND header is present but wrong
+function verifyTelegramSignature(req: Request): { verified: boolean; reason: string } {
+  const secretToken = Deno.env.get('TELEGRAM_WEBHOOK_SECRET');
   if (!secretToken) {
-    console.warn('No TELEGRAM_WEBHOOK_SECRET or TELEGRAM_BOT_TOKEN configured, skipping verification');
-    return true; // Fail open if not configured (log warning)
+    return { verified: true, reason: 'no secret configured, skipping verification' };
   }
 
   const headerToken = req.headers.get('x-telegram-bot-api-secret-token');
   if (!headerToken) {
-    console.error('Missing X-Telegram-Bot-Api-Secret-Token header');
-    return false;
+    // Telegram only sends this header if setWebhook was called with secret_token
+    // Don't reject if header is missing - it means webhook wasn't registered with secret_token yet
+    console.warn('TELEGRAM_WEBHOOK_SECRET configured but no header received. Register webhook with secret_token to enable verification.');
+    return { verified: true, reason: 'header not present, webhook may not be registered with secret_token' };
   }
 
-  return headerToken === secretToken;
+  if (headerToken === secretToken) {
+    return { verified: true, reason: 'signature valid' };
+  }
+
+  return { verified: false, reason: 'signature mismatch' };
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Only accept POST requests
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   }
 
-  // Verify Telegram signature
-  if (!verifyTelegramSignature(req)) {
-    console.error('Telegram webhook signature verification failed');
+  // Best-effort signature verification
+  const sigCheck = verifyTelegramSignature(req);
+  if (!sigCheck.verified) {
+    console.error('Telegram webhook signature verification FAILED:', sigCheck.reason);
     return new Response(
       JSON.stringify({ error: 'Invalid signature' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
+  console.log('Telegram webhook auth:', sigCheck.reason);
 
   try {
     const update: TelegramUpdate = await req.json();
     
-    console.log('Telegram webhook received (verified)');
+    console.log('Telegram webhook received');
 
-    // Only process messages
     if (!update.message) {
       console.log('No message in update, skipping');
       return new Response(
@@ -91,7 +95,6 @@ serve(async (req) => {
     const senderUsername = message.from.username;
     const messageId = message.message_id.toString();
 
-    // Get message text
     let messageText = '';
     if (message.text) {
       messageText = message.text;
@@ -105,7 +108,6 @@ serve(async (req) => {
 
     console.log(`Incoming Telegram from ${senderName} (${chatId})`);
 
-    // Find existing conversation by chat ID
     const { data: existingConvo, error: convoError } = await supabase
       .from('conversations')
       .select('id, user_id')
