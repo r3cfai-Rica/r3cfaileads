@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface Message {
@@ -27,7 +28,6 @@ interface RequestBody {
 const buildSystemPrompt = (language: 'pt-BR' | 'en-US', pageContext?: PageContext): string => {
   const isPtBR = language === 'pt-BR';
 
-  // Base prompt
   const basePrompt = isPtBR
     ? `Você é o **Guia de Configuração LeadFlow**, um assistente especializado em ajudar usuários a configurar e usar a plataforma de vendas B2B.
 
@@ -62,12 +62,10 @@ const buildSystemPrompt = (language: 'pt-BR' | 'en-US', pageContext?: PageContex
 - **Inbox**: Receive and reply to conversations from all channels
 - **Automations**: Configure follow-up sequences`;
 
-  // If no page context, return base prompt
   if (!pageContext) {
     return basePrompt;
   }
 
-  // Build contextual addition based on page
   const contextualHelp = getContextualHelp(pageContext.page, isPtBR);
 
   const contextSection = isPtBR
@@ -97,7 +95,6 @@ ${pageContext.helpTopics.join(', ')}`;
   return basePrompt + contextSection;
 };
 
-// Get specific help based on page
 const getContextualHelp = (page: string, isPtBR: boolean): string => {
   const helpMap: Record<string, { ptBR: string; enUS: string }> = {
     'dashboard': {
@@ -199,7 +196,6 @@ const getContextualHelp = (page: string, isPtBR: boolean): string => {
     return isPtBR ? help.ptBR : help.enUS;
   }
 
-  // Default help
   return isPtBR
     ? `- Ajude o usuário a entender as funcionalidades disponíveis
 - Guie para as páginas relevantes conforme a necessidade
@@ -210,12 +206,29 @@ const getContextualHelp = (page: string, isPtBR: boolean): string => {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const { messages, language = 'pt-BR', pageContext }: RequestBody = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
@@ -224,10 +237,9 @@ serve(async (req) => {
       throw new Error('AI service not configured');
     }
 
-    // Build contextual system prompt
     const systemPrompt = buildSystemPrompt(language, pageContext);
 
-    console.log(`AI Assistant - Page: ${pageContext?.page || 'unknown'}, Language: ${language}`);
+    console.log(`AI Assistant - Page: ${pageContext?.page || 'unknown'}, Language: ${language}, User: ${claimsData.claims.sub}`);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -266,7 +278,6 @@ serve(async (req) => {
       throw new Error(`AI Gateway error: ${response.status}`);
     }
 
-    // Return the stream directly
     return new Response(response.body, {
       headers: {
         ...corsHeaders,

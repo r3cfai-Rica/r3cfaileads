@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -18,22 +17,30 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    const body = await req.text();
-    const signature = req.headers.get("stripe-signature");
-
-    console.log("Received webhook event");
-
-    // For now, parse the event directly (in production, use webhook signature verification)
-    let event: Stripe.Event;
-    
-    try {
-      event = JSON.parse(body) as Stripe.Event;
-    } catch (err) {
-      console.error("Error parsing webhook body:", err);
-      return new Response("Invalid payload", { status: 400 });
+    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET not configured");
+      return new Response("Webhook secret not configured", { status: 500 });
     }
 
-    console.log("Event type:", event.type);
+    const signature = req.headers.get("stripe-signature");
+    if (!signature) {
+      console.error("Missing stripe-signature header");
+      return new Response("Missing signature", { status: 400 });
+    }
+
+    const body = await req.text();
+
+    // Verify webhook signature cryptographically
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      console.error("Webhook signature verification failed:", err.message);
+      return new Response("Invalid signature", { status: 400 });
+    }
+
+    console.log("Verified event type:", event.type);
 
     // Create admin client for database updates
     const supabaseAdmin = createClient(
@@ -61,7 +68,6 @@ serve(async (req) => {
 
       console.log("Payment completed for user:", userId, "Plan:", planType);
 
-      // Update user's plan based on plan type
       const { error: updateError } = await supabaseAdmin
         .from("profiles")
         .update({ 
@@ -77,7 +83,6 @@ serve(async (req) => {
 
       console.log(`Successfully updated user plan to 'paid' with type '${planType}'`);
 
-      // If premium, set up messaging usage limits
       if (planType === 'premium') {
         const { error: usageError } = await supabaseAdmin
           .from("user_messaging_usage")
@@ -100,10 +105,8 @@ serve(async (req) => {
           console.log("Messaging usage limits set for premium user");
         }
 
-        // If premium with setup_subscription flag, create a subscription for future months
         if (setupSubscription) {
           try {
-            // Get customer
             const customers = await stripe.customers.list({
               limit: 1,
               expand: ['data.subscriptions'],
@@ -114,14 +117,12 @@ serve(async (req) => {
             );
 
             if (customer) {
-              // Create a subscription starting next month
               const nextMonth = new Date();
               nextMonth.setMonth(nextMonth.getMonth() + 1);
-              nextMonth.setDate(1); // Start on the 1st of next month
+              nextMonth.setDate(1);
 
-              // Create a price for the recurring subscription
               const price = await stripe.prices.create({
-                unit_amount: 35000, // R$350
+                unit_amount: 35000,
                 currency: 'brl',
                 recurring: { interval: 'month' },
                 product_data: {
@@ -144,12 +145,10 @@ serve(async (req) => {
             }
           } catch (subError) {
             console.error("Error creating subscription:", subError);
-            // Don't fail the webhook - user already has access
           }
         }
       }
 
-      // Create admin notification for upgrade
       const { data: profile } = await supabaseAdmin
         .from("profiles")
         .select("name, email")
@@ -165,8 +164,6 @@ serve(async (req) => {
           title: `Novo pagamento - Plano ${planLabel}`,
           message: `${profile.name} comprou o plano ${planLabel} (${amount}).`,
           user_id: userId,
-          user_name: profile.name,
-          user_email: profile.email,
           metadata: {
             payment_intent: session.payment_intent,
             amount: session.amount_total,
@@ -177,19 +174,16 @@ serve(async (req) => {
       }
     }
 
-    // Handle subscription invoice paid (for recurring premium payments)
     if (event.type === "invoice.paid") {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = invoice.customer as string;
       
-      // Get customer to find user ID
       const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
       const userId = customer.metadata?.supabase_user_id;
 
       if (userId && invoice.billing_reason === 'subscription_cycle') {
         console.log("Recurring payment received for user:", userId);
         
-        // Reset monthly usage
         const { error: resetError } = await supabaseAdmin
           .from("user_messaging_usage")
           .update({
@@ -208,7 +202,6 @@ serve(async (req) => {
       }
     }
 
-    // Handle subscription cancelled
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.supabase_user_id;
@@ -216,13 +209,11 @@ serve(async (req) => {
       if (userId) {
         console.log("Subscription cancelled for user:", userId);
         
-        // Downgrade to basic (they already paid the R$150)
         await supabaseAdmin
           .from("profiles")
           .update({ plan_type: 'basic' })
           .eq("user_id", userId);
 
-        // Remove usage limits (basic = unlimited with own APIs)
         await supabaseAdmin
           .from("user_messaging_usage")
           .update({
@@ -232,7 +223,6 @@ serve(async (req) => {
           })
           .eq("user_id", userId);
 
-        // Create admin notification
         const { data: profile } = await supabaseAdmin
           .from("profiles")
           .select("name, email")
@@ -245,8 +235,10 @@ serve(async (req) => {
             title: "Assinatura Premium cancelada",
             message: `${profile.name} cancelou a assinatura Premium. Mantém acesso Básico.`,
             user_id: userId,
-            user_name: profile.name,
-            user_email: profile.email,
+            metadata: {
+              user_name: profile.name,
+              user_email: profile.email,
+            },
           });
         }
       }

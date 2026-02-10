@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface GenerateEmailRequest {
@@ -26,16 +27,27 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !data?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const { 
-      niche, 
-      leadName, 
-      leadPosition,
-      leadCompany,
-      cta, 
-      senderName,
-      senderCompany,
-      tone,
-      language 
+      niche, leadName, leadPosition, leadCompany, cta, 
+      senderName, senderCompany, tone, language 
     }: GenerateEmailRequest = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -114,7 +126,7 @@ ${cta ? `- CTA to incorporate: "${cta.title}" - ${cta.text}` : '- Create an appr
 
 Generate a complete email ready to send.`;
 
-    console.log('Generating email for:', { niche, leadName, tone });
+    console.log('Generating email for:', { niche, leadName, tone, user: data.claims.sub });
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -134,14 +146,12 @@ Generate a complete email ready to send.`;
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: 'Payment required. Please add credits to your workspace.' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       const errorText = await response.text();
@@ -149,19 +159,15 @@ Generate a complete email ready to send.`;
       throw new Error('Failed to generate email');
     }
 
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content;
+    const aiData = await response.json();
+    const content = aiData.choices[0]?.message?.content;
 
     if (!content) {
       throw new Error('No content received from AI');
     }
 
-    console.log('AI Response:', content);
-
-    // Parse the JSON response
     let emailData;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         emailData = JSON.parse(jsonMatch[0]);
@@ -181,8 +187,7 @@ Generate a complete email ready to send.`;
     console.error('Error in generate-email function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
