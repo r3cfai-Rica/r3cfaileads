@@ -65,6 +65,59 @@ export type Database = {
         }
         Relationships: []
       }
+      automations: {
+        Row: {
+          created_at: string
+          folder_id: string | null
+          frequency: string
+          id: string
+          is_active: boolean
+          last_run: string | null
+          max_leads_per_run: number
+          name: string
+          niche: string
+          total_leads_found: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_run?: string | null
+          max_leads_per_run?: number
+          name: string
+          niche: string
+          total_leads_found?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_run?: string | null
+          max_leads_per_run?: number
+          name?: string
+          niche?: string
+          total_leads_found?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automations_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           channel: string
