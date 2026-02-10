@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckoutAccessDialog } from '@/components/billing/CheckoutAccessDialog';
-import { Check, Zap, Crown, Sparkles, Loader2, Star, AlertTriangle, MapPin } from 'lucide-react';
+import { Check, Zap, Crown, Sparkles, Loader2, Star, AlertTriangle, MapPin, X, Phone, Mail, MessageCircle, Inbox } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -45,7 +45,6 @@ export const Plans: React.FC = () => {
       return;
     }
 
-    // Pre-open a tab synchronously to reduce popup blocking
     const preOpenedWindow = window.open('', '_blank');
     try {
       if (preOpenedWindow?.document) {
@@ -88,11 +87,9 @@ export const Plans: React.FC = () => {
         throw new Error('No checkout URL returned');
       }
 
-      // Keep the app open and show a dialog with the link (useful if corporate networks block the payment page)
       setCheckoutUrl(data.url);
       setIsCheckoutDialogOpen(true);
 
-      // Redirect the pre-opened tab
       if (preOpenedWindow) {
         preOpenedWindow.location.href = data.url;
       }
@@ -111,7 +108,7 @@ export const Plans: React.FC = () => {
 
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl animate-slide-up">
+      <div className="w-full max-w-5xl animate-slide-up">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary shadow-glow mb-4">
@@ -121,10 +118,10 @@ export const Plans: React.FC = () => {
           <p className="text-xl text-primary-foreground/70">{t.plans.subtitle}</p>
         </div>
 
-        {/* Plans Grid - 2 columns */}
+        {/* Plans Grid */}
         <div className="grid md:grid-cols-2 gap-8">
           {/* Demo/Free Plan */}
-          <Card variant="glass" className="backdrop-blur-xl relative">
+          <Card variant="glass" className="backdrop-blur-xl relative border border-muted-foreground/20">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
@@ -143,22 +140,39 @@ export const Plans: React.FC = () => {
                 R$ 0
               </div>
               
-              {/* Warning about demo leads */}
-              <Alert variant="default" className="bg-warning/10 border-warning/30">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                <AlertDescription className="text-sm text-warning">
+              {/* Strong warning about demo leads */}
+              <Alert variant="default" className="bg-destructive/10 border-destructive/30">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <AlertDescription className="text-sm font-medium text-destructive">
                   {t.plans.freeNote}
                 </AlertDescription>
               </Alert>
 
-              <ul className="space-y-3">
-                {t.plans.freeFeatures.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-muted-foreground">{feature}</span>
-                  </li>
-                ))}
-              </ul>
+              {/* What's included */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Incluso</p>
+                <ul className="space-y-2">
+                  {t.plans.freeFeatures.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <Check className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* What's NOT included - Limitations */}
+              <div className="pt-3 border-t border-destructive/20">
+                <p className="text-xs font-semibold text-destructive uppercase tracking-wider mb-2">Limitações</p>
+                <ul className="space-y-2">
+                  {t.plans.freeLimitations.map((limitation, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <X className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-destructive/80 font-medium">{limitation}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </CardContent>
             <CardFooter>
               <Button
@@ -173,7 +187,7 @@ export const Plans: React.FC = () => {
           </Card>
 
           {/* Premium Plan */}
-          <Card variant="glass" className="backdrop-blur-xl relative border-2 border-success/50">
+          <Card variant="glass" className="backdrop-blur-xl relative border-2 border-success/50 shadow-lg shadow-success/10">
             {/* Real Leads Badge */}
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
               <Badge variant="gradientCTA" className="gradient-cta px-4 py-1 text-sm shadow-lg">
@@ -193,7 +207,7 @@ export const Plans: React.FC = () => {
                 </Badge>
               </div>
               <CardTitle className="text-2xl mt-4">{t.plans.premium}</CardTitle>
-              <CardDescription>{t.plans.premiumDesc}</CardDescription>
+              <CardDescription className="font-medium">{t.plans.premiumDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1">
@@ -203,14 +217,43 @@ export const Plans: React.FC = () => {
                 </div>
                 <p className="text-xs text-muted-foreground">{t.plans.premiumFirstPayment}</p>
               </div>
-              <ul className="space-y-3">
+
+              {/* Highlight: Real data */}
+              <div className="p-3 rounded-lg bg-success/10 border border-success/30">
+                <div className="flex items-center gap-2 mb-1">
+                  <MapPin className="w-4 h-4 text-success" />
+                  <span className="text-sm font-semibold text-success">Dados reais e verificados</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Telefone, WhatsApp, endereço e site extraídos diretamente do Google Maps.</p>
+              </div>
+
+              {/* Features */}
+              <ul className="space-y-2">
                 {t.plans.premiumFeatures.map((feature, index) => (
                   <li key={index} className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{feature}</span>
+                    <span className="text-sm font-medium">{feature}</span>
                   </li>
                 ))}
               </ul>
+
+              {/* Channels icons */}
+              <div className="flex items-center gap-3 pt-2 border-t">
+                <span className="text-xs text-muted-foreground">Canais:</span>
+                <div className="flex gap-2">
+                  <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center" title="WhatsApp">
+                    <MessageCircle className="w-3.5 h-3.5 text-green-500" />
+                  </div>
+                  <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center" title="Email">
+                    <Mail className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center" title="SMS">
+                    <Phone className="w-3.5 h-3.5 text-purple-500" />
+                  </div>
+                  <div className="w-7 h-7 rounded-full bg-sky-500/20 flex items-center justify-center" title="Telegram">
+                    <Inbox className="w-3.5 h-3.5 text-sky-500" />
+                  </div>
+                </div>
+              </div>
             </CardContent>
             <CardFooter>
               <Button
