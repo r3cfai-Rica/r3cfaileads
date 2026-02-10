@@ -73,6 +73,19 @@ interface Customer {
   searches_used: number;
 }
 
+interface Payment {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  payment_method: string | null;
+  payment_type: string | null;
+  installments: number | null;
+  plan_type: string;
+  status: string;
+  created_at: string;
+}
+
 type PlanFilter = 'all' | 'free' | 'basic' | 'premium';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
@@ -87,22 +100,32 @@ export default function AdminCustomers() {
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
   const [contactSubject, setContactSubject] = useState('');
+  const [payments, setPayments] = useState<Record<string, Payment[]>>({});
 
-  // Fetch all customers from database (free trial + paid)
+  // Fetch all customers and payments from database
   useEffect(() => {
-    const fetchCustomers = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
+        const [customersRes, paymentsRes] = await Promise.all([
+          supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+          supabase.from('payments').select('*').order('created_at', { ascending: false }),
+        ]);
 
-        if (error) {
-          console.error('Error fetching customers:', error);
+        if (customersRes.error) {
+          console.error('Error fetching customers:', customersRes.error);
           toast.error('Erro ao carregar clientes');
-        } else if (data) {
-          setCustomers(data);
+        } else if (customersRes.data) {
+          setCustomers(customersRes.data);
+        }
+
+        if (!paymentsRes.error && paymentsRes.data) {
+          const grouped: Record<string, Payment[]> = {};
+          paymentsRes.data.forEach((p: any) => {
+            if (!grouped[p.user_id]) grouped[p.user_id] = [];
+            grouped[p.user_id].push(p);
+          });
+          setPayments(grouped);
         }
       } catch (err) {
         console.error('Error:', err);
@@ -112,7 +135,7 @@ export default function AdminCustomers() {
       }
     };
 
-    fetchCustomers();
+    fetchData();
   }, []);
 
   // Redirect non-admins
@@ -174,6 +197,48 @@ export default function AdminCustomers() {
       console.error('Error:', err);
       toast.error('Erro ao preparar email');
     }
+  };
+
+  const handleToggleActive = async (customer: Customer) => {
+    const newStatus = !customer.is_active;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: newStatus })
+      .eq('user_id', customer.user_id);
+    if (error) {
+      toast.error('Erro ao alterar status');
+      return;
+    }
+    setCustomers(prev => prev.map(c => c.user_id === customer.user_id ? { ...c, is_active: newStatus } : c));
+    toast.success(newStatus ? 'Usuário ativado' : 'Usuário desativado');
+  };
+
+  const handleCancelPlan = async (customer: Customer) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ plan: 'free', plan_type: 'basic' })
+      .eq('user_id', customer.user_id);
+    if (error) {
+      toast.error('Erro ao cancelar plano');
+      return;
+    }
+    setCustomers(prev => prev.map(c => c.user_id === customer.user_id ? { ...c, plan: 'free', plan_type: 'basic' } : c));
+    toast.success('Plano cancelado - usuário voltou para Free');
+  };
+
+  const getPaymentMethodLabel = (method: string | null) => {
+    switch (method) {
+      case 'pix': return 'Pix';
+      case 'credit_card': return 'Cartão de Crédito';
+      case 'boleto': return 'Boleto';
+      default: return method || '—';
+    }
+  };
+
+  const getPaymentInfo = (userId: string) => {
+    const userPayments = payments[userId];
+    if (!userPayments || userPayments.length === 0) return null;
+    return userPayments[0]; // most recent
   };
 
   const stats = {
@@ -381,15 +446,17 @@ export default function AdminCustomers() {
                   <TableRow className="bg-muted/50">
                     <TableHead>Cliente</TableHead>
                     <TableHead>Plano</TableHead>
+                    <TableHead>Pagamento</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Desde</TableHead>
-                    <TableHead>Último Acesso</TableHead>
                     <TableHead>Uso</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCustomers.map((customer) => (
+                  {filteredCustomers.map((customer) => {
+                    const payment = getPaymentInfo(customer.user_id);
+                    return (
                     <TableRow key={customer.id} className="hover:bg-muted/30">
                       <TableCell>
                         <div>
@@ -415,6 +482,19 @@ export default function AdminCustomers() {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        {payment ? (
+                          <div className="text-sm">
+                            <p className="font-medium">{getPaymentMethodLabel(payment.payment_method)}</p>
+                            <p className="text-muted-foreground">
+                              R$ {(payment.amount / 100).toFixed(2)}
+                              {payment.installments && payment.installments > 1 ? ` (${payment.installments}x)` : ''}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={customer.is_active ? 'success' : 'destructive'}>
                           {customer.is_active ? 'Ativo' : 'Inativo'}
                         </Badge>
@@ -423,14 +503,6 @@ export default function AdminCustomers() {
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
                           {format(new Date(customer.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          {customer.last_login
-                            ? format(new Date(customer.last_login), 'dd/MM/yyyy', { locale: ptBR })
-                            : 'Nunca'}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -451,7 +523,6 @@ export default function AdminCustomers() {
                               <Mail className="w-4 h-4 mr-2" />
                               Enviar Email
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => {
                                 navigator.clipboard.writeText(customer.email);
@@ -461,11 +532,35 @@ export default function AdminCustomers() {
                               <Mail className="w-4 h-4 mr-2" />
                               Copiar Email
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleToggleActive(customer)}>
+                              {customer.is_active ? (
+                                <>
+                                  <X className="w-4 h-4 mr-2" />
+                                  Desativar Usuário
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="w-4 h-4 mr-2" />
+                                  Ativar Usuário
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            {customer.plan === 'paid' && (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleCancelPlan(customer)}
+                              >
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Cancelar Plano
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -65,57 +65,7 @@ import { AdminNotifications } from '@/components/admin/AdminNotifications';
 import { useAdminStats } from '@/hooks/useAdminStats';
 import { TrialSlotsManager } from '@/components/admin/TrialSlotsManager';
 
-// Mock users for demo
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'João Silva',
-    email: 'joao@empresa.com',
-    plan: 'paid',
-    role: 'user',
-    searchesUsed: 45,
-    leadsUsed: 387,
-    isActive: true,
-    createdAt: new Date('2024-01-15'),
-    lastLogin: new Date('2024-03-10'),
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    email: 'maria@startup.io',
-    plan: 'free',
-    role: 'user',
-    searchesUsed: 1,
-    leadsUsed: 10,
-    isActive: true,
-    createdAt: new Date('2024-02-20'),
-    lastLogin: new Date('2024-03-09'),
-  },
-  {
-    id: '3',
-    name: 'Carlos Oliveira',
-    email: 'carlos@tech.com',
-    plan: 'paid',
-    role: 'user',
-    searchesUsed: 78,
-    leadsUsed: 1250,
-    isActive: false,
-    createdAt: new Date('2023-11-05'),
-    lastLogin: new Date('2024-02-15'),
-  },
-  {
-    id: '4',
-    name: 'Ana Costa',
-    email: 'ana@marketing.co',
-    plan: 'free',
-    role: 'user',
-    searchesUsed: 1,
-    leadsUsed: 8,
-    isActive: true,
-    createdAt: new Date('2024-03-01'),
-    lastLogin: new Date('2024-03-10'),
-  },
-];
+// No mock users — all data comes from the database
 
 const topNiches = [
   { name: 'Revestimento Industrial', searches: 156 },
@@ -152,13 +102,9 @@ export const Admin: React.FC = () => {
 
         if (error) {
           console.error('Error fetching profiles:', error);
-          if (allUsers.length === 0) {
-            setAllUsers(mockUsers);
-          }
-          setDbUsers(allUsers.length > 0 ? allUsers : mockUsers);
         } else if (profiles) {
           const mappedUsers: User[] = profiles.map(p => ({
-            id: p.id,
+            id: p.user_id,
             name: p.name,
             email: p.email,
             plan: p.plan as 'free' | 'paid',
@@ -170,16 +116,11 @@ export const Admin: React.FC = () => {
             lastLogin: p.last_login ? new Date(p.last_login) : new Date(p.created_at),
           }));
           
-          const combinedUsers = [...mappedUsers, ...mockUsers.filter(m => !mappedUsers.some(r => r.email === m.email))];
-          setDbUsers(combinedUsers);
-          setAllUsers(combinedUsers);
+          setDbUsers(mappedUsers);
+          setAllUsers(mappedUsers);
         }
       } catch (err) {
         console.error('Error:', err);
-        if (allUsers.length === 0) {
-          setAllUsers(mockUsers);
-        }
-        setDbUsers(allUsers.length > 0 ? allUsers : mockUsers);
       } finally {
         setIsLoadingUsers(false);
       }
@@ -240,18 +181,31 @@ export const Admin: React.FC = () => {
     return matchesSearch && matchesPlan && matchesStatus && matchesDate;
   });
 
-  const handleToggleActive = (userId: string) => {
-    const updated = usersToShow.map(u => 
-      u.id === userId ? { ...u, isActive: !u.isActive } : u
-    );
-    setDbUsers(updated);
-    setAllUsers(updated);
+  const handleToggleActive = async (userId: string) => {
+    const targetUser = usersToShow.find(u => u.id === userId);
+    if (!targetUser) return;
+    const newStatus = !targetUser.isActive;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: newStatus })
+      .eq('user_id', userId);
+    if (!error) {
+      const updated = usersToShow.map(u => u.id === userId ? { ...u, isActive: newStatus } : u);
+      setDbUsers(updated);
+      setAllUsers(updated);
+    }
   };
 
-  const handleDeleteUser = (userId: string) => {
-    const updated = usersToShow.filter(u => u.id !== userId);
-    setDbUsers(updated);
-    setAllUsers(updated);
+  const handleDeleteUser = async (userId: string) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: false, plan: 'free' })
+      .eq('user_id', userId);
+    if (!error) {
+      const updated = usersToShow.map(u => u.id === userId ? { ...u, isActive: false, plan: 'free' as const } : u);
+      setDbUsers(updated);
+      setAllUsers(updated);
+    }
   };
 
   const clearFilters = () => {
@@ -292,16 +246,13 @@ export const Admin: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card variant="stat">
+        <Card variant="stat" className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" onClick={() => { setPlanFilter('all'); setStatusFilter('all'); }}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{t.admin.totalUsers}</p>
                 <p className="text-3xl font-bold">{stats.totalUsers}</p>
-                <div className="flex items-center gap-1 mt-1 text-success text-sm">
-                  <ArrowUpRight className="w-3 h-3" />
-                  <span>+12% este mês</span>
-                </div>
+                <p className="text-xs text-muted-foreground mt-1">Clique para ver todos</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Users className="w-6 h-6 text-primary" />
@@ -310,16 +261,13 @@ export const Admin: React.FC = () => {
           </CardContent>
         </Card>
         
-        <Card variant="stat">
+        <Card variant="stat" className={`cursor-pointer hover:ring-2 hover:ring-success/50 transition-all ${planFilter === 'paid' ? 'ring-2 ring-success' : ''}`} onClick={() => setPlanFilter(planFilter === 'paid' ? 'all' : 'paid')}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{t.admin.paidUsers}</p>
                 <p className="text-3xl font-bold text-success">{stats.paidUsers}</p>
-                <div className="flex items-center gap-1 mt-1 text-success text-sm">
-                  <ArrowUpRight className="w-3 h-3" />
-                  <span>+8% este mês</span>
-                </div>
+                <p className="text-xs text-muted-foreground mt-1">{planFilter === 'paid' ? '✓ Filtrado' : 'Clique para filtrar'}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
                 <CreditCard className="w-6 h-6 text-success" />
@@ -334,10 +282,7 @@ export const Admin: React.FC = () => {
               <div>
                 <p className="text-sm text-muted-foreground">{t.admin.revenue}</p>
                 <p className="text-3xl font-bold">R$ {stats.revenue.toLocaleString()}</p>
-                <div className="flex items-center gap-1 mt-1 text-success text-sm">
-                  <ArrowUpRight className="w-3 h-3" />
-                  <span>+22% este mês</span>
-                </div>
+                <p className="text-xs text-muted-foreground mt-1">Receita estimada</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-warning" />
@@ -346,16 +291,13 @@ export const Admin: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card variant="stat">
+        <Card variant="stat" className={`cursor-pointer hover:ring-2 hover:ring-muted-foreground/50 transition-all ${planFilter === 'free' ? 'ring-2 ring-muted-foreground' : ''}`} onClick={() => setPlanFilter(planFilter === 'free' ? 'all' : 'free')}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                <p className="text-3xl font-bold">{stats.conversionRate}%</p>
-                <div className="flex items-center gap-1 mt-1 text-success text-sm">
-                  <ArrowUpRight className="w-3 h-3" />
-                  <span>+5% este mês</span>
-                </div>
+                <p className="text-sm text-muted-foreground">Usuários Free</p>
+                <p className="text-3xl font-bold">{stats.freeUsers}</p>
+                <p className="text-xs text-muted-foreground mt-1">{planFilter === 'free' ? '✓ Filtrado' : 'Clique para filtrar'}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
                 <Target className="w-6 h-6 text-secondary" />

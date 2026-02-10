@@ -390,6 +390,54 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          installments: number | null
+          metadata: Json | null
+          payment_method: string | null
+          payment_type: string | null
+          plan_type: string
+          status: string
+          stripe_payment_intent: string | null
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          installments?: number | null
+          metadata?: Json | null
+          payment_method?: string | null
+          payment_type?: string | null
+          plan_type?: string
+          status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          installments?: number | null
+          metadata?: Json | null
+          payment_method?: string | null
+          payment_type?: string | null
+          plan_type?: string
+          status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
