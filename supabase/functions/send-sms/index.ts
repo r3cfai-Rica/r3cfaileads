@@ -45,23 +45,26 @@ serve(async (req) => {
 
     console.log(`Processing SMS request for user: ${user.id}`);
 
-    // Get user's Twilio credentials
-    const { data: credentials, error: credentialsError } = await supabaseClient
-      .from('user_messaging_credentials')
-      .select('twilio_account_sid, twilio_auth_token, twilio_phone_number, sms_configured')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Get user's decrypted Twilio credentials via secure RPC
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: credentials, error: credentialsError } = await serviceClient
+      .rpc('get_decrypted_credentials', { _user_id: user.id });
 
     if (credentialsError) {
       console.error('Error fetching credentials:', credentialsError);
       throw new Error('Erro ao buscar credenciais');
     }
 
-    if (!credentials || !credentials.sms_configured) {
+    const cred = credentials?.[0];
+    if (!cred || !cred.sms_configured) {
       throw new Error('SMS não configurado. Configure suas credenciais em Configurações.');
     }
 
-    const { twilio_account_sid, twilio_auth_token, twilio_phone_number } = credentials;
+    const { twilio_account_sid, twilio_auth_token, twilio_phone_number } = cred;
 
     // Parse request body
     const { to, message, leadId, leadName }: SendSMSRequest = await req.json();

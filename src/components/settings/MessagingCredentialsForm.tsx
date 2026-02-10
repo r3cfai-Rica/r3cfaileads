@@ -128,91 +128,75 @@ export const MessagingCredentialsForm: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      let updateData: Record<string, any> = {};
-      let isConfigured = false;
+      // Build RPC params for encrypted save
+      const rpcParams = { _user_id: user.id } as any;
 
       switch (channel) {
         case 'whatsapp':
           if (credentials.whatsapp_provider === 'evolution') {
-            isConfigured = !!(credentials.evolution_api_url && credentials.evolution_api_key && credentials.evolution_instance_name);
-            updateData = {
-              whatsapp_access_token: '', // Clear Meta credentials
-              whatsapp_phone_number_id: '',
-              whatsapp_configured: isConfigured,
-              metadata: {
-                whatsapp_provider: 'evolution',
-                evolution_api_url: credentials.evolution_api_url,
-                evolution_api_key: credentials.evolution_api_key,
-                evolution_instance_name: credentials.evolution_instance_name,
-              },
+            const isConfigured = !!(credentials.evolution_api_url && credentials.evolution_api_key && credentials.evolution_instance_name);
+            rpcParams._whatsapp_access_token = ''; // Clear Meta credentials
+            rpcParams._whatsapp_configured = isConfigured;
+            // Evolution credentials go via direct update for metadata
+            const metadataUpdate = {
+              whatsapp_provider: 'evolution',
+              evolution_api_url: credentials.evolution_api_url,
+              evolution_api_key: credentials.evolution_api_key,
+              evolution_instance_name: credentials.evolution_instance_name,
             };
+            // Save encrypted fields via RPC first
+            const { error: rpcError } = await supabase.rpc('save_encrypted_credentials', rpcParams);
+            if (rpcError) throw rpcError;
+            // Then update metadata separately
+            const { error: metaError } = await supabase
+              .from('user_messaging_credentials')
+              .update({ metadata: metadataUpdate, whatsapp_configured: isConfigured })
+              .eq('user_id', user.id);
+            if (metaError) throw metaError;
+            setCredentials(prev => ({ ...prev, whatsapp_configured: isConfigured }));
           } else {
-            isConfigured = !!(credentials.whatsapp_access_token && credentials.whatsapp_phone_number_id);
-            updateData = {
-              whatsapp_access_token: credentials.whatsapp_access_token,
-              whatsapp_phone_number_id: credentials.whatsapp_phone_number_id,
-              whatsapp_configured: isConfigured,
-              metadata: {
-                whatsapp_provider: 'meta',
-              },
-            };
+            const isConfigured = !!(credentials.whatsapp_access_token && credentials.whatsapp_phone_number_id);
+            rpcParams._whatsapp_access_token = credentials.whatsapp_access_token;
+            rpcParams._whatsapp_phone_number_id = credentials.whatsapp_phone_number_id;
+            rpcParams._whatsapp_configured = isConfigured;
+            const { error: rpcError } = await supabase.rpc('save_encrypted_credentials', rpcParams);
+            if (rpcError) throw rpcError;
+            // Update metadata for provider
+            await supabase
+              .from('user_messaging_credentials')
+              .update({ metadata: { whatsapp_provider: 'meta' } })
+              .eq('user_id', user.id);
+            setCredentials(prev => ({ ...prev, whatsapp_configured: isConfigured }));
           }
           break;
-        case 'sms':
-          isConfigured = !!(credentials.twilio_account_sid && credentials.twilio_auth_token && credentials.twilio_phone_number);
-          updateData = {
-            twilio_account_sid: credentials.twilio_account_sid,
-            twilio_auth_token: credentials.twilio_auth_token,
-            twilio_phone_number: credentials.twilio_phone_number,
-            sms_configured: isConfigured,
-          };
+        case 'sms': {
+          const isConfigured = !!(credentials.twilio_account_sid && credentials.twilio_auth_token && credentials.twilio_phone_number);
+          rpcParams._twilio_account_sid = credentials.twilio_account_sid;
+          rpcParams._twilio_auth_token = credentials.twilio_auth_token;
+          rpcParams._twilio_phone_number = credentials.twilio_phone_number;
+          rpcParams._sms_configured = isConfigured;
+          const { error: rpcError } = await supabase.rpc('save_encrypted_credentials', rpcParams);
+          if (rpcError) throw rpcError;
+          setCredentials(prev => ({ ...prev, sms_configured: isConfigured }));
           break;
-        case 'email':
-          isConfigured = !!(credentials.resend_api_key && credentials.email_from_address);
-          updateData = {
-            resend_api_key: credentials.resend_api_key,
-            email_from_address: credentials.email_from_address,
-            email_from_name: credentials.email_from_name,
-            email_configured: isConfigured,
-          };
+        }
+        case 'email': {
+          const isConfigured = !!(credentials.resend_api_key && credentials.email_from_address);
+          rpcParams._resend_api_key = credentials.resend_api_key;
+          rpcParams._email_from_address = credentials.email_from_address;
+          rpcParams._email_from_name = credentials.email_from_name;
+          rpcParams._email_configured = isConfigured;
+          const { error: rpcError } = await supabase.rpc('save_encrypted_credentials', rpcParams);
+          if (rpcError) throw rpcError;
+          setCredentials(prev => ({ ...prev, email_configured: isConfigured }));
           break;
+        }
       }
-
-      if (credentials.id) {
-        // Update existing
-        const { error } = await supabase
-          .from('user_messaging_credentials')
-          .update(updateData)
-          .eq('id', credentials.id);
-
-        if (error) throw error;
-      } else {
-        // Insert new
-        const { data, error } = await supabase
-          .from('user_messaging_credentials')
-          .insert({ 
-            user_id: user.id, 
-            ...updateData 
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        setCredentials(prev => ({ ...prev, id: data.id, user_id: data.user_id }));
-      }
-
-      // Update local state
-      setCredentials(prev => ({
-        ...prev,
-        whatsapp_configured: channel === 'whatsapp' ? isConfigured : prev.whatsapp_configured,
-        sms_configured: channel === 'sms' ? isConfigured : prev.sms_configured,
-        email_configured: channel === 'email' ? isConfigured : prev.email_configured,
-      }));
 
       const providerName = channel === 'whatsapp' 
         ? (credentials.whatsapp_provider === 'evolution' ? 'Evolution API' : 'WhatsApp Cloud API')
         : channel === 'sms' ? 'SMS' : 'Email';
-      toast.success(`Configurações de ${providerName} salvas!`);
+      toast.success(`Configurações de ${providerName} salvas com criptografia!`);
     } catch (error) {
       console.error('Error saving credentials:', error);
       toast.error('Erro ao salvar credenciais');

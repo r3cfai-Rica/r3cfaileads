@@ -45,23 +45,26 @@ serve(async (req) => {
 
     console.log(`Processing WhatsApp request for user: ${user.id}`);
 
-    // Get user's WhatsApp credentials
-    const { data: credentials, error: credentialsError } = await supabaseClient
-      .from('user_messaging_credentials')
-      .select('whatsapp_access_token, whatsapp_phone_number_id, whatsapp_configured')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Get user's decrypted WhatsApp credentials via secure RPC
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: credentials, error: credentialsError } = await serviceClient
+      .rpc('get_decrypted_credentials', { _user_id: user.id });
 
     if (credentialsError) {
       console.error('Error fetching credentials:', credentialsError);
       throw new Error('Erro ao buscar credenciais');
     }
 
-    if (!credentials || !credentials.whatsapp_configured) {
+    const cred = credentials?.[0];
+    if (!cred || !cred.whatsapp_configured) {
       throw new Error('WhatsApp não configurado. Configure suas credenciais em Configurações.');
     }
 
-    const { whatsapp_access_token, whatsapp_phone_number_id } = credentials;
+    const { whatsapp_access_token, whatsapp_phone_number_id } = cred;
 
     // Parse request body
     const { to, message, leadId, leadName }: SendWhatsAppRequest = await req.json();
