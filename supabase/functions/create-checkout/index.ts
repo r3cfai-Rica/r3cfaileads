@@ -78,20 +78,19 @@ serve(async (req) => {
     // Get origin from request or use default
     const origin = req.headers.get("origin") || "https://gylxzoogrqqeqihqknkm.lovableproject.com";
 
-    // Premium Plan: R$447 first payment (R$250 setup + R$197 first month)
-    // Then R$197/month subscription
+    // Premium Plan: R$473 first payment (R$250 setup + R$223 first month)
+    // Then R$223/month subscription
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
-        // Setup fee + first month
         {
           price_data: {
             currency: "brl",
             product_data: {
               name: "LeadPilot Premium - Implementação + 1º Mês",
-              description: "Taxa de implementação R$250 + Primeira mensalidade R$197 (Leads reais do Google Maps)",
+              description: "Taxa de implementação R$250 + Primeira mensalidade R$223 (Leads reais do Google Maps)",
             },
-            unit_amount: 44700, // R$ 447,00 in centavos
+            unit_amount: 47300, // R$ 473,00 in centavos
           },
           quantity: 1,
         },
@@ -102,9 +101,8 @@ serve(async (req) => {
       metadata: {
         supabase_user_id: user.id,
         plan_type: 'premium',
-        // Flag to set up recurring subscription after first payment
         setup_subscription: 'true',
-        monthly_amount: '19700', // R$197 in centavos for recurring
+        monthly_amount: '22300', // R$223 in centavos for recurring
       },
     });
 
