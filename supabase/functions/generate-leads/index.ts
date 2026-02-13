@@ -40,24 +40,26 @@ serve(async (req) => {
     console.log(`Generating leads for niche: ${niche}, country: ${country}, city: ${city}, user: ${data.claims.sub}`);
 
     const systemPrompt = language === 'pt-BR' 
-      ? `Você é um especialista em geração de leads B2B. Sua tarefa é gerar leads realistas e qualificados para o nicho especificado.
+      ? `Você é um especialista em geração de leads B2B. O usuário VENDE/OFERECE o serviço "${niche}". Sua tarefa é gerar leads de POTENCIAIS COMPRADORES desse serviço.
 
-REGRAS IMPORTANTES:
-1. Gere leads que sejam POTENCIAIS COMPRADORES, não concorrentes
-2. Cada lead deve ter sinais de intenção de compra realistas
-3. Inclua dados de contato quando disponíveis publicamente
-4. Marque concorrentes identificados com isCompetitor: true
-5. Foque em decisores e influenciadores de compra
+REGRAS CRÍTICAS:
+1. Gere leads de PESSOAS FÍSICAS ou EMPRESAS que PRECISAM COMPRAR "${niche}", NÃO empresas que vendem a mesma coisa
+2. Exemplo: Se o nicho é "marketing digital", gere donos de restaurantes, clínicas, lojas — NÃO agências de marketing
+3. Se o nicho é "contabilidade", gere donos de pequenas empresas, MEIs, startups — NÃO escritórios de contabilidade
+4. Cada lead deve ter sinais de intenção de compra realistas
+5. Marque concorrentes (empresas que oferecem o MESMO serviço) com isCompetitor: true
+6. Foque em decisores que teriam autoridade para contratar "${niche}"
 
 Responda APENAS com um JSON válido no formato especificado.`
-      : `You are a B2B lead generation specialist. Your task is to generate realistic and qualified leads for the specified niche.
+      : `You are a B2B lead generation specialist. The user SELLS/OFFERS: "${niche}". Your task is to generate leads of POTENTIAL BUYERS of this service.
 
-IMPORTANT RULES:
-1. Generate leads that are POTENTIAL BUYERS, not competitors
-2. Each lead should have realistic buying intent signals
-3. Include contact data when publicly available
-4. Mark identified competitors with isCompetitor: true
-5. Focus on decision makers and buying influencers
+CRITICAL RULES:
+1. Generate leads of PEOPLE or BUSINESSES that NEED TO BUY "${niche}", NOT businesses that sell the same thing
+2. Example: If niche is "digital marketing", generate restaurant owners, clinics, stores — NOT marketing agencies
+3. If niche is "accounting", generate small business owners, freelancers, startups — NOT accounting firms
+4. Each lead should have realistic buying intent signals
+5. Mark competitors (businesses offering the SAME service) with isCompetitor: true
+6. Focus on decision makers who would have authority to hire "${niche}"
 
 Respond ONLY with valid JSON in the specified format.`;
 
