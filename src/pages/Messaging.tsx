@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { useApp, MessageLog, CTA } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -955,7 +956,7 @@ export const Messaging: React.FC = () => {
                               </div>
                               <div 
                                 className="prose prose-sm max-w-none text-foreground"
-                                dangerouslySetInnerHTML={{ __html: generatedEmail.body }}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedEmail.body) }}
                               />
                               
                               {/* CTA Image Preview */}
@@ -976,7 +977,7 @@ export const Messaging: React.FC = () => {
                               
                               <div 
                                 className="pt-2 border-t text-sm"
-                                dangerouslySetInnerHTML={{ __html: generatedEmail.signature }}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedEmail.signature) }}
                               />
                             </>
                           )}
