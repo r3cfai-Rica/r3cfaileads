@@ -115,7 +115,7 @@ Return ONLY a JSON with 3-5 Google Maps search terms to find POTENTIAL BUYERS in
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': GOOGLE_API_KEY,
-            'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.businessStatus,places.types,places.primaryType,places.regularOpeningHours',
+            'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.businessStatus,places.types,places.primaryType,places.regularOpeningHours,places.googleMapsUri',
           },
           body: JSON.stringify({
             textQuery: term,
@@ -207,10 +207,17 @@ Return ONLY JSON: {"classifications": [{"index": 0, "type": "buyer", "reason": "
       const phone = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
       const sources: string[] = [];
       if (place.websiteUri) sources.push(place.websiteUri);
-      sources.push(`https://www.google.com/maps/place/?q=place_id:${place.id}`);
+      if (place.googleMapsUri) {
+        sources.push(place.googleMapsUri);
+      } else {
+        sources.push(`https://www.google.com/maps/place/?q=place_id:${place.id}`);
+      }
 
       const classification = classMap.get(index);
       const isCompetitor = classification?.type === 'competitor';
+
+      // Try to extract email from website URL domain for display hint
+      let email: string | null = null;
 
       return {
         id: `lead-${Date.now()}-${index}`,
@@ -221,7 +228,7 @@ Return ONLY JSON: {"classifications": [{"index": 0, "type": "buyer", "reason": "
           ? `Rating: ${place.rating}/5 (${place.userRatingCount || 0} reviews)${place.businessStatus === 'OPERATIONAL' ? ' - Active' : ''}`
           : 'Listed on Google Maps'),
         urgency: (place.userRatingCount && place.userRatingCount > 50 ? 'high' : place.userRatingCount && place.userRatingCount > 10 ? 'medium' : 'low') as string,
-        email: null,
+        email,
         phone,
         whatsapp: phone,
         sources,
