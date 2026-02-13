@@ -156,10 +156,10 @@ export const translations = {
       // Premium plan
       premium: 'Premium',
       premiumDesc: 'Leads reais do Google Maps • Dados verificados',
-      premiumPrice: 'R$ 224',
+      premiumPrice: 'R$ 223',
       premiumPriceNote: '/mês',
-      premiumFirstPayment: 'Primeira cobrança: R$ 321 (R$97 implementação + R$224)',
-      premiumSetupFee: 'R$ 97',
+      premiumFirstPayment: 'Primeira cobrança: R$ 473 (R$250 implementação + R$223)',
+      premiumSetupFee: 'R$ 250',
       premiumFeatures: [
         '✅ Leads REAIS do Google Maps',
         '✅ Telefone, WhatsApp e site verificados',
@@ -387,10 +387,10 @@ export const translations = {
       // Premium plan
       premium: 'Premium',
       premiumDesc: 'Real leads from Google Maps • Verified data',
-      premiumPrice: 'R$ 224',
+      premiumPrice: 'R$ 223',
       premiumPriceNote: '/month',
-      premiumFirstPayment: 'First charge: R$ 321 (R$97 setup + R$224)',
-      premiumSetupFee: 'R$ 97',
+      premiumFirstPayment: 'First charge: R$ 473 (R$250 setup + R$223)',
+      premiumSetupFee: 'R$ 250',
       premiumFeatures: [
         '✅ REAL leads from Google Maps',
         '✅ Verified phone, WhatsApp & website',
