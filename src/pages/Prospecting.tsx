@@ -652,32 +652,53 @@ export const Prospecting: React.FC = () => {
                           {/* Contacts */}
                           <div className="flex flex-wrap items-center gap-3 mt-2">
                             {lead.email && (
-                              <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                              <a
+                                href={`mailto:${lead.email}`}
+                                className="text-xs flex items-center gap-1 text-primary hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Mail className="w-3 h-3" />
                                 {lead.email}
-                              </span>
+                              </a>
                             )}
                             {lead.phone && (
-                              <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                              <a
+                                href={`tel:${lead.phone}`}
+                                className="text-xs flex items-center gap-1 text-muted-foreground hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Phone className="w-3 h-3" />
                                 {lead.phone}
-                              </span>
+                              </a>
                             )}
                             {lead.whatsapp && (
-                              <span className="text-xs flex items-center gap-1 text-success">
+                              <a
+                                href={`https://wa.me/${lead.whatsapp?.replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs flex items-center gap-1 text-success hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <MessageCircle className="w-3 h-3" />
                                 WhatsApp
-                              </span>
+                              </a>
                             )}
                           </div>
 
                           {/* Sources */}
                           <div className="flex flex-wrap items-center gap-2 mt-2">
                             {lead.sources.map((source, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
-                                <LinkIcon className="w-3 h-3 mr-1" />
-                                {source}
-                              </Badge>
+                              <a
+                                key={i}
+                                href={source.startsWith('http') ? source : `https://${source}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border text-primary hover:bg-primary/10 hover:underline transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <LinkIcon className="w-3 h-3" />
+                                {source.length > 40 ? source.substring(0, 40) + '...' : source}
+                              </a>
                             ))}
                           </div>
                         </div>
