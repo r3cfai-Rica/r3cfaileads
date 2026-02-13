@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -61,11 +61,19 @@ const defaultCredentials: MessagingCredentials = {
   email_configured: false,
 };
 
+const STORAGE_KEY = 'messaging-credentials-draft';
+
 export const MessagingCredentialsForm: React.FC = () => {
   const { language } = useApp();
   const pt = language === 'pt-BR';
 
-  const [credentials, setCredentials] = useState<MessagingCredentials>(defaultCredentials);
+  const [credentials, setCredentials] = useState<MessagingCredentials>(() => {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return defaultCredentials;
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showTokens, setShowTokens] = useState({
@@ -74,6 +82,14 @@ export const MessagingCredentialsForm: React.FC = () => {
     twilio: false,
     resend: false,
   });
+  const hasLoadedFromDb = useRef(false);
+
+  // Persist draft to sessionStorage on every change (after DB load)
+  useEffect(() => {
+    if (hasLoadedFromDb.current) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(credentials));
+    }
+  }, [credentials]);
 
   useEffect(() => {
     loadCredentials();
@@ -97,7 +113,7 @@ export const MessagingCredentialsForm: React.FC = () => {
       if (data) {
         const metadata = (data as any).metadata || {};
         
-        setCredentials({
+        const dbCredentials: MessagingCredentials = {
           id: data.id,
           user_id: data.user_id,
           whatsapp_access_token: data.whatsapp_access_token || '',
@@ -115,12 +131,43 @@ export const MessagingCredentialsForm: React.FC = () => {
           email_from_address: data.email_from_address || '',
           email_from_name: data.email_from_name || '',
           email_configured: data.email_configured,
-        });
+        };
+
+        // Merge: keep any draft values the user typed (non-empty) over empty DB values
+        const savedDraft = sessionStorage.getItem(STORAGE_KEY);
+        if (savedDraft) {
+          try {
+            const draft = JSON.parse(savedDraft) as MessagingCredentials;
+            // If draft has unsaved edits (values that differ from defaults and DB), keep them
+            const merged = { ...dbCredentials };
+            const fieldsToMerge: (keyof MessagingCredentials)[] = [
+              'whatsapp_access_token', 'whatsapp_phone_number_id',
+              'evolution_api_url', 'evolution_api_key', 'evolution_instance_name',
+              'twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number',
+              'resend_api_key', 'email_from_address', 'email_from_name',
+              'whatsapp_provider'
+            ];
+            for (const field of fieldsToMerge) {
+              const draftVal = draft[field];
+              const dbVal = dbCredentials[field];
+              // If user typed something in draft that's different from DB, keep the draft
+              if (draftVal && draftVal !== '' && draftVal !== dbVal) {
+                (merged as any)[field] = draftVal;
+              }
+            }
+            setCredentials(merged);
+          } catch {
+            setCredentials(dbCredentials);
+          }
+        } else {
+          setCredentials(dbCredentials);
+        }
       }
     } catch (error) {
       console.error('Error loading credentials:', error);
       toast.error(pt ? 'Erro ao carregar credenciais' : 'Error loading credentials');
     } finally {
+      hasLoadedFromDb.current = true;
       setLoading(false);
     }
   };
@@ -195,6 +242,8 @@ export const MessagingCredentialsForm: React.FC = () => {
         ? (credentials.whatsapp_provider === 'evolution' ? 'Evolution API' : 'WhatsApp Cloud API')
         : channel === 'sms' ? 'SMS' : 'Email';
       toast.success(pt ? `Configurações de ${providerName} salvas com criptografia!` : `${providerName} settings saved with encryption!`);
+      // Clear draft after successful save
+      sessionStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       console.error('Error saving credentials:', error);
       toast.error(pt ? 'Erro ao salvar credenciais' : 'Error saving credentials');
