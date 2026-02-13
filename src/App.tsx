@@ -25,6 +25,7 @@ import Admin from "./pages/Admin";
 import AdminTools from "./pages/AdminTools";
 import UsageMonitorPage from "./pages/UsageMonitorPage";
 import AdminCustomers from "./pages/AdminCustomers";
+import PremiumReport from "./pages/PremiumReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/plans" element={<Plans />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/premium-report" element={<PremiumReport />} />
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/prospecting" element={<Prospecting />} />
