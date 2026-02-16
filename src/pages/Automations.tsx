@@ -4,37 +4,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Bot, Plus, Settings2, Trash2, Clock, Target, Users, Zap, Loader2 } from 'lucide-react';
+import { Bot, Plus, Settings2, Trash2, Clock, Target, Users, Loader2, Play, History, AlertTriangle, Check, XCircle, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { CreateBotDialog, BotFormData } from '@/components/automations/CreateBotDialog';
+import { RobotRunsDialog } from '@/components/automations/RobotRunsDialog';
 
 const Automations: React.FC = () => {
   const { folders, language } = useApp();
   const queryClient = useQueryClient();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newBotName, setNewBotName] = useState('');
-  const [newBotNiche, setNewBotNiche] = useState('');
-  const [newBotFolderId, setNewBotFolderId] = useState('');
-  const [newBotFrequency, setNewBotFrequency] = useState<'hourly' | 'daily' | 'weekly'>('daily');
-  const [newBotMaxLeads, setNewBotMaxLeads] = useState(50);
+  const [historyRobotId, setHistoryRobotId] = useState<string | null>(null);
+  const [historyRobotName, setHistoryRobotName] = useState('');
 
   const { data: bots = [], isLoading } = useQuery({
     queryKey: ['automations'],
@@ -51,35 +35,62 @@ const Automations: React.FC = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (form: BotFormData) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      // Calculate first next_run_at
+      const startDate = new Date(form.startDate + 'T' + form.runTime + ':00');
+      const now = new Date();
+      let nextRun = startDate > now ? startDate : new Date();
+      if (startDate <= now) {
+        // Set to next occurrence
+        if (form.frequency === 'daily') nextRun.setDate(nextRun.getDate() + 1);
+        else if (form.frequency === 'weekly') nextRun.setDate(nextRun.getDate() + 7);
+        else if (form.frequency === 'monthly') nextRun.setMonth(nextRun.getMonth() + 1);
+      }
+
       const { error } = await supabase.from('automations').insert({
         user_id: user.id,
-        name: newBotName,
-        niche: newBotNiche,
-        folder_id: newBotFolderId || null,
-        frequency: newBotFrequency,
-        max_leads_per_run: newBotMaxLeads,
+        name: form.name,
+        niche: form.niche,
+        lead_type: form.leadType,
+        country: form.country,
+        city: form.city,
+        folder_id: form.folderId || null,
+        frequency: form.frequency,
+        max_leads_per_run: form.maxLeads,
+        start_date: form.startDate,
+        end_date: form.endDate || null,
+        run_time: form.runTime,
+        timezone: form.timezone,
+        deduplicate: form.deduplicate,
+        next_run_at: nextRun.toISOString(),
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['automations'] });
-      setNewBotName('');
-      setNewBotNiche('');
-      setNewBotFolderId('');
-      setNewBotFrequency('daily');
-      setNewBotMaxLeads(50);
       setShowCreateDialog(false);
-      toast.success('Robô criado com sucesso!');
+      toast.success(language === 'pt-BR' ? 'Robô criado com sucesso!' : 'Robot created successfully!');
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const { error } = await supabase.from('automations').update({ is_active: !isActive }).eq('id', id);
+      const update: any = { is_active: !isActive };
+      // If reactivating, set a next_run
+      if (!isActive) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 5);
+        update.next_run_at = now.toISOString();
+        update.last_status = null;
+        update.last_error = null;
+      } else {
+        update.next_run_at = null;
+      }
+      const { error } = await supabase.from('automations').update(update).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automations'] }),
@@ -92,59 +103,77 @@ const Automations: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['automations'] });
-      toast.success('Robô removido.');
+      toast.success(language === 'pt-BR' ? 'Robô removido.' : 'Robot removed.');
     },
+  });
+
+  const runNowMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.functions.invoke('run-automation', {
+        body: { automationId: id, triggeredBy: 'user' },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['automations'] });
+      toast.success(
+        language === 'pt-BR'
+          ? `Execução concluída: ${data.leadsSaved} leads salvos`
+          : `Run completed: ${data.leadsSaved} leads saved`
+      );
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const tt = language === 'pt-BR' ? {
     title: 'Automações AI',
-    subtitle: 'Controle de clientes e faturamento LeadFlow.',
+    subtitle: 'Robôs de prospecção automática com IA.',
     robotsTitle: 'Robôs de Prospecção',
     robotsDesc: 'Deixe a IA buscar leads para você enquanto você dorme.',
     createBot: 'Criar Novo Robô',
     emptyTitle: 'Seu exército de IA está aguardando',
     emptyDesc: 'Crie automações para que nossa inteligência busque novos leads periodicamente e os organize no seu CRM.',
     startNow: 'COMEÇAR AGORA',
-    botName: 'Nome do Robô',
-    selectNiche: 'Nicho para Prospectar',
-    selectFolder: 'Salvar na Pasta',
-    frequency: 'Frequência',
-    hourly: 'A cada hora',
-    daily: 'Diário',
-    weekly: 'Semanal',
-    maxLeads: 'Máx. Leads por Execução',
-    cancel: 'Cancelar',
-    create: 'Criar Robô',
     active: 'Ativo',
     paused: 'Pausado',
+    error: 'Erro',
+    nextRun: 'Próxima execução',
     lastRun: 'Última execução',
     never: 'Nunca executou',
+    runNow: 'Executar agora',
+    history: 'Histórico',
+    leadsLastRun: 'última exec.',
   } : {
     title: 'AI Automations',
-    subtitle: 'LeadFlow customer and billing control.',
+    subtitle: 'Automatic prospecting robots with AI.',
     robotsTitle: 'Prospecting Robots',
     robotsDesc: 'Let AI search leads for you while you sleep.',
     createBot: 'Create New Robot',
     emptyTitle: 'Your AI army is waiting',
     emptyDesc: 'Create automations so our intelligence periodically searches for new leads and organizes them in your CRM.',
     startNow: 'START NOW',
-    botName: 'Robot Name',
-    selectNiche: 'Niche to Prospect',
-    selectFolder: 'Save to Folder',
-    frequency: 'Frequency',
-    hourly: 'Hourly',
-    daily: 'Daily',
-    weekly: 'Weekly',
-    maxLeads: 'Max Leads per Run',
-    cancel: 'Cancel',
-    create: 'Create Robot',
     active: 'Active',
     paused: 'Paused',
+    error: 'Error',
+    nextRun: 'Next run',
     lastRun: 'Last run',
     never: 'Never ran',
+    runNow: 'Run now',
+    history: 'History',
+    leadsLastRun: 'last run',
   };
 
-  const frequencyLabels: Record<string, string> = { hourly: tt.hourly, daily: tt.daily, weekly: tt.weekly };
+  const frequencyLabels: Record<string, string> = language === 'pt-BR'
+    ? { daily: 'Diário', weekly: 'Semanal', monthly: 'Mensal', hourly: 'Hora' }
+    : { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', hourly: 'Hourly' };
+
+  const getStatusBadge = (bot: any) => {
+    if (bot.last_status === 'error') return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" />{tt.error}</Badge>;
+    if (bot.is_active) return <Badge variant="default" className="gap-1"><Check className="w-3 h-3" />{tt.active}</Badge>;
+    return <Badge variant="secondary">{tt.paused}</Badge>;
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -179,30 +208,79 @@ const Automations: React.FC = () => {
         </div>
       ) : bots.length > 0 ? (
         <div className="grid gap-4">
-          {bots.map((bot) => (
+          {bots.map((bot: any) => (
             <Card key={bot.id}>
               <CardContent className="py-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bot.is_active ? 'bg-success/20' : 'bg-muted'}`}>
-                      <Bot className={`w-6 h-6 ${bot.is_active ? 'text-success' : 'text-muted-foreground'}`} />
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bot.is_active && bot.last_status !== 'error' ? 'bg-success/20' : bot.last_status === 'error' ? 'bg-destructive/20' : 'bg-muted'}`}>
+                        <Bot className={`w-6 h-6 ${bot.is_active && bot.last_status !== 'error' ? 'text-success' : bot.last_status === 'error' ? 'text-destructive' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold">{bot.name}</h3>
+                          {getStatusBadge(bot)}
+                          <Badge variant="outline" className="text-xs uppercase">{bot.lead_type || 'b2b'}</Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1"><Target className="w-4 h-4" />{bot.niche}</span>
+                          <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{frequencyLabels[bot.frequency] || bot.frequency}</span>
+                          <span className="flex items-center gap-1"><Users className="w-4 h-4" />{bot.total_leads_found} leads</span>
+                          {bot.last_leads_saved > 0 && (
+                            <span className="text-xs">({bot.last_leads_saved} {tt.leadsLastRun})</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{bot.name}</h3>
-                        <Badge variant={bot.is_active ? 'default' : 'secondary'}>{bot.is_active ? tt.active : tt.paused}</Badge>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-1">
-                        <span className="flex items-center gap-1"><Target className="w-4 h-4" />{bot.niche}</span>
-                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{frequencyLabels[bot.frequency] || bot.frequency}</span>
-                        <span className="flex items-center gap-1"><Users className="w-4 h-4" />{bot.total_leads_found} leads</span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={bot.is_active} onCheckedChange={() => toggleMutation.mutate({ id: bot.id, isActive: bot.is_active })} />
+                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(bot.id)} className="text-destructive hover:bg-destructive/10">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Switch checked={bot.is_active} onCheckedChange={() => toggleMutation.mutate({ id: bot.id, isActive: bot.is_active })} />
-                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(bot.id)} className="text-destructive hover:bg-destructive/10">
-                      <Trash2 className="w-4 h-4" />
+
+                  {/* Run details row */}
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground border-t pt-3">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {tt.lastRun}: {bot.last_run ? format(new Date(bot.last_run), 'dd/MM/yyyy HH:mm') : tt.never}
+                    </span>
+                    {bot.next_run_at && bot.is_active && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {tt.nextRun}: {format(new Date(bot.next_run_at), 'dd/MM/yyyy HH:mm')}
+                      </span>
+                    )}
+                    {bot.last_error && (
+                      <span className="flex items-center gap-1 text-destructive">
+                        <AlertTriangle className="w-3 h-3" />
+                        {bot.last_error.length > 60 ? bot.last_error.substring(0, 60) + '...' : bot.last_error}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => runNowMutation.mutate(bot.id)}
+                      disabled={runNowMutation.isPending}
+                      className="gap-1"
+                    >
+                      {runNowMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                      {tt.runNow}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setHistoryRobotId(bot.id); setHistoryRobotName(bot.name); }}
+                      className="gap-1"
+                    >
+                      <History className="w-3 h-3" />
+                      {tt.history}
                     </Button>
                   </div>
                 </div>
@@ -225,55 +303,24 @@ const Automations: React.FC = () => {
         </Card>
       )}
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Bot className="w-5 h-5 text-primary" />{tt.createBot}</DialogTitle>
-            <DialogDescription>{tt.robotsDesc}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">{tt.botName}</label>
-              <Input value={newBotName} onChange={(e) => setNewBotName(e.target.value)} placeholder="Ex: Bot Pisos Industriais" />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">{tt.selectNiche}</label>
-              <Input value={newBotNiche} onChange={(e) => setNewBotNiche(e.target.value)} placeholder="Ex: Pisos Uretanos" />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">{tt.selectFolder}</label>
-              <Select value={newBotFolderId} onValueChange={setNewBotFolderId}>
-                <SelectTrigger><SelectValue placeholder={tt.selectFolder} /></SelectTrigger>
-                <SelectContent>
-                  {folders.map(folder => (<SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">{tt.frequency}</label>
-              <Select value={newBotFrequency} onValueChange={(v: 'hourly' | 'daily' | 'weekly') => setNewBotFrequency(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hourly">{tt.hourly}</SelectItem>
-                  <SelectItem value="daily">{tt.daily}</SelectItem>
-                  <SelectItem value="weekly">{tt.weekly}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">{tt.maxLeads}</label>
-              <Input type="number" value={newBotMaxLeads} onChange={(e) => setNewBotMaxLeads(Number(e.target.value))} min={10} max={200} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>{tt.cancel}</Button>
-            <Button variant="gradient" onClick={() => createMutation.mutate()} disabled={!newBotName || !newBotNiche || !newBotFolderId || createMutation.isPending}>
-              {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-              {tt.create}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateBotDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        folders={folders}
+        onSubmit={createMutation.mutateAsync}
+        isPending={createMutation.isPending}
+        language={language}
+      />
+
+      {historyRobotId && (
+        <RobotRunsDialog
+          open={!!historyRobotId}
+          onOpenChange={(o) => { if (!o) setHistoryRobotId(null); }}
+          robotId={historyRobotId}
+          robotName={historyRobotName}
+          language={language}
+        />
+      )}
     </div>
   );
 };

@@ -67,43 +67,79 @@ export type Database = {
       }
       automations: {
         Row: {
+          city: string | null
+          country: string | null
           created_at: string
+          deduplicate: boolean
+          end_date: string | null
           folder_id: string | null
           frequency: string
           id: string
           is_active: boolean
+          last_error: string | null
+          last_leads_saved: number
           last_run: string | null
+          last_status: string | null
+          lead_type: string
           max_leads_per_run: number
           name: string
+          next_run_at: string | null
           niche: string
+          run_time: string | null
+          start_date: string | null
+          timezone: string | null
           total_leads_found: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          city?: string | null
+          country?: string | null
           created_at?: string
+          deduplicate?: boolean
+          end_date?: string | null
           folder_id?: string | null
           frequency?: string
           id?: string
           is_active?: boolean
+          last_error?: string | null
+          last_leads_saved?: number
           last_run?: string | null
+          last_status?: string | null
+          lead_type?: string
           max_leads_per_run?: number
           name: string
+          next_run_at?: string | null
           niche: string
+          run_time?: string | null
+          start_date?: string | null
+          timezone?: string | null
           total_leads_found?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          city?: string | null
+          country?: string | null
           created_at?: string
+          deduplicate?: boolean
+          end_date?: string | null
           folder_id?: string | null
           frequency?: string
           id?: string
           is_active?: boolean
+          last_error?: string | null
+          last_leads_saved?: number
           last_run?: string | null
+          last_status?: string | null
+          lead_type?: string
           max_leads_per_run?: number
           name?: string
+          next_run_at?: string | null
           niche?: string
+          run_time?: string | null
+          start_date?: string | null
+          timezone?: string | null
           total_leads_found?: number
           updated_at?: string
           user_id?: string
@@ -324,12 +360,15 @@ export type Database = {
           location: string | null
           name: string
           phone: string | null
+          place_id: string | null
           position: string | null
           sources: string[] | null
           status: string
+          tags: string[] | null
           telegram: string | null
           urgency: string
           user_id: string
+          website: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -342,12 +381,15 @@ export type Database = {
           location?: string | null
           name: string
           phone?: string | null
+          place_id?: string | null
           position?: string | null
           sources?: string[] | null
           status?: string
+          tags?: string[] | null
           telegram?: string | null
           urgency?: string
           user_id: string
+          website?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -360,12 +402,15 @@ export type Database = {
           location?: string | null
           name?: string
           phone?: string | null
+          place_id?: string | null
           position?: string | null
           sources?: string[] | null
           status?: string
+          tags?: string[] | null
           telegram?: string | null
           urgency?: string
           user_id?: string
+          website?: string | null
           whatsapp?: string | null
         }
         Relationships: [
@@ -532,6 +577,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      robot_runs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          leads_found: number
+          leads_saved: number
+          robot_id: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          leads_found?: number
+          leads_saved?: number
+          robot_id: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          leads_found?: number
+          leads_saved?: number
+          robot_id?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "robot_runs_robot_id_fkey"
+            columns: ["robot_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       search_history: {
         Row: {
