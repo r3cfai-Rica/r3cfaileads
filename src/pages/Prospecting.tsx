@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -43,6 +45,10 @@ import {
   Flag,
   Sparkles,
   X,
+  Building2,
+  UserCircle,
+  Upload,
+  Globe,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { generateLeadsWithAI } from '@/lib/ai-api';
@@ -50,6 +56,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFolders } from '@/hooks/useFolders';
 import { useLeads } from '@/hooks/useLeads';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
+import { CSVImportDialog } from '@/components/prospecting/CSVImportDialog';
 
 const STORAGE_KEY = 'prospecting_search_state';
 
@@ -61,6 +68,10 @@ interface ProspectingState {
   searchResults: Lead[];
   insights: NicheInsights | null;
   selectedLeads: string[];
+  leadType: 'b2b' | 'b2c' | 'both';
+  excludePublicSector: boolean;
+  contactOnly: boolean;
+  hideCompetitors: boolean;
 }
 
 const countries = [
@@ -72,6 +83,7 @@ const countries = [
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
 ];
 
+const PUBLIC_SECTOR_TYPES = ['government', 'hospital', 'school', 'university', 'city_hall', 'courthouse', 'fire_station', 'police', 'post_office', 'library', 'local_government_office'];
 
 export const Prospecting: React.FC = () => {
   const {
@@ -90,13 +102,11 @@ export const Prospecting: React.FC = () => {
   const { createSearchHistory } = useSearchHistory();
   const navigate = useNavigate();
 
-  // Load persisted state from sessionStorage
   const loadPersistedState = useCallback((): ProspectingState | null => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Restore Date objects for leads
         if (parsed.searchResults) {
           parsed.searchResults = parsed.searchResults.map((l: Lead) => ({
             ...l,
@@ -125,21 +135,26 @@ export const Prospecting: React.FC = () => {
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
 
-  // Persist state to sessionStorage whenever it changes
+  // New filters
+  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'both'>(persistedState?.leadType || 'b2b');
+  const [excludePublicSector, setExcludePublicSector] = useState(persistedState?.excludePublicSector ?? true);
+  const [contactOnly, setContactOnly] = useState(persistedState?.contactOnly ?? true);
+  const [hideCompetitors, setHideCompetitors] = useState(persistedState?.hideCompetitors ?? true);
+
+  // B2C
+  const [showCSVImport, setShowCSVImport] = useState(false);
+  const [b2cLeads, setB2cLeads] = useState<Lead[]>([]);
+  const [selectedB2cLeads, setSelectedB2cLeads] = useState<Set<string>>(new Set());
+
+  // Persist state
   useEffect(() => {
     const stateToSave: ProspectingState = {
-      searchQuery,
-      country,
-      city,
-      postalCode,
-      searchResults,
-      insights,
-      selectedLeads: Array.from(selectedLeads),
+      searchQuery, country, city, postalCode, searchResults, insights,
+      selectedLeads: Array.from(selectedLeads), leadType, excludePublicSector, contactOnly, hideCompetitors,
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads]);
+  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors]);
 
-  // Clear all search state
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
     setCity('');
@@ -148,43 +163,69 @@ export const Prospecting: React.FC = () => {
     setInsights(null);
     setSelectedLeads(new Set());
     setTargetFolder('');
+    setB2cLeads([]);
+    setSelectedB2cLeads(new Set());
     sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  const translations = {
-    'pt-BR': {
-      discoverTitle: 'Descobrir Clientes Potenciais',
-      discoverDesc: 'Busque por indivíduos ou decisores interessados no seu nicho.',
-      savedSearch: 'BUSCA SALVA',
-      leadsCount: 'LEADS',
-      searchPlaceholder: 'Ex: Pisos Urutanos',
-      cityPlaceholder: 'Cidade',
-      postalPlaceholder: 'CEP / Código Postal',
-      searchButton: 'Buscar Clientes',
-    },
-    'en-US': {
-      discoverTitle: 'Discover Potential Clients',
-      discoverDesc: 'Search for individuals or decision makers interested in your niche.',
-      savedSearch: 'SAVED SEARCH',
-      leadsCount: 'LEADS',
-      searchPlaceholder: 'Ex: Industrial Flooring',
-      cityPlaceholder: 'City',
-      postalPlaceholder: 'ZIP / Postal Code',
-      searchButton: 'Search Clients',
-    },
+  const tt2 = language === 'pt-BR' ? {
+    discoverTitle: 'Descobrir Clientes Potenciais',
+    discoverDesc: 'Busque por empresas ou consumidores interessados no seu nicho.',
+    savedSearch: 'BUSCA SALVA',
+    leadsCount: 'LEADS',
+    searchPlaceholder: 'Ex: Pisos Uretanos',
+    cityPlaceholder: 'Cidade',
+    postalPlaceholder: 'CEP / Código Postal',
+    searchButton: 'Buscar Clientes',
+    leadTypeLabel: 'Tipo de Lead',
+    b2b: 'B2B (Empresas)',
+    b2c: 'B2C (Consumidor)',
+    both: 'Ambos',
+    excludePublic: 'Excluir setor público',
+    contactOnlyLabel: 'Somente com contato',
+    hideCompetitorsLabel: 'Ocultar concorrentes',
+    b2cTitle: 'Leads Opt-in (por interesse)',
+    b2cDesc: 'Importe leads via CSV ou integre formulários.',
+    importCSV: 'Importar CSV',
+    metaAds: 'Meta Lead Ads',
+    googleForms: 'Google Lead Forms',
+    comingSoon: 'Em breve',
+    b2bTab: 'B2B (Maps)',
+    b2cTab: 'B2C (Opt-in)',
+    publicSector: 'Setor Público',
+  } : {
+    discoverTitle: 'Discover Potential Clients',
+    discoverDesc: 'Search for businesses or consumers interested in your niche.',
+    savedSearch: 'SAVED SEARCH',
+    leadsCount: 'LEADS',
+    searchPlaceholder: 'Ex: Industrial Flooring',
+    cityPlaceholder: 'City',
+    postalPlaceholder: 'ZIP / Postal Code',
+    searchButton: 'Search Clients',
+    leadTypeLabel: 'Lead Type',
+    b2b: 'B2B (Business)',
+    b2c: 'B2C (Consumer)',
+    both: 'Both',
+    excludePublic: 'Exclude public sector',
+    contactOnlyLabel: 'Contact info only',
+    hideCompetitorsLabel: 'Hide competitors',
+    b2cTitle: 'Opt-in Leads (by interest)',
+    b2cDesc: 'Import leads via CSV or integrate forms.',
+    importCSV: 'Import CSV',
+    metaAds: 'Meta Lead Ads',
+    googleForms: 'Google Lead Forms',
+    comingSoon: 'Coming soon',
+    b2bTab: 'B2B (Maps)',
+    b2cTab: 'B2C (Opt-in)',
+    publicSector: 'Public Sector',
   };
 
-  const tt = translations[language];
   const selectedCountry = countries.find(c => c.code === country);
-
-  const { toast } = useToast();
+  const { toast: toastHook } = useToast();
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-    
-    if (!canSearch) {
-      return;
-    }
+    if (!canSearch) return;
 
     setIsSearching(true);
     setSearchResults([]);
@@ -203,7 +244,21 @@ export const Prospecting: React.FC = () => {
         useRealData: isPaidUser,
       });
 
-      const limitedLeads = user?.plan === 'free' ? result.leads.slice(0, 10) : result.leads;
+      let filteredLeads = result.leads;
+
+      // Apply B2B filters
+      if (excludePublicSector) {
+        filteredLeads = filteredLeads.filter(l => {
+          const pos = (l.position || '').toLowerCase();
+          return !PUBLIC_SECTOR_TYPES.some(t => pos.includes(t.replace(/_/g, ' ')));
+        });
+      }
+
+      if (contactOnly) {
+        filteredLeads = filteredLeads.filter(l => l.email || l.phone || l.whatsapp || (l.sources && l.sources.length > 0));
+      }
+
+      const limitedLeads = user?.plan === 'free' ? filteredLeads.slice(0, 10) : filteredLeads;
       
       setSearchResults(limitedLeads);
       setInsights(result.insights);
@@ -212,7 +267,7 @@ export const Prospecting: React.FC = () => {
         setUser({ ...user, searchesUsed: user.searchesUsed + 1 });
       }
 
-      toast({
+      toastHook({
         title: language === 'pt-BR' ? 'Leads gerados com sucesso!' : 'Leads generated successfully!',
         description: language === 'pt-BR' 
           ? `${limitedLeads.length} leads encontrados para "${searchQuery}"`
@@ -220,7 +275,7 @@ export const Prospecting: React.FC = () => {
       });
     } catch (error) {
       console.error('Error generating leads:', error);
-      toast({
+      toastHook({
         title: language === 'pt-BR' ? 'Erro ao gerar leads' : 'Error generating leads',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
@@ -232,26 +287,19 @@ export const Prospecting: React.FC = () => {
 
   const handleSelectLead = (leadId: string) => {
     const newSelected = new Set(selectedLeads);
-    if (newSelected.has(leadId)) {
-      newSelected.delete(leadId);
-    } else {
-      newSelected.add(leadId);
-    }
+    if (newSelected.has(leadId)) newSelected.delete(leadId);
+    else newSelected.add(leadId);
     setSelectedLeads(newSelected);
   };
 
   const handleSelectAll = () => {
-    const validLeads = searchResults.filter(l => !l.isCompetitor);
-    if (selectedLeads.size === validLeads.length) {
-      setSelectedLeads(new Set());
-    } else {
-      setSelectedLeads(new Set(validLeads.map(l => l.id)));
-    }
+    const validLeads = getDisplayLeads();
+    if (selectedLeads.size === validLeads.length) setSelectedLeads(new Set());
+    else setSelectedLeads(new Set(validLeads.map(l => l.id)));
   };
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
-    
     const newFolder = await createFolder(newFolderName);
     if (newFolder) {
       setTargetFolder(newFolder.id);
@@ -260,45 +308,43 @@ export const Prospecting: React.FC = () => {
     }
   };
 
-  const handleSaveLeads = async () => {
-    if (!targetFolder || selectedLeads.size === 0) return;
-    
-    if (!canSaveLeads(selectedLeads.size)) {
-      return;
-    }
+  const handleSaveLeads = async (leadsToSaveFrom: Lead[], selectedSet: Set<string>) => {
+    if (!targetFolder || selectedSet.size === 0) return;
+    if (!canSaveLeads(selectedSet.size)) return;
 
-    const leadsToSave = searchResults
-      .filter(l => selectedLeads.has(l.id) && !l.isCompetitor);
-
-    // Save leads to database with real UUIDs
+    const leadsToSave = leadsToSaveFrom.filter(l => selectedSet.has(l.id) && !l.isCompetitor);
     const savedLeads = await saveLeads(leadsToSave, targetFolder);
     
     if (savedLeads.length > 0) {
-      // Update folder lead count in database
       await updateFolderLeadCount(targetFolder, savedLeads.length);
-
-      // Create search history record in database
       if (insights) {
         await createSearchHistory({
           name: searchQuery,
           niche: searchQuery,
           category: 'Prospecção',
-          leadsFound: searchResults.length,
+          leadsFound: leadsToSaveFrom.length,
           leadsSaved: savedLeads.length,
           insights,
           folderId: targetFolder,
         });
       }
-
-      if (user) {
-        setUser({ ...user, leadsUsed: user.leadsUsed + savedLeads.length });
-      }
-
-      setSelectedLeads(new Set());
-      setSearchResults([]);
-      setInsights(null);
-      setSearchQuery('');
+      if (user) setUser({ ...user, leadsUsed: user.leadsUsed + savedLeads.length });
+      selectedSet === selectedLeads ? setSelectedLeads(new Set()) : setSelectedB2cLeads(new Set());
     }
+  };
+
+  const handleCSVImport = (leads: Lead[]) => {
+    setB2cLeads(prev => [...prev, ...leads]);
+    toastHook({
+      title: language === 'pt-BR' ? 'CSV importado!' : 'CSV imported!',
+      description: `${leads.length} leads`,
+    });
+  };
+
+  const getDisplayLeads = () => {
+    let leads = searchResults;
+    if (hideCompetitors) leads = leads.filter(l => !l.isCompetitor);
+    return leads;
   };
 
   const urgencyVariant = {
@@ -306,6 +352,128 @@ export const Prospecting: React.FC = () => {
     medium: 'urgencyMedium' as const,
     high: 'urgencyHigh' as const,
   };
+
+  const renderLeadsList = (leads: Lead[], selected: Set<string>, onSelect: (id: string) => void, onSelectAll: () => void, onSave: () => void) => (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg">
+              {t.prospecting.results} ({leads.length})
+            </CardTitle>
+            <CardDescription>
+              {selected.size} {language === 'pt-BR' ? 'selecionado(s)' : 'selected'}
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={onSelectAll}>
+            {selected.size === leads.length ? t.common.deselectAll : t.common.selectAll}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Save Controls */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4 p-4 bg-muted/50 rounded-lg">
+          <Select value={targetFolder} onValueChange={setTargetFolder}>
+            <SelectTrigger className="sm:w-[200px]">
+              <SelectValue placeholder={t.prospecting.saveTo} />
+            </SelectTrigger>
+            <SelectContent>
+              {folders.map(folder => (
+                <SelectItem key={folder.id} value={folder.id}>
+                  {folder.name} ({folder.leadCount})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon"><Plus className="w-4 h-4" /></Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.prospecting.createFolder}</DialogTitle>
+                <DialogDescription>{t.crm.folderName}</DialogDescription>
+              </DialogHeader>
+              <Input value={newFolderName} onChange={e => setNewFolderName(e.target.value)} placeholder="Ex: Revestimento Industrial" />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>{t.common.cancel}</Button>
+                <Button onClick={handleCreateFolder}>{t.common.save}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Button variant="gradient" onClick={onSave} disabled={!targetFolder || selected.size === 0} className="sm:ml-auto">
+            <Save className="w-4 h-4 mr-2" />
+            {t.prospecting.saveSelected} ({selected.size})
+          </Button>
+        </div>
+
+        {/* Leads */}
+        <div className="space-y-3">
+          {leads.map((lead) => (
+            <div
+              key={lead.id}
+              className={`p-4 rounded-lg border transition-all ${
+                lead.isCompetitor
+                  ? 'bg-destructive/5 border-destructive/20 opacity-60'
+                  : selected.has(lead.id)
+                  ? 'bg-primary/5 border-primary/30'
+                  : 'bg-card hover:bg-muted/30'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                {!lead.isCompetitor && (
+                  <Checkbox checked={selected.has(lead.id)} onCheckedChange={() => onSelect(lead.id)} />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{lead.name}</span>
+                    {lead.position && <Badge variant="secondary" className="text-xs">{lead.position}</Badge>}
+                    {lead.isCompetitor && <Badge variant="destructive" className="text-xs">{t.prospecting.competitor}</Badge>}
+                    <Badge variant={urgencyVariant[lead.urgency]} className="text-xs">{t.common[lead.urgency]}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-primary" />{lead.intentSignal}
+                  </p>
+                  {lead.location && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />{lead.location}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-3 mt-2">
+                    {lead.email && (
+                      <a href={`mailto:${lead.email}`} className="text-xs flex items-center gap-1 text-primary hover:underline" onClick={e => e.stopPropagation()}>
+                        <Mail className="w-3 h-3" />{lead.email}
+                      </a>
+                    )}
+                    {lead.phone && (
+                      <a href={`tel:${lead.phone}`} className="text-xs flex items-center gap-1 text-muted-foreground hover:underline" onClick={e => e.stopPropagation()}>
+                        <Phone className="w-3 h-3" />{lead.phone}
+                      </a>
+                    )}
+                    {lead.whatsapp && (
+                      <a href={`https://wa.me/${lead.whatsapp?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs flex items-center gap-1 text-success hover:underline" onClick={e => e.stopPropagation()}>
+                        <MessageCircle className="w-3 h-3" />WhatsApp
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {lead.sources.map((source, i) => (
+                      <a key={i} href={source.startsWith('http') ? source : `https://${source}`} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border text-primary hover:bg-primary/10 hover:underline transition-colors"
+                        onClick={e => e.stopPropagation()}>
+                        <LinkIcon className="w-3 h-3" />{source.length > 40 ? source.substring(0, 40) + '...' : source}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -327,117 +495,132 @@ export const Prospecting: React.FC = () => {
         )}
       </div>
 
-      {/* Enhanced Search Card */}
+      {/* Lead Type Selector */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-lg font-semibold">{tt.discoverTitle}</h2>
-              <p className="text-sm text-muted-foreground">{tt.discoverDesc}</p>
+              <h2 className="text-lg font-semibold">{tt2.discoverTitle}</h2>
+              <p className="text-sm text-muted-foreground">{tt2.discoverDesc}</p>
             </div>
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {tt.savedSearch}
+                {tt2.savedSearch}
               </Badge>
               <Badge variant="success" className="font-bold">
-                9999 {tt.leadsCount}
+                9999 {tt2.leadsCount}
               </Badge>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Niche Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={tt.searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-10 h-12 text-base"
-                disabled={!canSearch}
-              />
-            </div>
-
-            {/* Country Select */}
-            <div className="relative">
-              <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger className="pl-10 h-12">
-                  <SelectValue>
-                    {selectedCountry && (
-                      <span className="flex items-center gap-2">
-                        <span>{selectedCountry.flag}</span>
-                        {selectedCountry.name}
-                      </span>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {countries.map(c => (
-                    <SelectItem key={c.code} value={c.code}>
-                      <span className="flex items-center gap-2">
-                        <span>{c.flag}</span>
-                        {c.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* City */}
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={tt.cityPlaceholder}
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="pl-10 h-12"
-              />
-            </div>
-
-            {/* Postal Code + Search + Clear Buttons */}
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder={tt.postalPlaceholder}
-                  value={postalCode}
-                  onChange={(e) => setPostalCode(e.target.value)}
-                  className="pl-10 h-12"
-                />
-              </div>
-              <Button
-                variant="gradient"
-                size="lg"
-                onClick={handleSearch}
-                disabled={isSearching || !searchQuery.trim() || !canSearch}
-                className="h-12 px-6 whitespace-nowrap"
-              >
-                {isSearching ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    {t.prospecting.searching}
-                  </>
-                ) : (
-                  tt.searchButton
-                )}
-              </Button>
-              {(searchResults.length > 0 || searchQuery.trim()) && (
+          {/* Lead Type Select */}
+          <div className="mb-4">
+            <label className="text-sm font-medium mb-1.5 block">{tt2.leadTypeLabel}</label>
+            <div className="flex gap-2">
+              {(['b2b', 'b2c', 'both'] as const).map(type => (
                 <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleClearSearch}
-                  className="h-12 px-4"
-                  title={language === 'pt-BR' ? 'Limpar busca' : 'Clear search'}
+                  key={type}
+                  variant={leadType === type ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setLeadType(type)}
+                  className="gap-2"
                 >
-                  <X className="w-5 h-5" />
+                  {type === 'b2b' && <Building2 className="w-4 h-4" />}
+                  {type === 'b2c' && <UserCircle className="w-4 h-4" />}
+                  {type === 'both' && <Globe className="w-4 h-4" />}
+                  {type === 'b2b' ? tt2.b2b : type === 'b2c' ? tt2.b2c : tt2.both}
                 </Button>
-              )}
+              ))}
             </div>
           </div>
+
+          {/* B2B Search Form */}
+          {(leadType === 'b2b' || leadType === 'both') && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder={tt2.searchPlaceholder} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSearch()} className="pl-10 h-12 text-base" disabled={!canSearch} />
+                </div>
+                <div className="relative">
+                  <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger className="pl-10 h-12">
+                      <SelectValue>{selectedCountry && <span className="flex items-center gap-2"><span>{selectedCountry.flag}</span>{selectedCountry.name}</span>}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map(c => <SelectItem key={c.code} value={c.code}><span className="flex items-center gap-2"><span>{c.flag}</span>{c.name}</span></SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder={tt2.cityPlaceholder} value={city} onChange={e => setCity(e.target.value)} className="pl-10 h-12" />
+                </div>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder={tt2.postalPlaceholder} value={postalCode} onChange={e => setPostalCode(e.target.value)} className="pl-10 h-12" />
+                  </div>
+                  <Button variant="gradient" size="lg" onClick={handleSearch} disabled={isSearching || !searchQuery.trim() || !canSearch} className="h-12 px-6 whitespace-nowrap">
+                    {isSearching ? <><Loader2 className="w-5 h-5 animate-spin" />{t.prospecting.searching}</> : tt2.searchButton}
+                  </Button>
+                  {(searchResults.length > 0 || searchQuery.trim()) && (
+                    <Button variant="outline" size="lg" onClick={handleClearSearch} className="h-12 px-4" title={language === 'pt-BR' ? 'Limpar busca' : 'Clear search'}>
+                      <X className="w-5 h-5" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* B2B Filters */}
+              <div className="flex flex-wrap items-center gap-6 mt-4 p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center gap-2">
+                  <Switch checked={excludePublicSector} onCheckedChange={setExcludePublicSector} />
+                  <label className="text-sm">{tt2.excludePublic}</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={contactOnly} onCheckedChange={setContactOnly} />
+                  <label className="text-sm">{tt2.contactOnlyLabel}</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={hideCompetitors} onCheckedChange={setHideCompetitors} />
+                  <label className="text-sm">{tt2.hideCompetitorsLabel}</label>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* B2C Section */}
+          {(leadType === 'b2c' || leadType === 'both') && (
+            <div className={`${leadType === 'both' ? 'mt-6 pt-6 border-t' : ''}`}>
+              <div className="flex items-center gap-3 mb-4">
+                <UserCircle className="w-5 h-5 text-primary" />
+                <div>
+                  <h3 className="font-semibold">{tt2.b2cTitle}</h3>
+                  <p className="text-sm text-muted-foreground">{tt2.b2cDesc}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" size="lg" onClick={() => setShowCSVImport(true)} className="gap-2">
+                  <Upload className="w-4 h-4" />
+                  {tt2.importCSV}
+                </Button>
+                <Button variant="outline" size="lg" disabled className="gap-2 opacity-50">
+                  <Sparkles className="w-4 h-4" />
+                  {tt2.metaAds}
+                  <Badge variant="secondary" className="text-xs ml-1">{tt2.comingSoon}</Badge>
+                </Button>
+                <Button variant="outline" size="lg" disabled className="gap-2 opacity-50">
+                  <Sparkles className="w-4 h-4" />
+                  {tt2.googleForms}
+                  <Badge variant="secondary" className="text-xs ml-1">{tt2.comingSoon}</Badge>
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -454,9 +637,7 @@ export const Prospecting: React.FC = () => {
                 <p className="text-muted-foreground">{t.limits.upgradeNow}</p>
               </div>
               <Link to="/plans">
-                <Button variant="gradientCTA" size="lg">
-                  {t.plans.upgrade}
-                </Button>
+                <Button variant="gradientCTA" size="lg">{t.plans.upgrade}</Button>
               </Link>
             </div>
           </CardContent>
@@ -464,270 +645,118 @@ export const Prospecting: React.FC = () => {
       )}
 
       {/* Results */}
-      {(searchResults.length > 0 || insights) && (
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Insights Panel */}
-          {insights && (
-            <div className="lg:col-span-1 space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Target className="w-5 h-5 text-primary" />
-                    {t.campaigns.insights}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-4 h-4" />
-                      <span className="font-medium text-sm">{t.campaigns.urgency}</span>
-                      <Badge variant={urgencyVariant[insights.urgency]}>
-                        {t.common[insights.urgency]}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{insights.urgencyReason}</p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-warning" />
-                      {t.campaigns.pains}
-                    </h4>
-                    <ul className="space-y-1">
-                      {insights.pains.slice(0, 3).map((pain, i) => (
-                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                          <span className="text-warning">•</span>
-                          {pain}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                      <HelpCircle className="w-4 h-4 text-info" />
-                      {t.campaigns.questions}
-                    </h4>
-                    <ul className="space-y-1">
-                      {insights.questions.slice(0, 3).map((q, i) => (
-                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                          <span className="text-info">•</span>
-                          {q}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
+      {leadType === 'both' ? (
+        // Both mode: tabs
+        ((searchResults.length > 0 || b2cLeads.length > 0 || insights) && (
+          <Tabs defaultValue="b2b" className="w-full">
+            <TabsList>
+              <TabsTrigger value="b2b" className="gap-1"><Building2 className="w-4 h-4" />{tt2.b2bTab} ({getDisplayLeads().length})</TabsTrigger>
+              <TabsTrigger value="b2c" className="gap-1"><UserCircle className="w-4 h-4" />{tt2.b2cTab} ({b2cLeads.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="b2b">
+              <div className="grid lg:grid-cols-3 gap-6">
+                {insights && renderInsightsPanel()}
+                <div className={insights ? 'lg:col-span-2' : 'lg:col-span-3'}>
+                  {renderLeadsList(getDisplayLeads(), selectedLeads, handleSelectLead, handleSelectAll, () => handleSaveLeads(searchResults, selectedLeads))}
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="b2c">
+              {b2cLeads.length > 0 ? renderLeadsList(
+                b2cLeads, selectedB2cLeads,
+                (id) => { const s = new Set(selectedB2cLeads); s.has(id) ? s.delete(id) : s.add(id); setSelectedB2cLeads(s); },
+                () => { setSelectedB2cLeads(selectedB2cLeads.size === b2cLeads.length ? new Set() : new Set(b2cLeads.map(l => l.id))); },
+                () => handleSaveLeads(b2cLeads, selectedB2cLeads)
+              ) : (
+                <Card className="py-12"><CardContent className="text-center text-muted-foreground">
+                  {language === 'pt-BR' ? 'Importe leads via CSV para visualizá-los aqui.' : 'Import leads via CSV to view them here.'}
+                </CardContent></Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        ))
+      ) : leadType === 'b2b' ? (
+        // B2B mode
+        (searchResults.length > 0 || insights) && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {insights && renderInsightsPanel()}
+            <div className={insights ? 'lg:col-span-2' : 'lg:col-span-3'}>
+              {renderLeadsList(getDisplayLeads(), selectedLeads, handleSelectLead, handleSelectAll, () => handleSaveLeads(searchResults, selectedLeads))}
             </div>
-          )}
-
-          {/* Leads List */}
-          <div className={insights ? 'lg:col-span-2' : 'lg:col-span-3'}>
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-lg">
-                      {t.prospecting.results} ({searchResults.filter(l => !l.isCompetitor).length})
-                    </CardTitle>
-                    <CardDescription>
-                      {selectedLeads.size} selecionado(s)
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleSelectAll}>
-                      {selectedLeads.size === searchResults.filter(l => !l.isCompetitor).length
-                        ? t.common.deselectAll
-                        : t.common.selectAll}
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Save Controls */}
-                <div className="flex flex-col sm:flex-row gap-3 mb-4 p-4 bg-muted/50 rounded-lg">
-                  <Select value={targetFolder} onValueChange={setTargetFolder}>
-                    <SelectTrigger className="sm:w-[200px]">
-                      <SelectValue placeholder={t.prospecting.saveTo} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {folders.map(folder => (
-                        <SelectItem key={folder.id} value={folder.id}>
-                          {folder.name} ({folder.leadCount})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="icon">
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{t.prospecting.createFolder}</DialogTitle>
-                        <DialogDescription>{t.crm.folderName}</DialogDescription>
-                      </DialogHeader>
-                      <Input
-                        value={newFolderName}
-                        onChange={(e) => setNewFolderName(e.target.value)}
-                        placeholder="Ex: Revestimento Industrial"
-                      />
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>
-                          {t.common.cancel}
-                        </Button>
-                        <Button onClick={handleCreateFolder}>
-                          {t.common.save}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  <Button
-                    variant="gradient"
-                    onClick={handleSaveLeads}
-                    disabled={!targetFolder || selectedLeads.size === 0}
-                    className="sm:ml-auto"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {t.prospecting.saveSelected} ({selectedLeads.size})
-                  </Button>
-                </div>
-
-                {/* Leads Grid */}
-                <div className="space-y-3">
-                  {searchResults.map((lead) => (
-                    <div
-                      key={lead.id}
-                      className={`p-4 rounded-lg border transition-all ${
-                        lead.isCompetitor
-                          ? 'bg-destructive/5 border-destructive/20 opacity-60'
-                          : selectedLeads.has(lead.id)
-                          ? 'bg-primary/5 border-primary/30'
-                          : 'bg-card hover:bg-muted/30'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        {!lead.isCompetitor && (
-                          <Checkbox
-                            checked={selectedLeads.has(lead.id)}
-                            onCheckedChange={() => handleSelectLead(lead.id)}
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <User className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium">{lead.name}</span>
-                            {lead.position && (
-                              <Badge variant="secondary" className="text-xs">
-                                {lead.position}
-                              </Badge>
-                            )}
-                            {lead.isCompetitor && (
-                              <Badge variant="destructive" className="text-xs">
-                                {t.prospecting.competitor}
-                              </Badge>
-                            )}
-                            <Badge variant={urgencyVariant[lead.urgency]} className="text-xs">
-                              {t.common[lead.urgency]}
-                            </Badge>
-                          </div>
-
-                          {/* Intent Signal */}
-                          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                            <Zap className="w-3 h-3 text-primary" />
-                            {lead.intentSignal}
-                          </p>
-
-                          {/* Location */}
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {lead.location}
-                          </p>
-
-                          {/* Contacts */}
-                          <div className="flex flex-wrap items-center gap-3 mt-2">
-                            {lead.email && (
-                              <a
-                                href={`mailto:${lead.email}`}
-                                className="text-xs flex items-center gap-1 text-primary hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Mail className="w-3 h-3" />
-                                {lead.email}
-                              </a>
-                            )}
-                            {lead.phone && (
-                              <a
-                                href={`tel:${lead.phone}`}
-                                className="text-xs flex items-center gap-1 text-muted-foreground hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Phone className="w-3 h-3" />
-                                {lead.phone}
-                              </a>
-                            )}
-                            {lead.whatsapp && (
-                              <a
-                                href={`https://wa.me/${lead.whatsapp?.replace(/\D/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs flex items-center gap-1 text-success hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MessageCircle className="w-3 h-3" />
-                                WhatsApp
-                              </a>
-                            )}
-                          </div>
-
-                          {/* Sources */}
-                          <div className="flex flex-wrap items-center gap-2 mt-2">
-                            {lead.sources.map((source, i) => (
-                              <a
-                                key={i}
-                                href={source.startsWith('http') ? source : `https://${source}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border text-primary hover:bg-primary/10 hover:underline transition-colors"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <LinkIcon className="w-3 h-3" />
-                                {source.length > 40 ? source.substring(0, 40) + '...' : source}
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </div>
-        </div>
+        )
+      ) : (
+        // B2C mode
+        b2cLeads.length > 0 && renderLeadsList(
+          b2cLeads, selectedB2cLeads,
+          (id) => { const s = new Set(selectedB2cLeads); s.has(id) ? s.delete(id) : s.add(id); setSelectedB2cLeads(s); },
+          () => { setSelectedB2cLeads(selectedB2cLeads.size === b2cLeads.length ? new Set() : new Set(b2cLeads.map(l => l.id))); },
+          () => handleSaveLeads(b2cLeads, selectedB2cLeads)
+        )
       )}
 
       {/* Empty State */}
-      {!isSearching && searchResults.length === 0 && canSearch && (
+      {!isSearching && searchResults.length === 0 && b2cLeads.length === 0 && canSearch && (
         <Card className="py-16">
           <CardContent className="text-center">
             <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
               <Search className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">{tt.discoverTitle}</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              {tt.discoverDesc}
-            </p>
+            <h3 className="text-xl font-semibold mb-2">{tt2.discoverTitle}</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">{tt2.discoverDesc}</p>
           </CardContent>
         </Card>
       )}
+
+      <CSVImportDialog open={showCSVImport} onOpenChange={setShowCSVImport} onImport={handleCSVImport} language={language} />
     </div>
   );
+
+  function renderInsightsPanel() {
+    if (!insights) return null;
+    return (
+      <div className="lg:col-span-1 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary" />
+              {t.campaigns.insights}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4" />
+                <span className="font-medium text-sm">{t.campaigns.urgency}</span>
+                <Badge variant={urgencyVariant[insights.urgency]}>{t.common[insights.urgency]}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">{insights.urgencyReason}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-warning" />{t.campaigns.pains}
+              </h4>
+              <ul className="space-y-1">
+                {insights.pains.slice(0, 3).map((pain, i) => (
+                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2"><span className="text-warning">•</span>{pain}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-info" />{t.campaigns.questions}
+              </h4>
+              <ul className="space-y-1">
+                {insights.questions.slice(0, 3).map((q, i) => (
+                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2"><span className="text-info">•</span>{q}</li>
+                ))}
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 };
 
 export default Prospecting;
