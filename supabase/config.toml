@@ -60,3 +60,9 @@ verify_jwt = false
 
 [functions.webhook-telegram]
 verify_jwt = false
+
+[functions.webhook-meta-leads]
+verify_jwt = false
+
+[functions.meta-oauth]
+verify_jwt = false

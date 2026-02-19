@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MessagingCredentialsForm } from '@/components/settings/MessagingCredentialsForm';
+import { MetaLeadAdsConnection } from '@/components/settings/MetaLeadAdsConnection';
 
 export const Settings: React.FC = () => {
   const { t, user, language, setLanguage } = useApp();
@@ -182,6 +183,11 @@ export const Settings: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Meta Lead Ads */}
+        <div className="lg:col-span-2">
+          <MetaLeadAdsConnection />
+        </div>
 
         {/* Messaging Credentials */}
         <div className="lg:col-span-2">
