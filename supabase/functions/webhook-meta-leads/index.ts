@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const VERIFY_TOKEN = "r3cf_meta_verify_2024";
@@ -21,11 +21,21 @@ Deno.serve(async (req) => {
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
+    console.log(`GET verification: mode=${mode}, token=${token}, challenge=${challenge}`);
+
     if (mode === "subscribe" && token === VERIFY_TOKEN) {
       console.log("Webhook verified successfully");
-      return new Response(challenge, { status: 200 });
+      return new Response(challenge || "", {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
     }
-    return new Response("Forbidden", { status: 403 });
+
+    // Even if not a valid verification, return 200 with CORS to avoid 404
+    return new Response("OK", {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "text/plain" },
+    });
   }
 
   // ===== POST: Receive Lead Events =====
@@ -34,9 +44,13 @@ Deno.serve(async (req) => {
       const body = await req.json();
       console.log("Webhook received:", JSON.stringify(body));
 
-      // Verify signature if META_APP_SECRET is set
-      const appSecret = Deno.env.get("META_APP_SECRET");
-      // Note: For production, you should verify the X-Hub-Signature-256 header
+      // Check if this is a verification via POST (fallback)
+      if (body?.["hub.mode"] === "subscribe" && body?.["hub.verify_token"] === VERIFY_TOKEN) {
+        return new Response(body["hub.challenge"] || "verified", {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        });
+      }
 
       if (body.object !== "page") {
         return new Response("Not a page event", { status: 200, headers: corsHeaders });
@@ -54,12 +68,9 @@ Deno.serve(async (req) => {
 
           const leadgenId = change.value?.leadgen_id;
           const formId = change.value?.form_id;
-          const adId = change.value?.ad_id;
-          const createdTime = change.value?.created_time;
 
           console.log(`Lead event: page=${pageId}, lead=${leadgenId}, form=${formId}`);
 
-          // Find the meta_connection for this page
           const { data: connections, error: connError } = await supabase
             .from("meta_connections")
             .select("*")
@@ -72,7 +83,6 @@ Deno.serve(async (req) => {
           }
 
           for (const conn of connections) {
-            // Fetch lead data from Meta Graph API
             const accessToken = conn.page_access_token;
             const leadRes = await fetch(
               `https://graph.facebook.com/v21.0/${leadgenId}?access_token=${accessToken}`
@@ -87,7 +97,6 @@ Deno.serve(async (req) => {
             const leadData = await leadRes.json();
             console.log("Lead data from Meta:", JSON.stringify(leadData));
 
-            // Parse field_data into structured lead
             const fields: Record<string, string> = {};
             for (const fd of leadData.field_data || []) {
               fields[fd.name?.toLowerCase()] = fd.values?.[0] || "";
@@ -113,7 +122,6 @@ Deno.serve(async (req) => {
               tags: ["meta-ads", "auto-sync"],
             };
 
-            // Deduplicate by email or phone
             let existing = null;
             if (leadRecord.email) {
               const { data } = await supabase
@@ -149,11 +157,9 @@ Deno.serve(async (req) => {
               console.error("Error saving lead:", saveError);
             } else {
               console.log("Lead saved:", savedLead.id);
-
-              // Update profile leads_used count
               await supabase.rpc("increment_messaging_usage", {
                 _user_id: conn.user_id,
-                _channel: "email", // just to track usage
+                _channel: "email",
               });
             }
           }
@@ -173,5 +179,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response("Method not allowed", { status: 405 });
+  return new Response("OK", { status: 200, headers: corsHeaders });
 });
