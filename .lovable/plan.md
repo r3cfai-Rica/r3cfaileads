@@ -1,93 +1,62 @@
 
 
-# Correcao Definitiva - Meta OAuth Session Issue
+# Correcao Definitiva - Meta OAuth Error Handling
 
-## Problema Raiz
+## Diagnostico
 
-O fluxo OAuth abre uma nova aba (`window.open`). Quando o Facebook redireciona de volta, o cliente Supabase na nova aba precisa recuperar a sessao do `localStorage` de forma assincrona. Porem, o `MetaOAuthCallback` chama `supabase.functions.invoke` imediatamente no `useEffect`, ANTES da sessao ser inicializada. Isso faz com que nenhum token de autenticacao seja enviado, e a edge function retorna 401 silenciosamente (sem logs).
+Os logs da edge function mostram que a autenticacao funciona perfeitamente ("authenticated user 2972f3cf..."), mas NENHUM log aparece depois disso. Isso indica que:
 
-## Solucao (3 alteracoes)
+1. A chamada ao Facebook API provavelmente retorna um erro (codigo ja usado, expirado, ou redirect_uri inconsistente)
+2. Os `console.error` existentes nao estao aparecendo nos logs (possivelmente por limitacao do viewer)
+3. O frontend mostra apenas "Edge Function returned a non-2xx status code" - uma mensagem generica do cliente Supabase - sem extrair o erro real retornado pela funcao
 
-### 1. MetaOAuthCallback - Aguardar sessao antes de chamar a funcao
+## Solucao (2 alteracoes)
 
-Modificar `src/pages/MetaOAuthCallback.tsx` para esperar a sessao do Supabase ser recuperada antes de invocar a edge function. Usar `supabase.auth.onAuthStateChange` para detectar quando a sessao esta pronta, com um timeout de seguranca.
+### 1. Edge Function - Logging completo em CADA etapa
 
-```typescript
-useEffect(() => {
-  const code = searchParams.get('code');
-  const error = searchParams.get('error');
+Adicionar `console.log` (nao `console.error`) em TODAS as etapas para garantir visibilidade nos logs:
 
-  if (error) { /* ... mesmo tratamento ... */ return; }
-  if (!code) { /* ... mesmo tratamento ... */ return; }
+- Log do code e redirect_uri recebidos
+- Log antes e depois de cada chamada ao Facebook API
+- Log do status HTTP e body de cada resposta do Facebook
+- Log de cada etapa de salvamento no banco
 
-  const exchangeCode = async () => {
-    try {
-      // Aguardar a sessao ser recuperada do localStorage
-      let session = (await supabase.auth.getSession()).data.session;
-      
-      if (!session) {
-        // Esperar até 5 segundos pela recuperação da sessão
-        session = await new Promise((resolve) => {
-          const timeout = setTimeout(() => resolve(null), 5000);
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, sess) => {
-              if (sess) {
-                clearTimeout(timeout);
-                subscription.unsubscribe();
-                resolve(sess);
-              }
-            }
-          );
-        });
-      }
+Isso vai permitir diagnosticar exatamente onde o fluxo falha.
 
-      if (!session) {
-        throw new Error(
-          pt ? 'Sessão expirada. Faça login novamente.' 
-             : 'Session expired. Please log in again.'
-        );
-      }
+### 2. Frontend - Extrair erro real da resposta
 
-      const redirectUri = 'https://r3cfaileads.lovable.app/meta-oauth-callback';
-      const { data, error: fnError } = await supabase.functions.invoke('meta-oauth', {
-        body: { code, redirect_uri: redirectUri },
-      });
-      // ... resto do tratamento igual ...
-    } catch (err) { /* ... */ }
-  };
-
-  exchangeCode();
-}, [searchParams, navigate, pt]);
-```
-
-### 2. Edge Function - Adicionar logs de debug
-
-Modificar `supabase/functions/meta-oauth/index.ts` para adicionar `console.log` nos pontos criticos, permitindo diagnosticar problemas futuros:
-
-- Log quando recebe requisicao (metodo, tem auth header ou nao)
-- Log quando getUser falha (com o erro especifico)
-- Log quando troca de token com Facebook falha/sucede
-
-### 3. MetaLeadAdsConnection - Usar window.location.href
-
-Modificar `src/components/settings/MetaLeadAdsConnection.tsx` para usar `window.location.href` em vez de `window.open`. Isso navega a mesma aba, preservando a sessao no localStorage quando o Facebook redireciona de volta para o mesmo dominio.
+O `supabase.functions.invoke` retorna um `FunctionsHttpError` generico quando a funcao retorna non-2xx. O erro real esta no `error.context` (um objeto Response). O frontend precisa extrair esse erro:
 
 ```typescript
-const handleConnect = () => {
-  const redirectUri = 'https://r3cfaileads.lovable.app/meta-oauth-callback';
-  const scope = 'pages_show_list,leads_retrieval,pages_manage_ads,pages_read_engagement';
-  const authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code`;
-  window.location.href = authUrl;
-};
+const { data, error: fnError } = await supabase.functions.invoke('meta-oauth', {
+  body: { code, redirect_uri: redirectUri },
+});
+
+if (fnError) {
+  let errorMessage = fnError.message;
+  try {
+    if (fnError.context) {
+      const errorBody = await fnError.context.json();
+      errorMessage = errorBody?.error || errorMessage;
+    }
+  } catch {}
+  throw new Error(errorMessage);
+}
 ```
 
-Nota: `window.location.href` funciona corretamente na URL publicada (`r3cfaileads.lovable.app`). No preview do Lovable, o Facebook pode bloquear o iframe, mas o teste deve ser feito pela URL publicada.
+Isso fara com que o usuario veja a mensagem real do erro (ex: "This authorization code has been used" ou "Invalid redirect_uri") em vez da mensagem generica.
 
-## Resumo das alteracoes
+## Arquivos alterados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/MetaOAuthCallback.tsx` | Aguardar sessao com `onAuthStateChange` + timeout |
-| `supabase/functions/meta-oauth/index.ts` | Adicionar console.log nos pontos criticos |
-| `src/components/settings/MetaLeadAdsConnection.tsx` | Trocar `window.open` por `window.location.href` |
+| `supabase/functions/meta-oauth/index.ts` | Adicionar console.log detalhado em cada etapa do fluxo |
+| `src/pages/MetaOAuthCallback.tsx` | Extrair mensagem de erro real do FunctionsHttpError |
+
+## Resultado esperado
+
+Apos essas alteracoes:
+- O usuario vera a mensagem de erro REAL do Facebook (nao mais "Edge Function returned a non-2xx status code")
+- Os logs mostrarao exatamente em qual etapa o fluxo falha
+- Sera possivel diagnosticar e corrigir o problema raiz (provavelmente codigo expirado ou redirect_uri inconsistente no portal da Meta)
 
