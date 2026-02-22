@@ -63,7 +63,16 @@ const MetaOAuthCallback: React.FC = () => {
           body: { code, redirect_uri: redirectUri },
         });
 
-        if (fnError) throw fnError;
+        if (fnError) {
+          let errorMessage = fnError.message;
+          try {
+            if ((fnError as any).context) {
+              const errorBody = await (fnError as any).context.json();
+              errorMessage = errorBody?.error || errorMessage;
+            }
+          } catch {}
+          throw new Error(errorMessage);
+        }
 
         if (data?.success) {
           const pageCount = data.pages?.length || 0;
