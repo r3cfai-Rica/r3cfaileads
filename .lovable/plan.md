@@ -1,51 +1,50 @@
 
+# Correcao Definitiva - Escopos Invalidos e Dominio
 
-# Correcao - Facebook retornando 0 paginas
+## Problema Identificado
 
-## Problema
+Dois erros distintos estao ocorrendo:
 
-A API `me/accounts` do Facebook retorna `{"data":[]}` mesmo com a conta tendo a pagina "R3CF.ai". Isso acontece porque:
+1. **Escopo invalido**: O escopo `pages_manage_metadata` NAO EXISTE na API do Facebook. Ele foi adicionado por engano e causa o erro "Invalid Scopes". Este escopo deve ser REMOVIDO.
 
-1. Durante o dialogo OAuth do Facebook, ha uma etapa onde o usuario seleciona quais paginas compartilhar. Se as paginas nao foram marcadas, a API retorna vazio.
-2. A pagina e gerenciada pelo Business Manager, e pode precisar do escopo `business_management` para ser listada.
-3. O parametro `auth_type=rerequest` pode ser necessario para forcar o Facebook a reapresentar a tela de selecao de paginas.
+2. **Dominio nao configurado**: O Meta Developer Portal exige que o dominio `r3cfaileads.lovable.app` esteja no campo "Dominios da App" nas configuracoes do aplicativo. Isso e uma configuracao manual no portal (nao no codigo).
 
-## Solucao (2 alteracoes)
+## Alteracao no Codigo
 
-### 1. Frontend - Adicionar escopos e forcar re-autorizacao
+### Arquivo: `src/components/settings/MetaLeadAdsConnection.tsx` (linha 51)
 
-**Arquivo:** `src/components/settings/MetaLeadAdsConnection.tsx`
+Remover `pages_manage_metadata` dos escopos. Os escopos validos e necessarios sao:
 
-- Adicionar `business_management` e `pages_manage_metadata` aos escopos solicitados
-- Adicionar `auth_type=rerequest` na URL do OAuth para forcar a reapresentacao da tela de selecao de paginas (caso o usuario ja tenha autorizado antes sem selecionar paginas)
+- `pages_show_list` - listar paginas
+- `leads_retrieval` - recuperar leads
+- `pages_manage_ads` - gerenciar anuncios
+- `pages_read_engagement` - ler engajamento
+- `business_management` - acesso a paginas do Business Manager
 
-```typescript
-const handleConnect = () => {
-  const redirectUri = 'https://r3cfaileads.lovable.app/meta-oauth-callback';
-  const scope = 'pages_show_list,leads_retrieval,pages_manage_ads,pages_read_engagement,business_management,pages_manage_metadata';
-  const authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&auth_type=rerequest`;
-  window.location.href = authUrl;
-};
+**De:**
+```
+pages_show_list,leads_retrieval,pages_manage_ads,pages_read_engagement,business_management,pages_manage_metadata
 ```
 
-### 2. Edge Function - Melhorar mensagem de erro e tentar endpoint alternativo
+**Para:**
+```
+pages_show_list,leads_retrieval,pages_manage_ads,pages_read_engagement,business_management
+```
 
-**Arquivo:** `supabase/functions/meta-oauth/index.ts`
+## Configuracao Manual no Meta Developer Portal
 
-Quando `me/accounts` retorna 0 paginas, tentar tambem o endpoint `me/accounts` com o campo `tasks` para verificar se ha paginas com permissoes limitadas. Tambem melhorar a mensagem de erro para orientar o usuario:
+Voce precisa fazer o seguinte no portal https://developers.facebook.com:
 
-- Se 0 paginas forem encontradas, retornar uma mensagem clara explicando que o usuario precisa selecionar as paginas durante o dialogo de autorizacao
-- Adicionar log do token (primeiros 10 caracteres) para debug
-- Sugerir ao usuario tentar novamente e selecionar todas as paginas na tela do Facebook
+1. Acesse seu app "R3CF Leads Flow"
+2. Va em **Configuracoes > Basico**
+3. No campo **"Dominios da App"**, adicione: `r3cfaileads.lovable.app`
+4. Clique em **Salvar Alteracoes**
+
+Isso resolve o erro "Nao e possivel carregar o URL".
 
 ## Resumo
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/components/settings/MetaLeadAdsConnection.tsx` | Adicionar escopos `business_management` e `pages_manage_metadata` + parametro `auth_type=rerequest` |
-| `supabase/functions/meta-oauth/index.ts` | Melhorar mensagem de erro quando 0 paginas sao encontradas, orientando o usuario a selecionar as paginas |
-
-## Resultado esperado
-
-Ao clicar em "Conectar com Facebook" novamente, o Facebook vai reapresentar a tela de autorizacao com a opcao de selecionar paginas. Com os escopos adicionais (`business_management`), paginas gerenciadas pelo Business Manager tambem serao listadas. Se ainda assim retornar 0 paginas, a mensagem de erro vai orientar o usuario sobre o que fazer.
-
+| Item | Acao |
+|------|------|
+| Escopo `pages_manage_metadata` | Remover do codigo (escopo invalido) |
+| Dominio da App | Adicionar `r3cfaileads.lovable.app` no Meta Developer Portal manualmente |
