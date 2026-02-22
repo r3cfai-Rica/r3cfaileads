@@ -116,6 +116,39 @@ export interface GeneratedEmail {
   previewText: string;
 }
 
+interface GenerateLeadsByInterestParams {
+  interest: string;
+  country: string;
+  city: string;
+  language: 'pt-BR' | 'en-US';
+  useRealData?: boolean;
+}
+
+export async function generateLeadsByInterest(params: GenerateLeadsByInterestParams): Promise<GenerateLeadsResponse> {
+  const functionName = params.useRealData ? 'generate-leads-interest' : 'generate-leads-interest-demo';
+
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body: params
+  });
+
+  if (error) {
+    console.error(`Error calling ${functionName}:`, error);
+    throw new Error(error.message || 'Failed to generate leads by interest');
+  }
+
+  if (data.error) {
+    throw new Error(data.error);
+  }
+
+  return {
+    leads: data.leads.map((lead: any) => ({
+      ...lead,
+      createdAt: new Date(lead.createdAt),
+    })),
+    insights: data.insights,
+  };
+}
+
 export async function generateEmailWithAI(params: GenerateEmailParams): Promise<GeneratedEmail> {
   const { data, error } = await supabase.functions.invoke('generate-email', {
     body: params
