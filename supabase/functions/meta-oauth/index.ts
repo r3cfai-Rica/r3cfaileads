@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     }
 
     const shortLivedToken = tokenData.access_token;
-    console.log("meta-oauth: Step 1 SUCCESS - got short-lived token");
+    console.log("meta-oauth: Step 1 SUCCESS - got short-lived token, starts with:", shortLivedToken?.substring(0, 10));
 
     // Step 2: Exchange for long-lived token
     const longLivedUrl = `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${shortLivedToken}`;
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     }
 
     const longLivedUserToken = longLivedData.access_token;
-    console.log("meta-oauth: Step 2 SUCCESS - got long-lived token");
+    console.log("meta-oauth: Step 2 SUCCESS - got long-lived token, starts with:", longLivedUserToken?.substring(0, 10));
 
     // Step 3: Get pages the user manages
     console.log("meta-oauth: Step 3 - fetching pages...");
@@ -145,14 +145,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    const pages = pagesData.data || [];
+    let pages = pagesData.data || [];
     console.log("meta-oauth: Step 3 SUCCESS - found", pages.length, "pages");
 
     if (pages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "No pages found. You need to manage at least one Facebook page." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      // Try with tasks field to check for pages with limited permissions
+      console.log("meta-oauth: 0 pages found, trying with tasks field...");
+      const pagesRetryRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/accounts?access_token=${longLivedUserToken}&fields=id,name,access_token,tasks`
       );
+      const pagesRetryText = await pagesRetryRes.text();
+      console.log("meta-oauth: Retry response:", pagesRetryText);
+
+      let pagesRetryData;
+      try { pagesRetryData = JSON.parse(pagesRetryText); } catch { pagesRetryData = { data: [] }; }
+
+      if (pagesRetryData.data && pagesRetryData.data.length > 0) {
+        // Use these pages instead
+        pages.push(...pagesRetryData.data);
+        console.log("meta-oauth: Retry found", pagesRetryData.data.length, "pages");
+      } else {
+        console.log("meta-oauth: Still 0 pages after retry");
+        return new Response(
+          JSON.stringify({ 
+            error: "Nenhuma página encontrada. Durante a autorização do Facebook, certifique-se de selecionar todas as suas páginas na tela de permissões. Se o problema persistir, verifique se sua conta é administradora de pelo menos uma Página do Facebook e se o aplicativo Meta está com as permissões aprovadas." 
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Step 4: Save page connections
