@@ -32,6 +32,31 @@ const MetaOAuthCallback: React.FC = () => {
 
     const exchangeCode = async () => {
       try {
+        // Wait for session to be recovered from localStorage
+        let session = (await supabase.auth.getSession()).data.session;
+
+        if (!session) {
+          // Wait up to 5 seconds for session recovery
+          session = await new Promise<any>((resolve) => {
+            const timeout = setTimeout(() => resolve(null), 5000);
+            const { data: { subscription } } = supabase.auth.onAuthStateChange(
+              (_event, sess) => {
+                if (sess) {
+                  clearTimeout(timeout);
+                  subscription.unsubscribe();
+                  resolve(sess);
+                }
+              }
+            );
+          });
+        }
+
+        if (!session) {
+          throw new Error(
+            pt ? 'Sessão expirada. Faça login novamente.' : 'Session expired. Please log in again.'
+          );
+        }
+
         const redirectUri = 'https://r3cfaileads.lovable.app/meta-oauth-callback';
 
         const { data, error: fnError } = await supabase.functions.invoke('meta-oauth', {

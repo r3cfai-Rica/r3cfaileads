@@ -11,9 +11,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("meta-oauth: received request", req.method);
+
     // Verify auth
     const authHeader = req.headers.get("Authorization");
+    console.log("meta-oauth: auth header present:", !!authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
+      console.error("meta-oauth: missing or invalid auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -30,11 +34,13 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
+      console.error("meta-oauth: getUser failed:", userError?.message || "no user");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    console.log("meta-oauth: authenticated user", user.id);
     const userId = user.id;
 
     const { code, redirect_uri } = await req.json();
