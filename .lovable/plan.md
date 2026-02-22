@@ -1,42 +1,64 @@
 
-# Diagnostico da Integracao Meta Lead Ads
 
-## Status Atual
+# Solucao para Usuarios Comuns Conectarem Meta Lead Ads
 
-### O que esta funcionando
-- As Edge Functions `webhook-meta-leads` e `meta-oauth` estao deployadas e respondendo
-- O endpoint POST do webhook funciona corretamente (testado com sucesso, retornou `{"success": true}`)
-- Os logs confirmam que o webhook processa eventos corretamente
-- Os secrets `META_APP_ID` e `META_APP_SECRET` estao configurados
-- A tabela `meta_connections` existe no banco com RLS configurado
-- O componente `MetaLeadAdsConnection` e a rota `/meta-oauth-callback` estao implementados
-- Nenhuma pagina esta conectada ainda (tabela `meta_connections` vazia)
+## Situacao Atual
 
-### Problema Identificado
-O **GET request** para verificacao do webhook retorna **404**. Isso e critico porque o Meta envia um GET para validar o webhook antes de ativa-lo. O POST funciona normalmente, mas o GET falha no gateway.
+A arquitetura ja e multi-tenant. O fluxo para um usuario comum seria:
 
-Isso acontece porque o gateway das Edge Functions pode rejeitar requests GET sem headers de autorizacao, mesmo com `verify_jwt = false`.
+1. Entrar no app R3CF
+2. Ir em Settings
+3. Clicar em "Conectar com Facebook"
+4. Autorizar as permissoes no Facebook
+5. Pronto -- os leads da pagina dele comecam a chegar automaticamente
 
-## Plano de Solucao
+O webhook e registrado UMA VEZ (pelo admin, ja feito). Cada usuario conecta suas proprias paginas via OAuth, e o sistema identifica automaticamente a quem pertence cada lead pelo `page_id`.
 
-### 1. Corrigir o Webhook para aceitar GET (verificacao do Meta)
-Reescrever a funcao `webhook-meta-leads` para garantir compatibilidade com o gateway, adicionando headers CORS tambem na resposta GET e garantindo que o challenge seja retornado corretamente com content-type `text/plain`.
+## Problema: Meta App em Modo Development
 
-### 2. Teste completo do fluxo
-Apos o fix, testar:
-- GET de verificacao (simular o que o Meta envia)
-- POST de evento de lead (simular um evento leadgen)
+Enquanto o app Meta estiver em modo **Development**, apenas usuarios cadastrados como **Testers** ou **Admins** no Meta Developer Portal podem usar o OAuth. Usuarios comuns receberao erro de permissao.
 
-### 3. Instrucoes para o Meta Developer Portal
-Apos confirmar que o webhook responde ao GET:
-- **Callback URL**: `https://gylxzoogrqqeqihqknkm.supabase.co/functions/v1/webhook-meta-leads`
-- **Verify Token**: `r3cf_meta_verify_2024`
-- Inscrever no campo `leadgen`
+## Acoes Necessarias
 
-## Detalhes Tecnicos
+### 1. Verificacao de Negocio no Meta (Manual - fora do codigo)
 
-O problema do GET 404 pode ser resolvido de duas formas:
-1. Testar se o gateway aceita GET com query params na URL publicada (as vezes e um problema temporario de cache/propagacao)
-2. Se persistir, adicionar um fallback no POST handler que tambem aceita verificacao do webhook via POST (o Meta suporta isso em algumas configuracoes)
+Voce precisa completar a **Business Verification** no Meta Business Suite para que o app seja aprovado para modo Live. Passos:
 
-A correcao principal sera garantir que os CORS headers estejam presentes em TODAS as respostas, incluindo as de verificacao GET, e que o content-type esteja correto para o challenge response.
+- Acesse [Meta Developer Portal](https://developers.facebook.com/apps/1183775287299903/settings/basic/)
+- Va em **App Review** no menu lateral
+- Solicite as permissoes: `pages_show_list`, `leads_retrieval`, `pages_manage_ads`, `pages_read_engagement`
+- Complete a verificacao de negocio com documentos da empresa
+- Apos aprovacao, mude o app para modo **Live**
+
+### 2. Atualizar Redirect URI para producao
+
+No componente `MetaLeadAdsConnection`, o `redirect_uri` usa `window.location.origin`, o que ja funciona dinamicamente tanto em preview quanto em producao. Porem, e necessario registrar a URL de producao no Meta Developer Portal:
+
+- Va em **Facebook Login** > **Settings** no Meta Developer Portal
+- Em **Valid OAuth Redirect URIs**, adicione:
+  - `https://r3cfaileads.lovable.app/meta-oauth-callback`
+
+### 3. Melhorias opcionais no codigo
+
+Nenhuma alteracao de codigo e estritamente necessaria -- o fluxo ja funciona para multi-tenant. Porem, melhorias opcionais incluem:
+
+- **Feedback ao usuario**: Adicionar uma mensagem explicando que o app Meta precisa estar em modo Live para usuarios externos
+- **Tratamento de erro de permissao**: Quando o Meta retornar erro de permissao (app em Development), mostrar uma mensagem amigavel ao usuario
+- **Polling de leads**: Adicionar um botao de "Sincronizar agora" para buscar leads manualmente (fallback caso o webhook falhe)
+
+## Resumo
+
+| Item | Status |
+|------|--------|
+| Arquitetura multi-tenant | Ja implementada |
+| OAuth para usuarios comuns | Ja implementado |
+| Webhook compartilhado | Ja configurado |
+| Salvamento por user_id | Ja funciona |
+| Business Verification do Meta | Pendente (manual) |
+| Redirect URI em producao | Precisa registrar no Meta |
+| Alteracoes de codigo | Nenhuma obrigatoria |
+
+## Conclusao
+
+O sistema ja esta preparado para multiplos usuarios. A unica barreira e a **verificacao de negocio no Meta**, que e um processo manual feito no Meta Developer Portal. Apos aprovacao, qualquer usuario podera conectar suas paginas clicando em "Conectar com Facebook" no app.
+
