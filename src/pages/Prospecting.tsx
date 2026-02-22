@@ -51,7 +51,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { generateLeadsWithAI } from '@/lib/ai-api';
+import { generateLeadsWithAI, generateLeadsByInterest } from '@/lib/ai-api';
 import { useToast } from '@/hooks/use-toast';
 import { useFolders } from '@/hooks/useFolders';
 import { useLeads } from '@/hooks/useLeads';
@@ -68,10 +68,16 @@ interface ProspectingState {
   searchResults: Lead[];
   insights: NicheInsights | null;
   selectedLeads: string[];
-  leadType: 'b2b' | 'b2c' | 'both';
+  leadType: 'b2b' | 'b2c' | 'interest' | 'both';
   excludePublicSector: boolean;
   contactOnly: boolean;
   hideCompetitors: boolean;
+  interestQuery: string;
+  interestCountry: string;
+  interestCity: string;
+  interestResults: Lead[];
+  interestInsights: NicheInsights | null;
+  selectedInterestLeads: string[];
 }
 
 const countries = [
@@ -136,7 +142,7 @@ export const Prospecting: React.FC = () => {
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
 
   // New filters
-  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'both'>(persistedState?.leadType || 'b2b');
+  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'interest' | 'both'>(persistedState?.leadType || 'b2b');
   const [excludePublicSector, setExcludePublicSector] = useState(persistedState?.excludePublicSector ?? true);
   const [contactOnly, setContactOnly] = useState(persistedState?.contactOnly ?? true);
   const [hideCompetitors, setHideCompetitors] = useState(persistedState?.hideCompetitors ?? true);
@@ -146,14 +152,25 @@ export const Prospecting: React.FC = () => {
   const [b2cLeads, setB2cLeads] = useState<Lead[]>([]);
   const [selectedB2cLeads, setSelectedB2cLeads] = useState<Set<string>>(new Set());
 
+  // Interest-based search
+  const [interestQuery, setInterestQuery] = useState(persistedState?.interestQuery || '');
+  const [interestCountry, setInterestCountry] = useState(persistedState?.interestCountry || 'BR');
+  const [interestCity, setInterestCity] = useState(persistedState?.interestCity || '');
+  const [interestResults, setInterestResults] = useState<Lead[]>(persistedState?.interestResults || []);
+  const [interestInsights, setInterestInsights] = useState<NicheInsights | null>(persistedState?.interestInsights || null);
+  const [selectedInterestLeads, setSelectedInterestLeads] = useState<Set<string>>(new Set(persistedState?.selectedInterestLeads || []));
+  const [isSearchingInterest, setIsSearchingInterest] = useState(false);
+
   // Persist state
   useEffect(() => {
     const stateToSave: ProspectingState = {
       searchQuery, country, city, postalCode, searchResults, insights,
       selectedLeads: Array.from(selectedLeads), leadType, excludePublicSector, contactOnly, hideCompetitors,
+      interestQuery, interestCountry, interestCity, interestResults, interestInsights,
+      selectedInterestLeads: Array.from(selectedInterestLeads),
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors]);
+  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
@@ -165,6 +182,11 @@ export const Prospecting: React.FC = () => {
     setTargetFolder('');
     setB2cLeads([]);
     setSelectedB2cLeads(new Set());
+    setInterestQuery('');
+    setInterestCity('');
+    setInterestResults([]);
+    setInterestInsights(null);
+    setSelectedInterestLeads(new Set());
     sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
@@ -180,6 +202,7 @@ export const Prospecting: React.FC = () => {
     leadTypeLabel: 'Tipo de Lead',
     b2b: 'B2B (Empresas)',
     b2c: 'B2C (Consumidor)',
+    interest: 'Por Interesses',
     both: 'Ambos',
     excludePublic: 'Excluir setor público',
     contactOnlyLabel: 'Somente com contato',
@@ -192,7 +215,15 @@ export const Prospecting: React.FC = () => {
     comingSoon: 'Em breve',
     b2bTab: 'B2B (Maps)',
     b2cTab: 'B2C (Opt-in)',
+    interestTab: 'Interesses',
     publicSector: 'Setor Público',
+    interestPlaceholder: 'Ex: pessoas interessadas em fitness, yoga, alimentação saudável...',
+    interestSearchButton: 'Buscar por Interesse',
+    interestTitle: 'Busca por Interesses',
+    interestDesc: 'Encontre negócios que atendem um público com interesses específicos.',
+    relevanceHigh: 'Alta',
+    relevanceMedium: 'Média',
+    relevanceLow: 'Baixa',
   } : {
     discoverTitle: 'Discover Potential Clients',
     discoverDesc: 'Search for businesses or consumers interested in your niche.',
@@ -205,6 +236,7 @@ export const Prospecting: React.FC = () => {
     leadTypeLabel: 'Lead Type',
     b2b: 'B2B (Business)',
     b2c: 'B2C (Consumer)',
+    interest: 'By Interests',
     both: 'Both',
     excludePublic: 'Exclude public sector',
     contactOnlyLabel: 'Contact info only',
@@ -217,7 +249,15 @@ export const Prospecting: React.FC = () => {
     comingSoon: 'Coming soon',
     b2bTab: 'B2B (Maps)',
     b2cTab: 'B2C (Opt-in)',
+    interestTab: 'Interests',
     publicSector: 'Public Sector',
+    interestPlaceholder: 'Ex: people interested in fitness, yoga, healthy eating...',
+    interestSearchButton: 'Search by Interest',
+    interestTitle: 'Interest-Based Search',
+    interestDesc: 'Find businesses that serve an audience with specific interests.',
+    relevanceHigh: 'High',
+    relevanceMedium: 'Medium',
+    relevanceLow: 'Low',
   };
 
   const selectedCountry = countries.find(c => c.code === country);
@@ -282,6 +322,53 @@ export const Prospecting: React.FC = () => {
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleInterestSearch = async () => {
+    if (!interestQuery.trim()) return;
+    if (!canSearch) return;
+
+    setIsSearchingInterest(true);
+    setInterestResults([]);
+    setInterestInsights(null);
+    setSelectedInterestLeads(new Set());
+
+    try {
+      const selectedCountryData = countries.find(c => c.code === interestCountry);
+      const isPaidUser = user?.plan === 'paid';
+      const result = await generateLeadsByInterest({
+        interest: interestQuery,
+        country: selectedCountryData?.name || 'Brazil',
+        city: interestCity,
+        language: language,
+        useRealData: isPaidUser,
+      });
+
+      const limitedLeads = user?.plan === 'free' ? result.leads.slice(0, 10) : result.leads;
+
+      setInterestResults(limitedLeads);
+      setInterestInsights(result.insights);
+
+      if (user) {
+        setUser({ ...user, searchesUsed: user.searchesUsed + 1 });
+      }
+
+      toastHook({
+        title: language === 'pt-BR' ? 'Leads por interesse gerados!' : 'Interest-based leads generated!',
+        description: language === 'pt-BR'
+          ? `${limitedLeads.length} leads encontrados para "${interestQuery}"`
+          : `${limitedLeads.length} leads found for "${interestQuery}"`,
+      });
+    } catch (error) {
+      console.error('Error generating interest leads:', error);
+      toastHook({
+        title: language === 'pt-BR' ? 'Erro ao gerar leads' : 'Error generating leads',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSearchingInterest(false);
     }
   };
 
@@ -353,7 +440,7 @@ export const Prospecting: React.FC = () => {
     high: 'urgencyHigh' as const,
   };
 
-  const renderLeadsList = (leads: Lead[], selected: Set<string>, onSelect: (id: string) => void, onSelectAll: () => void, onSave: () => void) => (
+  const renderLeadsList = (leads: Lead[], selected: Set<string>, onSelect: (id: string) => void, onSelectAll: () => void, onSave: () => void, isInterestMode = false) => (
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -517,8 +604,8 @@ export const Prospecting: React.FC = () => {
           {/* Lead Type Select */}
           <div className="mb-4">
             <label className="text-sm font-medium mb-1.5 block">{tt2.leadTypeLabel}</label>
-            <div className="flex gap-2">
-              {(['b2b', 'b2c', 'both'] as const).map(type => (
+            <div className="flex flex-wrap gap-2">
+              {(['b2b', 'interest', 'b2c', 'both'] as const).map(type => (
                 <Button
                   key={type}
                   variant={leadType === type ? 'default' : 'outline'}
@@ -527,9 +614,10 @@ export const Prospecting: React.FC = () => {
                   className="gap-2"
                 >
                   {type === 'b2b' && <Building2 className="w-4 h-4" />}
+                  {type === 'interest' && <Target className="w-4 h-4" />}
                   {type === 'b2c' && <UserCircle className="w-4 h-4" />}
                   {type === 'both' && <Globe className="w-4 h-4" />}
-                  {type === 'b2b' ? tt2.b2b : type === 'b2c' ? tt2.b2c : tt2.both}
+                  {type === 'b2b' ? tt2.b2b : type === 'interest' ? tt2.interest : type === 'b2c' ? tt2.b2c : tt2.both}
                 </Button>
               ))}
             </div>
@@ -588,6 +676,46 @@ export const Prospecting: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Switch checked={hideCompetitors} onCheckedChange={setHideCompetitors} />
                   <label className="text-sm">{tt2.hideCompetitorsLabel}</label>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Interest-Based Search Form */}
+          {leadType === 'interest' && (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <Target className="w-5 h-5 text-primary" />
+                <div>
+                  <h3 className="font-semibold">{tt2.interestTitle}</h3>
+                  <p className="text-sm text-muted-foreground">{tt2.interestDesc}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative md:col-span-2">
+                  <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder={tt2.interestPlaceholder} value={interestQuery} onChange={e => setInterestQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleInterestSearch()} className="pl-10 h-12 text-base" disabled={!canSearch} />
+                </div>
+                <div className="relative">
+                  <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Select value={interestCountry} onValueChange={setInterestCountry}>
+                    <SelectTrigger className="pl-10 h-12">
+                      <SelectValue>{countries.find(c => c.code === interestCountry) && <span className="flex items-center gap-2"><span>{countries.find(c => c.code === interestCountry)!.flag}</span>{countries.find(c => c.code === interestCountry)!.name}</span>}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map(c => <SelectItem key={c.code} value={c.code}><span className="flex items-center gap-2"><span>{c.flag}</span>{c.name}</span></SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder={`${tt2.cityPlaceholder} (${language === 'pt-BR' ? 'opcional' : 'optional'})`} value={interestCity} onChange={e => setInterestCity(e.target.value)} className="pl-10 h-12" />
+                  </div>
+                  <Button variant="gradient" size="lg" onClick={handleInterestSearch} disabled={isSearchingInterest || !interestQuery.trim() || !canSearch} className="h-12 px-6 whitespace-nowrap">
+                    {isSearchingInterest ? <><Loader2 className="w-5 h-5 animate-spin" />{t.prospecting.searching}</> : tt2.interestSearchButton}
+                  </Button>
                 </div>
               </div>
             </>
@@ -685,6 +813,22 @@ export const Prospecting: React.FC = () => {
             </div>
           </div>
         )
+      ) : leadType === 'interest' ? (
+        // Interest mode
+        (interestResults.length > 0 || interestInsights) && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {interestInsights && renderInsightsPanel(interestInsights)}
+            <div className={interestInsights ? 'lg:col-span-2' : 'lg:col-span-3'}>
+              {renderLeadsList(
+                interestResults, selectedInterestLeads,
+                (id) => { const s = new Set(selectedInterestLeads); s.has(id) ? s.delete(id) : s.add(id); setSelectedInterestLeads(s); },
+                () => { setSelectedInterestLeads(selectedInterestLeads.size === interestResults.length ? new Set() : new Set(interestResults.map(l => l.id))); },
+                () => handleSaveLeads(interestResults, selectedInterestLeads),
+                true
+              )}
+            </div>
+          </div>
+        )
       ) : (
         // B2C mode
         b2cLeads.length > 0 && renderLeadsList(
@@ -696,7 +840,7 @@ export const Prospecting: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!isSearching && searchResults.length === 0 && b2cLeads.length === 0 && canSearch && (
+      {!isSearching && !isSearchingInterest && searchResults.length === 0 && interestResults.length === 0 && b2cLeads.length === 0 && canSearch && (
         <Card className="py-16">
           <CardContent className="text-center">
             <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
@@ -712,8 +856,9 @@ export const Prospecting: React.FC = () => {
     </div>
   );
 
-  function renderInsightsPanel() {
-    if (!insights) return null;
+  function renderInsightsPanel(insightsData?: NicheInsights | null) {
+    const data = insightsData || insights;
+    if (!data) return null;
     return (
       <div className="lg:col-span-1 space-y-4">
         <Card>
@@ -728,16 +873,16 @@ export const Prospecting: React.FC = () => {
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-4 h-4" />
                 <span className="font-medium text-sm">{t.campaigns.urgency}</span>
-                <Badge variant={urgencyVariant[insights.urgency]}>{t.common[insights.urgency]}</Badge>
+                <Badge variant={urgencyVariant[data.urgency]}>{t.common[data.urgency]}</Badge>
               </div>
-              <p className="text-sm text-muted-foreground">{insights.urgencyReason}</p>
+              <p className="text-sm text-muted-foreground">{data.urgencyReason}</p>
             </div>
             <div>
               <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-warning" />{t.campaigns.pains}
               </h4>
               <ul className="space-y-1">
-                {insights.pains.slice(0, 3).map((pain, i) => (
+                {data.pains.slice(0, 3).map((pain, i) => (
                   <li key={i} className="text-sm text-muted-foreground flex items-start gap-2"><span className="text-warning">•</span>{pain}</li>
                 ))}
               </ul>
@@ -747,7 +892,7 @@ export const Prospecting: React.FC = () => {
                 <HelpCircle className="w-4 h-4 text-info" />{t.campaigns.questions}
               </h4>
               <ul className="space-y-1">
-                {insights.questions.slice(0, 3).map((q, i) => (
+                {data.questions.slice(0, 3).map((q, i) => (
                   <li key={i} className="text-sm text-muted-foreground flex items-start gap-2"><span className="text-info">•</span>{q}</li>
                 ))}
               </ul>

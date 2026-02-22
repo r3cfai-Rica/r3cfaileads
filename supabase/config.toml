@@ -66,3 +66,9 @@ verify_jwt = false
 
 [functions.meta-oauth]
 verify_jwt = false
+
+[functions.generate-leads-interest]
+verify_jwt = false
+
+[functions.generate-leads-interest-demo]
+verify_jwt = false
