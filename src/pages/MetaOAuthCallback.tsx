@@ -32,7 +32,7 @@ const MetaOAuthCallback: React.FC = () => {
 
     const exchangeCode = async () => {
       try {
-        const redirectUri = `${window.location.origin}/meta-oauth-callback`;
+        const redirectUri = 'https://r3cfaileads.lovable.app/meta-oauth-callback';
 
         const { data, error: fnError } = await supabase.functions.invoke('meta-oauth', {
           body: { code, redirect_uri: redirectUri },

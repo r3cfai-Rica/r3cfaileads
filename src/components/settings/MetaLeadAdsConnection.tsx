@@ -47,10 +47,10 @@ export const MetaLeadAdsConnection: React.FC = () => {
   }, [user]);
 
   const handleConnect = () => {
-    const redirectUri = `${window.location.origin}/meta-oauth-callback`;
+    const redirectUri = 'https://r3cfaileads.lovable.app/meta-oauth-callback';
     const scope = 'pages_show_list,leads_retrieval,pages_manage_ads,pages_read_engagement';
     const authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code`;
-    window.location.href = authUrl;
+    window.open(authUrl, '_blank');
   };
 
   const handleDisconnect = async (connectionId: string) => {
