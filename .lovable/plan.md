@@ -1,62 +1,51 @@
 
 
-# Correcao Definitiva - Meta OAuth Error Handling
+# Correcao - Facebook retornando 0 paginas
 
-## Diagnostico
+## Problema
 
-Os logs da edge function mostram que a autenticacao funciona perfeitamente ("authenticated user 2972f3cf..."), mas NENHUM log aparece depois disso. Isso indica que:
+A API `me/accounts` do Facebook retorna `{"data":[]}` mesmo com a conta tendo a pagina "R3CF.ai". Isso acontece porque:
 
-1. A chamada ao Facebook API provavelmente retorna um erro (codigo ja usado, expirado, ou redirect_uri inconsistente)
-2. Os `console.error` existentes nao estao aparecendo nos logs (possivelmente por limitacao do viewer)
-3. O frontend mostra apenas "Edge Function returned a non-2xx status code" - uma mensagem generica do cliente Supabase - sem extrair o erro real retornado pela funcao
+1. Durante o dialogo OAuth do Facebook, ha uma etapa onde o usuario seleciona quais paginas compartilhar. Se as paginas nao foram marcadas, a API retorna vazio.
+2. A pagina e gerenciada pelo Business Manager, e pode precisar do escopo `business_management` para ser listada.
+3. O parametro `auth_type=rerequest` pode ser necessario para forcar o Facebook a reapresentar a tela de selecao de paginas.
 
 ## Solucao (2 alteracoes)
 
-### 1. Edge Function - Logging completo em CADA etapa
+### 1. Frontend - Adicionar escopos e forcar re-autorizacao
 
-Adicionar `console.log` (nao `console.error`) em TODAS as etapas para garantir visibilidade nos logs:
+**Arquivo:** `src/components/settings/MetaLeadAdsConnection.tsx`
 
-- Log do code e redirect_uri recebidos
-- Log antes e depois de cada chamada ao Facebook API
-- Log do status HTTP e body de cada resposta do Facebook
-- Log de cada etapa de salvamento no banco
-
-Isso vai permitir diagnosticar exatamente onde o fluxo falha.
-
-### 2. Frontend - Extrair erro real da resposta
-
-O `supabase.functions.invoke` retorna um `FunctionsHttpError` generico quando a funcao retorna non-2xx. O erro real esta no `error.context` (um objeto Response). O frontend precisa extrair esse erro:
+- Adicionar `business_management` e `pages_manage_metadata` aos escopos solicitados
+- Adicionar `auth_type=rerequest` na URL do OAuth para forcar a reapresentacao da tela de selecao de paginas (caso o usuario ja tenha autorizado antes sem selecionar paginas)
 
 ```typescript
-const { data, error: fnError } = await supabase.functions.invoke('meta-oauth', {
-  body: { code, redirect_uri: redirectUri },
-});
-
-if (fnError) {
-  let errorMessage = fnError.message;
-  try {
-    if (fnError.context) {
-      const errorBody = await fnError.context.json();
-      errorMessage = errorBody?.error || errorMessage;
-    }
-  } catch {}
-  throw new Error(errorMessage);
-}
+const handleConnect = () => {
+  const redirectUri = 'https://r3cfaileads.lovable.app/meta-oauth-callback';
+  const scope = 'pages_show_list,leads_retrieval,pages_manage_ads,pages_read_engagement,business_management,pages_manage_metadata';
+  const authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&auth_type=rerequest`;
+  window.location.href = authUrl;
+};
 ```
 
-Isso fara com que o usuario veja a mensagem real do erro (ex: "This authorization code has been used" ou "Invalid redirect_uri") em vez da mensagem generica.
+### 2. Edge Function - Melhorar mensagem de erro e tentar endpoint alternativo
 
-## Arquivos alterados
+**Arquivo:** `supabase/functions/meta-oauth/index.ts`
+
+Quando `me/accounts` retorna 0 paginas, tentar tambem o endpoint `me/accounts` com o campo `tasks` para verificar se ha paginas com permissoes limitadas. Tambem melhorar a mensagem de erro para orientar o usuario:
+
+- Se 0 paginas forem encontradas, retornar uma mensagem clara explicando que o usuario precisa selecionar as paginas durante o dialogo de autorizacao
+- Adicionar log do token (primeiros 10 caracteres) para debug
+- Sugerir ao usuario tentar novamente e selecionar todas as paginas na tela do Facebook
+
+## Resumo
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `supabase/functions/meta-oauth/index.ts` | Adicionar console.log detalhado em cada etapa do fluxo |
-| `src/pages/MetaOAuthCallback.tsx` | Extrair mensagem de erro real do FunctionsHttpError |
+| `src/components/settings/MetaLeadAdsConnection.tsx` | Adicionar escopos `business_management` e `pages_manage_metadata` + parametro `auth_type=rerequest` |
+| `supabase/functions/meta-oauth/index.ts` | Melhorar mensagem de erro quando 0 paginas sao encontradas, orientando o usuario a selecionar as paginas |
 
 ## Resultado esperado
 
-Apos essas alteracoes:
-- O usuario vera a mensagem de erro REAL do Facebook (nao mais "Edge Function returned a non-2xx status code")
-- Os logs mostrarao exatamente em qual etapa o fluxo falha
-- Sera possivel diagnosticar e corrigir o problema raiz (provavelmente codigo expirado ou redirect_uri inconsistente no portal da Meta)
+Ao clicar em "Conectar com Facebook" novamente, o Facebook vai reapresentar a tela de autorizacao com a opcao de selecionar paginas. Com os escopos adicionais (`business_management`), paginas gerenciadas pelo Business Manager tambem serao listadas. Se ainda assim retornar 0 paginas, a mensagem de erro vai orientar o usuario sobre o que fazer.
 
