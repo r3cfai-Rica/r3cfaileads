@@ -1,124 +1,127 @@
 
 
-# Busca de Leads por Interesses/Comportamento
+# Busca de Leads na Web/Internet (Perplexity AI Search)
 
-## O que sera implementado
+## Objetivo
 
-Uma nova aba de busca **"Por Interesses"** na pagina de prospecao que permite encontrar leads com base em interesses e comportamento, nao apenas localizacao no Google Maps.
+Criar um **4o modo de busca** na prospecao que pesquisa leads reais em toda a internet (sites, redes sociais, diretorios, blogs, noticias) usando o Perplexity AI Search -- nao limitado ao Google Maps.
 
-**Exemplo de uso:** "pessoas interessadas em fitness em Sao Paulo" encontra academias, lojas de suplementos, estúdios de yoga, lojas de roupas esportivas -- ou seja, negocios cujos clientes tem esse interesse.
-
-## Como funciona (dados reais para Premium)
-
-A busca por interesses usa o **mesmo Google Places API** como fonte de dados reais, mas com uma camada de IA diferente:
+## Diferenca dos modos existentes
 
 ```text
-Busca B2B atual (Maps):
-  Input: "O que voce vende" + cidade
-  IA: Identifica compradores do servico
-  Google Places: Busca esses compradores
+Modo 1 - B2B (Maps):     Google Places API -> negocios locais
+Modo 2 - Por Interesses: Google Places API -> negocios por interesse
+Modo 3 - B2C (Opt-in):   CSV, Meta Lead Ads -> leads passivos
 
-Busca por Interesses (NOVO):
-  Input: "Interesse/comportamento do publico-alvo" + regiao (opcional)
-  IA: Traduz interesse em tipos de negocios relacionados
-  Google Places: Busca esses negocios (dados reais)
-  IA: Classifica e qualifica por relevancia ao interesse
+Modo 4 - Busca Web (NOVO):
+  Input: "clinicas de estetica que postam no Instagram em Sao Paulo"
+  Perplexity: busca na web inteira (sites, redes sociais, diretorios)
+  IA: extrai e estrutura leads reais dos resultados
+  Output: leads com nome, site, telefone, fonte verificavel
 ```
 
-Premium = dados reais do Google Places (regra mantida).
-Free = dados de demonstracao via IA (igual ao B2B free).
+## Como funciona
+
+1. Usuario digita uma busca livre (ex: "estúdios de tatuagem em Curitiba com Instagram ativo")
+2. Edge function usa Perplexity API para buscar na web real
+3. IA (Gemini) processa os resultados e extrai leads estruturados (nome, contato, site, fonte)
+4. Cada lead vem com link da fonte original (verificavel)
+
+Premium = busca real via Perplexity (dados verificaveis da web).
+Free = nao disponivel (ou versao demo limitada).
+
+## Pre-requisito
+
+Conectar o **Perplexity** ao projeto via conector. Isso disponibiliza a `PERPLEXITY_API_KEY` nas edge functions.
 
 ## Alteracoes
 
-### 1. Nova Edge Function: `supabase/functions/generate-leads-interest/index.ts`
+### 1. Nova Edge Function: `supabase/functions/generate-leads-web/index.ts`
 
-- Recebe: `interest` (descricao do interesse), `country`, `city` (opcional), `language`
-- Passo 1: IA converte interesse em 3-5 termos de busca Google Places
-  - Ex: "fitness" -> "academias", "lojas de suplementos", "studios de pilates", "crossfit box"
-- Passo 2: Busca no Google Places API (dados reais)
-- Passo 3: IA classifica cada resultado por relevancia ao interesse (alta/media/baixa)
-- Passo 4: Gera insights de mercado focados no interesse
-- Autenticacao e rate limiting iguais ao `generate-leads-google`
+- Recebe: `query` (busca livre), `country`, `city` (opcional), `language`
+- Passo 1: Perplexity busca na web com o query do usuario
+  - Usa modelo `sonar-pro` para resultados com citacoes
+  - Filtra por regiao se informada
+- Passo 2: IA (Gemini) extrai leads estruturados dos resultados
+  - Nome do negocio/pessoa
+  - Site, telefone, email (se encontrados nos resultados)
+  - Fonte original (URL da citacao do Perplexity)
+  - Sinal de intencao baseado no contexto encontrado
+- Passo 3: Gera insights de mercado
+- Autenticacao JWT igual as outras functions
 
-### 2. Nova Edge Function Free: `supabase/functions/generate-leads-interest-demo/index.ts`
+### 2. Frontend: `src/lib/ai-api.ts`
 
-- Versao demo para usuarios Free (gera leads ficticios via IA)
-- Mesmo formato de resposta, mas sem Google Places
+- Nova funcao `generateLeadsFromWeb()` que chama `generate-leads-web`
 
-### 3. Frontend: `src/lib/ai-api.ts`
+### 3. Frontend: `src/pages/Prospecting.tsx`
 
-- Nova funcao `generateLeadsByInterest()` que chama a edge function correta (demo para free, real para premium)
+- Novo tipo de lead: adicionar `'web'` ao tipo existente
+- Novo botao no seletor: **"Busca Web"** com icone `Globe`
+- Formulario:
+  - Campo de busca livre: "Descreva o que procura" (ex: "restaurantes veganos com delivery em Porto Alegre")
+  - Pais (opcional)
+  - Cidade (opcional)
+  - Badge **Premium** no botao (somente Premium)
+- Resultados mostram badge **"Web"** laranja
+- Cada lead mostra a fonte/URL de onde foi encontrado
 
-### 4. Frontend: `src/pages/Prospecting.tsx`
+### 4. Estado persistido
 
-- Novo tipo de lead: `'b2b' | 'b2c' | 'interest' | 'both'`
-- Novo botao no seletor: **"Por Interesses"** com icone `Target`
-- Formulario diferente quando selecionado:
-  - Campo principal: "Descreva o interesse do seu publico-alvo" (ex: "pessoas que praticam yoga")
-  - Pais (obrigatorio)
-  - Cidade (opcional - interesses podem ser mais amplos)
-  - Sem CEP (nao faz sentido para interesses)
-- Resultados mostram badge **"Interesse"** roxo para diferenciar
-- Coluna de relevancia ao interesse (alta/media/baixa)
-
-### 5. Atualizacao do estado persistido
-
-- Adicionar `'interest'` ao tipo `leadType` no `ProspectingState`
-- Persistir resultados de busca por interesse separadamente
+- Adicionar campos `webQuery`, `webResults`, `webInsights`, `selectedWebLeads` ao `ProspectingState`
 
 ## Detalhes Tecnicos
 
-### Edge Function `generate-leads-interest` (Premium)
+### Edge Function `generate-leads-web`
 
 ```text
 Entrada:
-  interest: "pessoas interessadas em fitness"
-  country: "Brasil"
-  city: "Sao Paulo" (opcional)
+  query: "academias de crossfit com Instagram ativo em BH"
+  country: "Brasil" (opcional)
+  city: "Belo Horizonte" (opcional)
   language: "pt-BR"
 
-Passo 1 - IA traduz interesse em termos de busca:
-  Prompt: "O publico-alvo tem interesse em 'fitness'.
-   Que tipos de negocios atendem esse publico?
-   Retorne termos de busca para Google Maps."
-  Resultado: ["academias Sao Paulo", "lojas suplementos Sao Paulo", ...]
+Passo 1 - Perplexity Search:
+  Modelo: sonar-pro (multi-step com citacoes)
+  Query formatada com contexto de prospeccao
+  Retorna: texto com citacoes [1], [2], etc. + array de URLs
 
-Passo 2 - Google Places API:
-  Busca cada termo, coleta ate 15 negocios reais
+Passo 2 - Gemini extrai leads:
+  Prompt: "Extraia negocios/leads dos resultados abaixo.
+   Para cada um retorne: nome, site, telefone, email, descricao, fonte."
+  Resultado: array de leads estruturados
 
-Passo 3 - IA classifica relevancia:
-  Para cada negocio, avalia se atende diretamente o interesse
-  Adiciona intentSignal especifico ao interesse
-
-Passo 4 - Insights:
-  Gera insights focados no interesse (dores, tendencias)
+Passo 3 - Insights de mercado
 
 Saida: { leads: [...], insights: {...} }
 ```
 
-### Diferenciacao visual na UI
+### Diferenciacao visual atualizada
 
 | Tipo | Badge | Icone | Cor |
 |------|-------|-------|-----|
 | B2B (Maps) | Maps | Building2 | Azul |
 | Por Interesses | Interesse | Target | Roxo |
+| Busca Web | Web | Globe | Laranja |
 | B2C (Opt-in) | Opt-in | UserCircle | Verde |
+
+### Vantagens sobre Google Maps
+
+- Encontra negocios que NAO estao no Google Maps
+- Pega informacoes de redes sociais (Instagram, LinkedIn, Facebook)
+- Encontra negocios menores, freelancers, profissionais autonomos
+- Busca por contexto especifico (ex: "que fazem delivery", "com avaliacao positiva")
+- Fontes verificaveis com links
 
 ## Arquivos a criar/modificar
 
 | Arquivo | Acao |
 |---------|------|
-| `supabase/functions/generate-leads-interest/index.ts` | CRIAR - busca real por interesses (Premium) |
-| `supabase/functions/generate-leads-interest-demo/index.ts` | CRIAR - busca demo por interesses (Free) |
-| `src/lib/ai-api.ts` | MODIFICAR - adicionar `generateLeadsByInterest()` |
-| `src/pages/Prospecting.tsx` | MODIFICAR - nova aba "Por Interesses" com formulario e resultados |
+| `supabase/functions/generate-leads-web/index.ts` | CRIAR - busca real na web via Perplexity + Gemini |
+| `src/lib/ai-api.ts` | MODIFICAR - adicionar `generateLeadsFromWeb()` |
+| `src/pages/Prospecting.tsx` | MODIFICAR - nova aba "Busca Web" com formulario e resultados |
 
-## Resultado esperado
+## Passo inicial obrigatorio
 
-O usuario tera 3 modos de busca:
-1. **B2B (Maps)** - busca por nicho + localizacao (ja existe)
-2. **Por Interesses** - busca por comportamento/interesse do publico-alvo (NOVO)
-3. **B2C (Opt-in)** - CSV, Meta Lead Ads (ja existe)
-
-Todos com dados reais para Premium, demonstracao para Free.
+Antes de implementar, sera necessario **conectar o Perplexity** ao projeto para disponibilizar a API key nas edge functions.
 
