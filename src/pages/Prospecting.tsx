@@ -51,7 +51,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { generateLeadsWithAI, generateLeadsByInterest } from '@/lib/ai-api';
+import { generateLeadsWithAI, generateLeadsByInterest, generateLeadsFromWeb } from '@/lib/ai-api';
 import { useToast } from '@/hooks/use-toast';
 import { useFolders } from '@/hooks/useFolders';
 import { useLeads } from '@/hooks/useLeads';
@@ -68,7 +68,7 @@ interface ProspectingState {
   searchResults: Lead[];
   insights: NicheInsights | null;
   selectedLeads: string[];
-  leadType: 'b2b' | 'b2c' | 'interest' | 'both';
+  leadType: 'b2b' | 'b2c' | 'interest' | 'web' | 'both';
   excludePublicSector: boolean;
   contactOnly: boolean;
   hideCompetitors: boolean;
@@ -78,6 +78,12 @@ interface ProspectingState {
   interestResults: Lead[];
   interestInsights: NicheInsights | null;
   selectedInterestLeads: string[];
+  webQuery: string;
+  webCountry: string;
+  webCity: string;
+  webResults: Lead[];
+  webInsights: NicheInsights | null;
+  selectedWebLeads: string[];
 }
 
 const countries = [
@@ -142,7 +148,7 @@ export const Prospecting: React.FC = () => {
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
 
   // New filters
-  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'interest' | 'both'>(persistedState?.leadType || 'b2b');
+  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'interest' | 'web' | 'both'>(persistedState?.leadType || 'b2b');
   const [excludePublicSector, setExcludePublicSector] = useState(persistedState?.excludePublicSector ?? true);
   const [contactOnly, setContactOnly] = useState(persistedState?.contactOnly ?? true);
   const [hideCompetitors, setHideCompetitors] = useState(persistedState?.hideCompetitors ?? true);
@@ -161,6 +167,15 @@ export const Prospecting: React.FC = () => {
   const [selectedInterestLeads, setSelectedInterestLeads] = useState<Set<string>>(new Set(persistedState?.selectedInterestLeads || []));
   const [isSearchingInterest, setIsSearchingInterest] = useState(false);
 
+  // Web search
+  const [webQuery, setWebQuery] = useState(persistedState?.webQuery || '');
+  const [webCountry, setWebCountry] = useState(persistedState?.webCountry || 'BR');
+  const [webCity, setWebCity] = useState(persistedState?.webCity || '');
+  const [webResults, setWebResults] = useState<Lead[]>(persistedState?.webResults || []);
+  const [webInsights, setWebInsights] = useState<NicheInsights | null>(persistedState?.webInsights || null);
+  const [selectedWebLeads, setSelectedWebLeads] = useState<Set<string>>(new Set(persistedState?.selectedWebLeads || []));
+  const [isSearchingWeb, setIsSearchingWeb] = useState(false);
+
   // Persist state
   useEffect(() => {
     const stateToSave: ProspectingState = {
@@ -168,9 +183,11 @@ export const Prospecting: React.FC = () => {
       selectedLeads: Array.from(selectedLeads), leadType, excludePublicSector, contactOnly, hideCompetitors,
       interestQuery, interestCountry, interestCity, interestResults, interestInsights,
       selectedInterestLeads: Array.from(selectedInterestLeads),
+      webQuery, webCountry, webCity, webResults, webInsights,
+      selectedWebLeads: Array.from(selectedWebLeads),
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads]);
+  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads, webQuery, webCountry, webCity, webResults, webInsights, selectedWebLeads]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
@@ -187,6 +204,11 @@ export const Prospecting: React.FC = () => {
     setInterestResults([]);
     setInterestInsights(null);
     setSelectedInterestLeads(new Set());
+    setWebQuery('');
+    setWebCity('');
+    setWebResults([]);
+    setWebInsights(null);
+    setSelectedWebLeads(new Set());
     sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
@@ -224,6 +246,12 @@ export const Prospecting: React.FC = () => {
     relevanceHigh: 'Alta',
     relevanceMedium: 'Média',
     relevanceLow: 'Baixa',
+    web: 'Busca Web',
+    webTitle: 'Busca Web (Internet)',
+    webDesc: 'Encontre leads reais na internet, redes sociais e diretórios usando IA.',
+    webPlaceholder: 'Ex: clínicas de estética com Instagram ativo em São Paulo...',
+    webSearchButton: 'Buscar na Web',
+    webPremium: 'Premium',
   } : {
     discoverTitle: 'Discover Potential Clients',
     discoverDesc: 'Search for businesses or consumers interested in your niche.',
@@ -258,6 +286,12 @@ export const Prospecting: React.FC = () => {
     relevanceHigh: 'High',
     relevanceMedium: 'Medium',
     relevanceLow: 'Low',
+    web: 'Web Search',
+    webTitle: 'Web Search (Internet)',
+    webDesc: 'Find real leads across the internet, social media and directories using AI.',
+    webPlaceholder: 'Ex: crossfit gyms with active Instagram in Austin...',
+    webSearchButton: 'Search the Web',
+    webPremium: 'Premium',
   };
 
   const selectedCountry = countries.find(c => c.code === country);
@@ -369,6 +403,57 @@ export const Prospecting: React.FC = () => {
       });
     } finally {
       setIsSearchingInterest(false);
+    }
+  };
+
+  const handleWebSearch = async () => {
+    if (!webQuery.trim()) return;
+    if (!canSearch) return;
+    if (user?.plan !== 'paid') {
+      toastHook({
+        title: language === 'pt-BR' ? 'Recurso Premium' : 'Premium Feature',
+        description: language === 'pt-BR' ? 'A Busca Web está disponível apenas para usuários Premium.' : 'Web Search is only available for Premium users.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSearchingWeb(true);
+    setWebResults([]);
+    setWebInsights(null);
+    setSelectedWebLeads(new Set());
+
+    try {
+      const selectedCountryData = countries.find(c => c.code === webCountry);
+      const result = await generateLeadsFromWeb({
+        query: webQuery,
+        country: selectedCountryData?.name,
+        city: webCity || undefined,
+        language: language,
+      });
+
+      setWebResults(result.leads);
+      setWebInsights(result.insights);
+
+      if (user) {
+        setUser({ ...user, searchesUsed: user.searchesUsed + 1 });
+      }
+
+      toastHook({
+        title: language === 'pt-BR' ? 'Leads encontrados na web!' : 'Web leads found!',
+        description: language === 'pt-BR'
+          ? `${result.leads.length} leads encontrados para "${webQuery}"`
+          : `${result.leads.length} leads found for "${webQuery}"`,
+      });
+    } catch (error) {
+      console.error('Error in web search:', error);
+      toastHook({
+        title: language === 'pt-BR' ? 'Erro na Busca Web' : 'Web Search Error',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSearchingWeb(false);
     }
   };
 
@@ -605,7 +690,7 @@ export const Prospecting: React.FC = () => {
           <div className="mb-4">
             <label className="text-sm font-medium mb-1.5 block">{tt2.leadTypeLabel}</label>
             <div className="flex flex-wrap gap-2">
-              {(['b2b', 'interest', 'b2c', 'both'] as const).map(type => (
+              {(['b2b', 'interest', 'web', 'b2c', 'both'] as const).map(type => (
                 <Button
                   key={type}
                   variant={leadType === type ? 'default' : 'outline'}
@@ -615,9 +700,11 @@ export const Prospecting: React.FC = () => {
                 >
                   {type === 'b2b' && <Building2 className="w-4 h-4" />}
                   {type === 'interest' && <Target className="w-4 h-4" />}
+                  {type === 'web' && <Globe className="w-4 h-4" />}
                   {type === 'b2c' && <UserCircle className="w-4 h-4" />}
-                  {type === 'both' && <Globe className="w-4 h-4" />}
-                  {type === 'b2b' ? tt2.b2b : type === 'interest' ? tt2.interest : type === 'b2c' ? tt2.b2c : tt2.both}
+                  {type === 'both' && <Sparkles className="w-4 h-4" />}
+                  {type === 'b2b' ? tt2.b2b : type === 'interest' ? tt2.interest : type === 'web' ? tt2.web : type === 'b2c' ? tt2.b2c : tt2.both}
+                  {type === 'web' && <Badge variant="warning" className="text-xs ml-1">{tt2.webPremium}</Badge>}
                 </Button>
               ))}
             </div>
@@ -715,6 +802,49 @@ export const Prospecting: React.FC = () => {
                   </div>
                   <Button variant="gradient" size="lg" onClick={handleInterestSearch} disabled={isSearchingInterest || !interestQuery.trim() || !canSearch} className="h-12 px-6 whitespace-nowrap">
                     {isSearchingInterest ? <><Loader2 className="w-5 h-5 animate-spin" />{t.prospecting.searching}</> : tt2.interestSearchButton}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Web Search Form */}
+          {leadType === 'web' && (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <Globe className="w-5 h-5 text-warning" />
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2">
+                    {tt2.webTitle}
+                    <Badge variant="warning" className="text-xs">{tt2.webPremium}</Badge>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{tt2.webDesc}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative md:col-span-2">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder={tt2.webPlaceholder} value={webQuery} onChange={e => setWebQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleWebSearch()} className="pl-10 h-12 text-base" disabled={!canSearch} />
+                </div>
+                <div className="relative">
+                  <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Select value={webCountry} onValueChange={setWebCountry}>
+                    <SelectTrigger className="pl-10 h-12">
+                      <SelectValue>{countries.find(c => c.code === webCountry) && <span className="flex items-center gap-2"><span>{countries.find(c => c.code === webCountry)!.flag}</span>{countries.find(c => c.code === webCountry)!.name}</span>}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map(c => <SelectItem key={c.code} value={c.code}><span className="flex items-center gap-2"><span>{c.flag}</span>{c.name}</span></SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder={`${tt2.cityPlaceholder} (${language === 'pt-BR' ? 'opcional' : 'optional'})`} value={webCity} onChange={e => setWebCity(e.target.value)} className="pl-10 h-12" />
+                  </div>
+                  <Button variant="gradient" size="lg" onClick={handleWebSearch} disabled={isSearchingWeb || !webQuery.trim() || !canSearch} className="h-12 px-6 whitespace-nowrap">
+                    {isSearchingWeb ? <><Loader2 className="w-5 h-5 animate-spin" />{t.prospecting.searching}</> : tt2.webSearchButton}
                   </Button>
                 </div>
               </div>
@@ -829,6 +959,21 @@ export const Prospecting: React.FC = () => {
             </div>
           </div>
         )
+      ) : leadType === 'web' ? (
+        // Web mode
+        (webResults.length > 0 || webInsights) && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {webInsights && renderInsightsPanel(webInsights)}
+            <div className={webInsights ? 'lg:col-span-2' : 'lg:col-span-3'}>
+              {renderLeadsList(
+                webResults, selectedWebLeads,
+                (id) => { const s = new Set(selectedWebLeads); s.has(id) ? s.delete(id) : s.add(id); setSelectedWebLeads(s); },
+                () => { setSelectedWebLeads(selectedWebLeads.size === webResults.length ? new Set() : new Set(webResults.map(l => l.id))); },
+                () => handleSaveLeads(webResults, selectedWebLeads)
+              )}
+            </div>
+          </div>
+        )
       ) : (
         // B2C mode
         b2cLeads.length > 0 && renderLeadsList(
@@ -840,7 +985,7 @@ export const Prospecting: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!isSearching && !isSearchingInterest && searchResults.length === 0 && interestResults.length === 0 && b2cLeads.length === 0 && canSearch && (
+      {!isSearching && !isSearchingInterest && !isSearchingWeb && searchResults.length === 0 && interestResults.length === 0 && webResults.length === 0 && b2cLeads.length === 0 && canSearch && (
         <Card className="py-16">
           <CardContent className="text-center">
             <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
