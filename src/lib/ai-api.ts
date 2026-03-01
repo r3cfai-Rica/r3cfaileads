@@ -149,6 +149,36 @@ export async function generateLeadsByInterest(params: GenerateLeadsByInterestPar
   };
 }
 
+interface GenerateLeadsFromWebParams {
+  query: string;
+  country?: string;
+  city?: string;
+  language: 'pt-BR' | 'en-US';
+}
+
+export async function generateLeadsFromWeb(params: GenerateLeadsFromWebParams): Promise<GenerateLeadsResponse> {
+  const { data, error } = await supabase.functions.invoke('generate-leads-web', {
+    body: params
+  });
+
+  if (error) {
+    console.error('Error calling generate-leads-web:', error);
+    throw new Error(error.message || 'Failed to generate leads from web');
+  }
+
+  if (data.error) {
+    throw new Error(data.error);
+  }
+
+  return {
+    leads: data.leads.map((lead: any) => ({
+      ...lead,
+      createdAt: new Date(lead.createdAt),
+    })),
+    insights: data.insights,
+  };
+}
+
 export async function generateEmailWithAI(params: GenerateEmailParams): Promise<GeneratedEmail> {
   const { data, error } = await supabase.functions.invoke('generate-email', {
     body: params
