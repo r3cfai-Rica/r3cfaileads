@@ -237,12 +237,12 @@ export const Prospecting: React.FC = () => {
     comingSoon: 'Em breve',
     b2bTab: 'B2B (Maps)',
     b2cTab: 'B2C (Opt-in)',
-    interestTab: 'Interesses',
+    interestTab: 'Tendências',
     publicSector: 'Setor Público',
-    interestPlaceholder: 'Ex: pessoas interessadas em fitness, yoga, alimentação saudável...',
-    interestSearchButton: 'Buscar por Interesse',
-    interestTitle: 'Busca por Interesses',
-    interestDesc: 'Encontre negócios que atendem um público com interesses específicos.',
+    interestPlaceholder: 'Ex: fitness, alimentação saudável, marketing digital, pets...',
+    interestSearchButton: 'Buscar Tendências',
+    interestTitle: 'Busca por Tendências de Interesse',
+    interestDesc: 'Descubra o que as pessoas estão buscando no Google e encontre negócios alinhados com a demanda real.',
     relevanceHigh: 'Alta',
     relevanceMedium: 'Média',
     relevanceLow: 'Baixa',
@@ -277,12 +277,12 @@ export const Prospecting: React.FC = () => {
     comingSoon: 'Coming soon',
     b2bTab: 'B2B (Maps)',
     b2cTab: 'B2C (Opt-in)',
-    interestTab: 'Interests',
+    interestTab: 'Trends',
     publicSector: 'Public Sector',
-    interestPlaceholder: 'Ex: people interested in fitness, yoga, healthy eating...',
-    interestSearchButton: 'Search by Interest',
-    interestTitle: 'Interest-Based Search',
-    interestDesc: 'Find businesses that serve an audience with specific interests.',
+    interestPlaceholder: 'Ex: fitness, healthy eating, digital marketing, pets...',
+    interestSearchButton: 'Search Trends',
+    interestTitle: 'Interest Trends Search',
+    interestDesc: 'Discover what people are searching for on Google and find businesses aligned with real demand.',
     relevanceHigh: 'High',
     relevanceMedium: 'Medium',
     relevanceLow: 'Low',
@@ -772,7 +772,7 @@ export const Prospecting: React.FC = () => {
           {leadType === 'interest' && (
             <>
               <div className="flex items-center gap-3 mb-4">
-                <Target className="w-5 h-5 text-primary" />
+                <TrendingUp className="w-5 h-5 text-primary" />
                 <div>
                   <h3 className="font-semibold">{tt2.interestTitle}</h3>
                   <p className="text-sm text-muted-foreground">{tt2.interestDesc}</p>
@@ -780,7 +780,7 @@ export const Prospecting: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative md:col-span-2">
-                  <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input placeholder={tt2.interestPlaceholder} value={interestQuery} onChange={e => setInterestQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleInterestSearch()} className="pl-10 h-12 text-base" disabled={!canSearch} />
                 </div>
@@ -866,10 +866,9 @@ export const Prospecting: React.FC = () => {
                   <Upload className="w-4 h-4" />
                   {tt2.importCSV}
                 </Button>
-                <Button variant="outline" size="lg" disabled className="gap-2 opacity-50">
+                <Button variant="outline" size="lg" onClick={() => navigate('/settings')} className="gap-2">
                   <Sparkles className="w-4 h-4" />
                   {tt2.metaAds}
-                  <Badge variant="secondary" className="text-xs ml-1">{tt2.comingSoon}</Badge>
                 </Button>
                 <Button variant="outline" size="lg" disabled className="gap-2 opacity-50">
                   <Sparkles className="w-4 h-4" />
