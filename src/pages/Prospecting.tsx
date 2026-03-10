@@ -780,7 +780,7 @@ export const Prospecting: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative md:col-span-2">
-                  <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input placeholder={tt2.interestPlaceholder} value={interestQuery} onChange={e => setInterestQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleInterestSearch()} className="pl-10 h-12 text-base" disabled={!canSearch} />
                 </div>

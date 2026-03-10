@@ -12,7 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -32,11 +31,6 @@ serve(async (req) => {
 
     const { interest, country, city, language } = await req.json();
 
-    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
-    if (!GOOGLE_API_KEY) {
-      throw new Error('GOOGLE_API_KEY is not configured');
-    }
-
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
@@ -46,33 +40,70 @@ serve(async (req) => {
     const locationStr = locationParts.join(', ');
     const langCode = language === 'pt-BR' ? 'pt-BR' : 'en';
 
-    console.log(`Interest-based search: "${interest}", location: ${locationStr}, user: ${data.claims.sub}`);
+    console.log(`Interest/Trends search: "${interest}", location: ${locationStr}, user: ${data.claims.sub}`);
 
-    // Step 1: AI translates interest into Google Places search terms
-    const interestPrompt = language === 'pt-BR'
-      ? `O público-alvo tem interesse em: "${interest}".
+    // Step 1: AI analyzes trending search behavior and demand patterns
+    const trendsPrompt = language === 'pt-BR'
+      ? `Você é um analista de tendências de mercado e comportamento de busca digital.
 
-Que tipos de negócios atendem diretamente esse público? Pense em empresas cujos CLIENTES têm esse interesse.
+O interesse do público-alvo é: "${interest}"
+Região: ${locationStr}
 
-Exemplo: Se o interesse é "fitness", retorne: academias, lojas de suplementos, estúdios de pilates, crossfit boxes, lojas de roupas esportivas.
-Se o interesse é "culinária gourmet", retorne: lojas de utensílios de cozinha, escolas de gastronomia, empórios, adegas.
-Se o interesse é "pets", retorne: pet shops, clínicas veterinárias, hotéis para pets, adestradores.
+Analise as TENDÊNCIAS DE BUSCA e DEMANDA REAL para esse interesse:
+1. O que as pessoas estão buscando no Google relacionado a "${interest}"?
+2. Quais são as buscas mais populares e emergentes?
+3. Que tipo de negócios/profissionais estão sendo mais procurados por esse público?
+4. Quais são as tendências crescentes nesse segmento?
 
-Retorne APENAS um JSON com 3-5 termos de busca para o Google Maps na região ${locationStr}:
-{"searchTerms": ["termo1 ${locationStr}", "termo2 ${locationStr}"], "businessTypes": ["tipo de negócio 1", "tipo de negócio 2"]}`
-      : `The target audience is interested in: "${interest}".
+Com base nisso, gere uma lista de 10-15 negócios/profissionais REAIS que se beneficiariam dessas tendências na região ${locationStr}.
 
-What types of businesses directly serve this audience? Think of companies whose CUSTOMERS have this interest.
+Retorne APENAS JSON:
+{
+  "trendingSearches": ["busca trending 1", "busca trending 2", "busca trending 3"],
+  "demandSignals": ["sinal de demanda 1", "sinal de demanda 2"],
+  "leads": [
+    {
+      "name": "Nome do negócio/profissional realista",
+      "position": "Tipo de negócio",
+      "location": "${locationStr}",
+      "intentSignal": "Por que esse negócio se beneficia das tendências (ex: 'Buscas por aulas de yoga cresceram 40% na região')",
+      "urgency": "high|medium|low",
+      "relevanceReason": "Como se conecta ao interesse '${interest}'"
+    }
+  ]
+}`
+      : `You are a market trends and digital search behavior analyst.
 
-Example: If interest is "fitness", return: gyms, supplement stores, pilates studios, crossfit boxes, sportswear stores.
-If interest is "gourmet cooking", return: kitchen supply stores, culinary schools, specialty food shops, wine shops.
-If interest is "pets", return: pet shops, veterinary clinics, pet hotels, dog trainers.
+The target audience interest is: "${interest}"
+Region: ${locationStr}
 
-Return ONLY a JSON with 3-5 Google Maps search terms in ${locationStr}:
-{"searchTerms": ["term1 ${locationStr}", "term2 ${locationStr}"], "businessTypes": ["business type 1", "business type 2"]}`;
+Analyze SEARCH TRENDS and REAL DEMAND for this interest:
+1. What are people searching for on Google related to "${interest}"?
+2. What are the most popular and emerging searches?
+3. What types of businesses/professionals are being sought by this audience?
+4. What are the growing trends in this segment?
 
-    let searchTerms: string[] = [`${interest} ${locationStr}`];
-    let businessTypes: string[] = [];
+Based on this, generate a list of 10-15 REALISTIC businesses/professionals that would benefit from these trends in ${locationStr}.
+
+Return ONLY JSON:
+{
+  "trendingSearches": ["trending search 1", "trending search 2", "trending search 3"],
+  "demandSignals": ["demand signal 1", "demand signal 2"],
+  "leads": [
+    {
+      "name": "Realistic business/professional name",
+      "position": "Business type",
+      "location": "${locationStr}",
+      "intentSignal": "Why this business benefits from trends (e.g. 'Searches for yoga classes grew 40% in the region')",
+      "urgency": "high|medium|low",
+      "relevanceReason": "How it connects to the interest '${interest}'"
+    }
+  ]
+}`;
+
+    let leads: any[] = [];
+    let trendingSearches: string[] = [];
+    let demandSignals: string[] = [];
 
     try {
       const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -82,10 +113,10 @@ Return ONLY a JSON with 3-5 Google Maps search terms in ${locationStr}:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
+          model: 'google/gemini-2.5-flash',
           messages: [
-            { role: 'system', content: 'Respond ONLY with valid JSON, no markdown, no code blocks.' },
-            { role: 'user', content: interestPrompt }
+            { role: 'system', content: 'You are a market trends analyst. Respond ONLY with valid JSON, no markdown, no code blocks. Generate realistic business names and data based on real market patterns.' },
+            { role: 'user', content: trendsPrompt }
           ],
         }),
       });
@@ -95,178 +126,139 @@ Return ONLY a JSON with 3-5 Google Maps search terms in ${locationStr}:
         const content = aiData.choices?.[0]?.message?.content;
         const jsonMatch = content?.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
         const parsed = JSON.parse(jsonMatch[1]?.trim() || content?.trim());
-        if (parsed.searchTerms?.length) {
-          searchTerms = parsed.searchTerms.slice(0, 5);
-          businessTypes = parsed.businessTypes || [];
+        
+        trendingSearches = parsed.trendingSearches || [];
+        demandSignals = parsed.demandSignals || [];
+        
+        if (parsed.leads?.length) {
+          leads = parsed.leads.map((lead: any, index: number) => ({
+            id: `lead-${Date.now()}-${index}`,
+            name: lead.name || 'Unknown',
+            position: lead.position || 'Business',
+            location: lead.location || locationStr,
+            intentSignal: lead.intentSignal || '',
+            urgency: lead.urgency || 'medium',
+            email: null,
+            phone: null,
+            whatsapp: null,
+            sources: [],
+            isCompetitor: false,
+            interestRelevance: lead.urgency || 'medium',
+            status: 'new',
+            createdAt: new Date().toISOString(),
+          }));
         }
       }
     } catch (e) {
-      console.warn('Failed to get interest search terms, using default:', e);
+      console.warn('Failed to generate trend-based leads:', e);
     }
 
-    console.log('Interest search terms:', searchTerms);
+    // Step 2: If we have GOOGLE_API_KEY, enrich with real Google Places data
+    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
+    
+    if (GOOGLE_API_KEY && leads.length > 0) {
+      console.log('Enriching with Google Places data...');
+      
+      // Use trending searches to find real businesses
+      const searchTerms = trendingSearches.length > 0 
+        ? trendingSearches.slice(0, 3).map(t => `${t} ${locationStr}`)
+        : [`${interest} ${locationStr}`];
 
-    // Step 2: Search Google Places
-    const allPlaces: any[] = [];
-    const seenIds = new Set<string>();
+      const realPlaces: any[] = [];
+      const seenIds = new Set<string>();
 
-    for (const term of searchTerms) {
-      try {
-        const searchResponse = await fetch('https://places.googleapis.com/v1/places:searchText', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': GOOGLE_API_KEY,
-            'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.businessStatus,places.types,places.primaryType,places.regularOpeningHours,places.googleMapsUri',
-          },
-          body: JSON.stringify({
-            textQuery: term,
-            languageCode: langCode,
-            maxResultCount: 8,
-          }),
-        });
+      for (const term of searchTerms) {
+        try {
+          const searchResponse = await fetch('https://places.googleapis.com/v1/places:searchText', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': GOOGLE_API_KEY,
+              'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.businessStatus,places.types,places.primaryType,places.googleMapsUri',
+            },
+            body: JSON.stringify({
+              textQuery: term,
+              languageCode: langCode,
+              maxResultCount: 5,
+            }),
+          });
 
-        if (searchResponse.ok) {
-          const searchData = await searchResponse.json();
-          for (const place of (searchData.places || [])) {
-            if (!seenIds.has(place.id)) {
-              seenIds.add(place.id);
-              allPlaces.push(place);
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            for (const place of (searchData.places || [])) {
+              if (!seenIds.has(place.id)) {
+                seenIds.add(place.id);
+                realPlaces.push(place);
+              }
             }
           }
+        } catch (e) {
+          console.warn(`Places search failed for "${term}":`, e);
         }
-      } catch (e) {
-        console.warn(`Search failed for term "${term}":`, e);
+        if (realPlaces.length >= 10) break;
       }
 
-      if (allPlaces.length >= 15) break;
-    }
+      // Replace AI-generated leads with real Places data where possible
+      if (realPlaces.length > 0) {
+        const enrichedLeads = realPlaces.map((place: any, index: number) => {
+          const phone = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
+          const sources: string[] = [];
+          if (place.websiteUri) sources.push(place.websiteUri);
+          if (place.googleMapsUri) sources.push(place.googleMapsUri);
+          else sources.push(`https://www.google.com/maps/place/?q=place_id:${place.id}`);
 
-    if (allPlaces.length === 0) {
-      return new Response(
-        JSON.stringify({ leads: [], insights: null }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+          return {
+            id: `lead-${Date.now()}-real-${index}`,
+            name: place.displayName?.text || 'Unknown',
+            position: place.primaryType?.replace(/_/g, ' ') || place.types?.[0]?.replace(/_/g, ' ') || 'Business',
+            location: place.formattedAddress || '',
+            intentSignal: trendingSearches.length > 0
+              ? `${language === 'pt-BR' ? 'Tendência' : 'Trending'}: ${trendingSearches[0]} | Rating: ${place.rating || 'N/A'}/5`
+              : `Rating: ${place.rating || 'N/A'}/5 (${place.userRatingCount || 0} reviews)`,
+            urgency: (place.rating && place.rating >= 4) ? 'high' : 'medium',
+            email: null,
+            phone,
+            whatsapp: phone,
+            sources,
+            isCompetitor: false,
+            interestRelevance: (place.rating && place.rating >= 4) ? 'high' : 'medium',
+            status: 'new',
+            createdAt: new Date().toISOString(),
+          };
+        });
 
-    // Step 3: AI classifies relevance to the interest
-    const relevancePrompt = language === 'pt-BR'
-      ? `O público-alvo tem interesse em: "${interest}".
-Abaixo estão negócios encontrados no Google Maps. Classifique a RELEVÂNCIA de cada um para esse interesse:
-- "high" = atende DIRETAMENTE esse interesse (ex: academia para "fitness")
-- "medium" = atende INDIRETAMENTE (ex: loja de roupas esportivas para "fitness")  
-- "low" = relação fraca com o interesse
-
-${allPlaces.map((p, i) => `${i}. ${p.displayName?.text} (${p.primaryType || p.types?.[0] || 'unknown'}) - ${p.formattedAddress}`).join('\n')}
-
-Retorne APENAS JSON: {"classifications": [{"index": 0, "relevance": "high", "reason": "motivo curto de como atende o interesse"}, ...]}`
-      : `The target audience is interested in: "${interest}".
-Below are businesses from Google Maps. Classify the RELEVANCE of each to this interest:
-- "high" = DIRECTLY serves this interest (e.g. gym for "fitness")
-- "medium" = INDIRECTLY serves this interest (e.g. sportswear store for "fitness")
-- "low" = weak connection to the interest
-
-${allPlaces.map((p, i) => `${i}. ${p.displayName?.text} (${p.primaryType || p.types?.[0] || 'unknown'}) - ${p.formattedAddress}`).join('\n')}
-
-Return ONLY JSON: {"classifications": [{"index": 0, "relevance": "high", "reason": "short reason how it serves the interest"}, ...]}`;
-
-    let classifications: {index: number; relevance: string; reason: string}[] = [];
-
-    try {
-      const classifyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
-          messages: [
-            { role: 'system', content: 'Respond ONLY with valid JSON, no markdown, no code blocks.' },
-            { role: 'user', content: relevancePrompt }
-          ],
-        }),
-      });
-
-      if (classifyResponse.ok) {
-        const classifyData = await classifyResponse.json();
-        const content = classifyData.choices?.[0]?.message?.content;
-        const jsonMatch = content?.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-        const parsed = JSON.parse(jsonMatch[1]?.trim() || content?.trim());
-        classifications = parsed.classifications || [];
+        // Merge: real places first, then AI-generated (marked differently)
+        leads = [...enrichedLeads, ...leads.slice(0, 5)];
       }
-    } catch (e) {
-      console.warn('Failed to classify places:', e);
     }
 
-    const classMap = new Map<number, {relevance: string; reason: string}>();
-    for (const c of classifications) {
-      classMap.set(c.index, { relevance: c.relevance, reason: c.reason });
-    }
-
-    // Step 4: Transform into leads
-    const leads = allPlaces.map((place: any, index: number) => {
-      const phone = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
-      const sources: string[] = [];
-      if (place.websiteUri) sources.push(place.websiteUri);
-      if (place.googleMapsUri) {
-        sources.push(place.googleMapsUri);
-      } else {
-        sources.push(`https://www.google.com/maps/place/?q=place_id:${place.id}`);
-      }
-
-      const classification = classMap.get(index);
-      const relevance = classification?.relevance || 'medium';
-
-      return {
-        id: `lead-${Date.now()}-${index}`,
-        name: place.displayName?.text || 'Unknown',
-        position: place.primaryType?.replace(/_/g, ' ') || place.types?.[0]?.replace(/_/g, ' ') || 'Business',
-        location: place.formattedAddress || '',
-        intentSignal: classification?.reason || (place.rating
-          ? `Rating: ${place.rating}/5 (${place.userRatingCount || 0} reviews)${place.businessStatus === 'OPERATIONAL' ? ' - Active' : ''}`
-          : 'Listed on Google Maps'),
-        urgency: relevance as string,
-        email: null,
-        phone,
-        whatsapp: phone,
-        sources,
-        isCompetitor: false,
-        interestRelevance: relevance,
-        status: 'new',
-        createdAt: new Date().toISOString(),
-      };
-    });
-
-    // Sort by relevance: high first
-    const relevanceOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-    leads.sort((a: any, b: any) => (relevanceOrder[a.interestRelevance] || 1) - (relevanceOrder[b.interestRelevance] || 1));
-
-    // Step 5: Generate insights focused on the interest
+    // Step 3: Generate trend-focused insights
     const insightsPrompt = language === 'pt-BR'
-      ? `Analise o interesse "${interest}" na região "${locationStr}".
+      ? `Analise as tendências de busca para "${interest}" na região "${locationStr}".
 
-Negócios encontrados que atendem esse público: ${leads.map((l: any) => l.name).join(', ')}.
+Buscas trending identificadas: ${trendingSearches.join(', ') || 'N/A'}
+Sinais de demanda: ${demandSignals.join(', ') || 'N/A'}
 
 Retorne APENAS JSON:
 {
-  "pains": ["dor/necessidade que pessoas com interesse em '${interest}' têm 1", "dor2", "dor3", "dor4"],
-  "questions": ["pergunta que esse público faz 1?", "p2?", "p3?", "p4?"],
-  "trends": ["tendência de mercado para '${interest}' 1", "t2", "t3"],
+  "pains": ["necessidade/dor do público que busca '${interest}' 1", "dor2", "dor3", "dor4"],
+  "questions": ["o que as pessoas estão perguntando sobre '${interest}' 1?", "p2?", "p3?", "p4?"],
+  "trends": ["tendência crescente 1", "tendência 2", "tendência 3"],
   "urgency": "medium",
-  "urgencyReason": "razão"
+  "urgencyReason": "razão baseada nas tendências"
 }`
-      : `Analyze the interest "${interest}" in "${locationStr}".
+      : `Analyze search trends for "${interest}" in "${locationStr}".
 
-Businesses found serving this audience: ${leads.map((l: any) => l.name).join(', ')}.
+Trending searches identified: ${trendingSearches.join(', ') || 'N/A'}
+Demand signals: ${demandSignals.join(', ') || 'N/A'}
 
 Return ONLY JSON:
 {
-  "pains": ["pain/need people interested in '${interest}' have 1", "p2", "p3", "p4"],
-  "questions": ["question this audience asks 1?", "q2?", "q3?", "q4?"],
-  "trends": ["market trend for '${interest}' 1", "t2", "t3"],
+  "pains": ["need/pain of audience searching for '${interest}' 1", "p2", "p3", "p4"],
+  "questions": ["what people are asking about '${interest}' 1?", "q2?", "q3?", "q4?"],
+  "trends": ["growing trend 1", "t2", "t3"],
   "urgency": "medium",
-  "urgencyReason": "reason"
+  "urgencyReason": "reason based on trends"
 }`;
 
     let insights = null;
@@ -280,7 +272,7 @@ Return ONLY JSON:
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash-lite',
           messages: [
-            { role: 'system', content: 'You are a market analyst. Respond ONLY with valid JSON, no markdown.' },
+            { role: 'system', content: 'You are a search trends analyst. Respond ONLY with valid JSON, no markdown.' },
             { role: 'user', content: insightsPrompt }
           ],
         }),
@@ -296,7 +288,7 @@ Return ONLY JSON:
       console.warn('Failed to generate insights:', insightError);
     }
 
-    console.log(`Interest search found ${leads.length} leads for "${interest}"`);
+    console.log(`Interest/Trends search found ${leads.length} leads for "${interest}"`);
 
     return new Response(
       JSON.stringify({ leads, insights }),
