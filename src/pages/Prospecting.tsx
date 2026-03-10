@@ -866,10 +866,9 @@ export const Prospecting: React.FC = () => {
                   <Upload className="w-4 h-4" />
                   {tt2.importCSV}
                 </Button>
-                <Button variant="outline" size="lg" disabled className="gap-2 opacity-50">
+                <Button variant="outline" size="lg" onClick={() => navigate('/settings')} className="gap-2">
                   <Sparkles className="w-4 h-4" />
                   {tt2.metaAds}
-                  <Badge variant="secondary" className="text-xs ml-1">{tt2.comingSoon}</Badge>
                 </Button>
                 <Button variant="outline" size="lg" disabled className="gap-2 opacity-50">
                   <Sparkles className="w-4 h-4" />
