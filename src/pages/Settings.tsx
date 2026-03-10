@@ -18,6 +18,7 @@ import {
   Crown,
   Check,
   Zap,
+  MapPin,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MessagingCredentialsForm } from '@/components/settings/MessagingCredentialsForm';
@@ -183,6 +184,29 @@ export const Settings: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Google API Notice for Premium */}
+        {user?.plan === 'paid' && (
+          <Card className="lg:col-span-2 border-success/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-success">
+                <MapPin className="w-5 h-5" />
+                {pt ? 'Google Places API' : 'Google Places API'}
+              </CardTitle>
+              <CardDescription>
+                {pt 
+                  ? 'Sua conta Premium utiliza a Google Places API para buscar leads reais e verificados com dados completos de contato.'
+                  : 'Your Premium account uses Google Places API to fetch real, verified leads with complete contact data.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Check className="w-5 h-5 text-success" />
+                <span className="text-sm font-medium">{pt ? 'API configurada e ativa' : 'API configured and active'}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Meta Lead Ads */}
         <div className="lg:col-span-2">

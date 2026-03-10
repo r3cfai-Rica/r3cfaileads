@@ -710,6 +710,38 @@ export const Prospecting: React.FC = () => {
             </div>
           </div>
 
+          {/* Google API Key Notice for Premium */}
+          {user?.plan === 'paid' && (leadType === 'b2b' || leadType === 'interest' || leadType === 'both') && (
+            <div className="mb-4 p-3 rounded-lg border border-success/30 bg-success/5 flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-success mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-success">
+                  {language === 'pt-BR' ? '✅ Google Places API ativa' : '✅ Google Places API active'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {language === 'pt-BR' 
+                    ? 'Seus resultados utilizam dados reais e verificados do Google Maps — telefone, WhatsApp, endereço e site.'
+                    : 'Your results use real, verified data from Google Maps — phone, WhatsApp, address and website.'}
+                </p>
+              </div>
+            </div>
+          )}
+          {user?.plan === 'free' && (leadType === 'b2b' || leadType === 'interest' || leadType === 'both') && (
+            <div className="mb-4 p-3 rounded-lg border border-warning/30 bg-warning/5 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-warning mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-warning">
+                  {language === 'pt-BR' ? 'Leads de demonstração (IA)' : 'Demo leads (AI)'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {language === 'pt-BR' 
+                    ? 'No plano gratuito, os leads são gerados por IA para demonstração. Faça upgrade para acessar dados reais do Google Maps.'
+                    : 'On the free plan, leads are AI-generated for demo purposes. Upgrade to access real Google Maps data.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* B2B Search Form */}
           {(leadType === 'b2b' || leadType === 'both') && (
             <>
