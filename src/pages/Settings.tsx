@@ -18,6 +18,7 @@ import {
   Crown,
   Check,
   Zap,
+  MapPin,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MessagingCredentialsForm } from '@/components/settings/MessagingCredentialsForm';
