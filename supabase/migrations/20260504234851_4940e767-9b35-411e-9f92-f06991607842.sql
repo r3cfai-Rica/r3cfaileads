@@ -1,0 +1,1 @@
+UPDATE public.profiles SET plan = 'paid', plan_type = 'premium' WHERE user_id = '37b1a1b8-c0b1-4e47-9b43-7025c3628d8b';
