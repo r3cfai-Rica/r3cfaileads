@@ -68,21 +68,29 @@ Deno.serve(async (req) => {
     let errorMessage: string | null = null;
 
     try {
-      // Only B2B is automated via Google Maps for now
-      if (automation.lead_type === 'b2b' || automation.lead_type === 'both') {
+      const isB2B = automation.lead_type === 'b2b' || automation.lead_type === 'both';
+      const isTrends = automation.lead_type === 'trends';
+
+      if (isB2B || isTrends) {
         const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
         const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
-        if (!GOOGLE_API_KEY || !LOVABLE_API_KEY) {
-          throw new Error('API keys not configured (GOOGLE_API_KEY or LOVABLE_API_KEY)');
+        if (!GOOGLE_API_KEY) {
+          throw new Error('Google Places API não configurada. Este robô requer plano Premium com Google API Key ativa.');
+        }
+        if (!LOVABLE_API_KEY) {
+          throw new Error('Lovable AI Gateway indisponível. Tente novamente em instantes.');
         }
 
         const countryName = automation.country || 'Brazil';
         const cityName = automation.city || '';
         const locationStr = [cityName, countryName].filter(Boolean).join(', ');
 
-        // Step 1: Get buyer search terms from AI
-        const buyerPrompt = `You are a B2B sales expert. The user sells/offers: "${automation.niche}".
+        // Step 1: Get search terms from AI (B2B = ideal buyers; Trends = trending demand)
+        const buyerPrompt = isTrends
+          ? `You are a market trends analyst. Given the niche "${automation.niche}" in "${locationStr}", identify what people are CURRENTLY SEARCHING FOR on Google related to this niche (real demand signals, problems, hot topics).
+Return ONLY JSON: {"searchTerms": ["trending term 1 ${locationStr}", "trending term 2 ${locationStr}", "trending term 3 ${locationStr}"]}`
+          : `You are a B2B sales expert. The user sells/offers: "${automation.niche}".
 Who are the IDEAL BUYERS? Do NOT list competitors.
 Return ONLY JSON: {"searchTerms": ["term1 ${locationStr}", "term2 ${locationStr}"], "buyerTypes": ["type1"]}`;
 
