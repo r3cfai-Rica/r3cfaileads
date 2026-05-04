@@ -231,7 +231,7 @@ Return ONLY JSON: {"searchTerms": ["term1 ${locationStr}", "term2 ${locationStr}
 
       // B2C leads can't be automated without external integrations yet
       if (automation.lead_type === 'b2c') {
-        errorMessage = 'B2C automation requires CSV import or integrations (Meta/Google Lead Forms). Manual import only.';
+        errorMessage = 'B2C ainda não é suportado em robôs. Use Importação CSV ou conecte Meta Lead Ads na Prospecção.';
       }
 
     } catch (e) {
