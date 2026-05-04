@@ -1,127 +1,66 @@
+## Diagnóstico
 
+Verifiquei a página `/automations`, a edge function `run-automation`, o agendador `automation-scheduler` (rodando a cada 5min via cron — OK) e o banco. Encontrei estes problemas:
 
-# Busca de Leads na Web/Internet (Perplexity AI Search)
+### 1. Nenhum robô foi criado de fato no banco
+A tabela `automations` está vazia para você. Provável causa: o formulário "Criar Novo Robô" exige obrigatoriamente uma **Pasta** (`folderId`) — se você não tem pasta criada, o botão "Criar Robô" fica desabilitado e o usuário não percebe o porquê. Além disso a validação não dá feedback (nenhum aviso explicando o que falta).
 
-## Objetivo
+### 2. CreateBotDialog só oferece B2B / B2C / Both
+Não existem opções para os novos tipos que adicionamos na Prospecção (Tendências / Busca Web). E a edge function `run-automation` só implementa B2B real — para `b2c` ela retorna erro "B2C automation requires CSV import…", o que confunde o usuário.
 
-Criar um **4o modo de busca** na prospecao que pesquisa leads reais em toda a internet (sites, redes sociais, diretorios, blogs, noticias) usando o Perplexity AI Search -- nao limitado ao Google Maps.
+### 3. Erro silencioso quando faltam credenciais
+Se `GOOGLE_API_KEY` não está configurada (free users ou cliente sem API key), o run dá throw genérico. Hoje você (admin) tem a chave, mas precisa de mensagem amigável + bloquear criação para quem não tem Premium.
 
-## Diferenca dos modos existentes
+### 4. Warning de React (ref em function component)
+Console mostra: `Function components cannot be given refs` em `CreateBotDialog`. O `<Dialog>` Radix tenta passar ref para o wrapper. Não quebra mas polui o log. Resolvido envolvendo o componente em `React.forwardRef` ou removendo o ref desnecessário.
 
-```text
-Modo 1 - B2B (Maps):     Google Places API -> negocios locais
-Modo 2 - Por Interesses: Google Places API -> negocios por interesse
-Modo 3 - B2C (Opt-in):   CSV, Meta Lead Ads -> leads passivos
+### 5. Falta do bloco em `supabase/config.toml`
+Não existem entradas `[functions.run-automation]` nem `[functions.automation-scheduler]`. Como `verify_jwt` default é `true`, o `automation-scheduler` (chamado pelo pg_cron com service_role) ainda funciona, mas é mais seguro/explícito declarar `verify_jwt = false` para `automation-scheduler` (chamado por sistema) e manter `true` para `run-automation` (chamado por usuário).
 
-Modo 4 - Busca Web (NOVO):
-  Input: "clinicas de estetica que postam no Instagram em Sao Paulo"
-  Perplexity: busca na web inteira (sites, redes sociais, diretorios)
-  IA: extrai e estrutura leads reais dos resultados
-  Output: leads com nome, site, telefone, fonte verificavel
+### 6. Histórico de execuções vazio
+Como nenhuma execução rodou, a aba "Histórico" sempre aparece vazia — esperado, mas vamos validar após o fluxo voltar a funcionar.
+
+---
+
+## Plano de correção
+
+**A. Corrigir UX do formulário de criação (`CreateBotDialog.tsx`)**
+- Tornar a seleção de Pasta opcional: se o usuário não tiver pasta, criar automaticamente uma pasta "Robôs IA" no primeiro envio (ou mostrar botão "Criar pasta agora").
+- Mostrar mensagens de validação visíveis (ex.: "Selecione uma pasta" em vermelho) em vez de só desabilitar o botão.
+- Adicionar tipos de busca alinhados à Prospecção: **B2B (Google Maps)**, **Tendências (Google Trends + Maps)**, **B2C – em breve**. Marcar B2C como desabilitado com badge "Em breve" para não frustrar.
+
+**B. Suportar busca por Tendências em `run-automation`**
+- Quando `lead_type === 'trends'` (novo valor), chamar a mesma lógica da função `generate-leads-interest` (analisar tendências com Gemini + buscar via Google Places).
+- Manter B2B existente.
+- Trocar a mensagem genérica de B2C por algo informativo no UI antes de salvar.
+
+**C. Aviso de pré-requisito Google API Key**
+- Na página `/automations`, mostrar um banner quando o usuário Free abrir a página: "Robôs requerem plano Premium (usam Google Places para leads reais)" com botão para upgrade.
+- Para Premium/Admin: mostrar selo verde "✅ Google Places ativa".
+
+**D. Limpar warning de ref**
+- Em `CreateBotDialog.tsx` (e `RobotRunsDialog.tsx` se necessário), remover prop `ref` implícita ou usar `React.forwardRef` no wrapper que vai dentro do `<Dialog>`.
+
+**E. Declarar `verify_jwt` no `supabase/config.toml`**
+```toml
+[functions.run-automation]
+verify_jwt = true
+
+[functions.automation-scheduler]
+verify_jwt = false
 ```
 
-## Como funciona
+**F. Teste end-to-end**
+- Após deploy, criar um robô de teste B2B (nicho "marketing digital", São Paulo), clicar **Executar agora**, validar que `robot_runs` recebe registro com `status=success` e `leads_saved > 0`.
+- Validar que a aba "Histórico" mostra a execução.
 
-1. Usuario digita uma busca livre (ex: "estúdios de tatuagem em Curitiba com Instagram ativo")
-2. Edge function usa Perplexity API para buscar na web real
-3. IA (Gemini) processa os resultados e extrai leads estruturados (nome, contato, site, fonte)
-4. Cada lead vem com link da fonte original (verificavel)
+---
 
-Premium = busca real via Perplexity (dados verificaveis da web).
-Free = nao disponivel (ou versao demo limitada).
+## Arquivos a alterar
 
-## Pre-requisito
+- `src/components/automations/CreateBotDialog.tsx` — validação visual, novo tipo "Tendências", auto-criar pasta, fix de ref.
+- `src/pages/Automations.tsx` — banner de pré-requisitos por plano.
+- `supabase/functions/run-automation/index.ts` — suportar `lead_type='trends'`, mensagens de erro mais claras.
+- `supabase/config.toml` — adicionar blocos das duas funções.
 
-Conectar o **Perplexity** ao projeto via conector. Isso disponibiliza a `PERPLEXITY_API_KEY` nas edge functions.
-
-## Alteracoes
-
-### 1. Nova Edge Function: `supabase/functions/generate-leads-web/index.ts`
-
-- Recebe: `query` (busca livre), `country`, `city` (opcional), `language`
-- Passo 1: Perplexity busca na web com o query do usuario
-  - Usa modelo `sonar-pro` para resultados com citacoes
-  - Filtra por regiao se informada
-- Passo 2: IA (Gemini) extrai leads estruturados dos resultados
-  - Nome do negocio/pessoa
-  - Site, telefone, email (se encontrados nos resultados)
-  - Fonte original (URL da citacao do Perplexity)
-  - Sinal de intencao baseado no contexto encontrado
-- Passo 3: Gera insights de mercado
-- Autenticacao JWT igual as outras functions
-
-### 2. Frontend: `src/lib/ai-api.ts`
-
-- Nova funcao `generateLeadsFromWeb()` que chama `generate-leads-web`
-
-### 3. Frontend: `src/pages/Prospecting.tsx`
-
-- Novo tipo de lead: adicionar `'web'` ao tipo existente
-- Novo botao no seletor: **"Busca Web"** com icone `Globe`
-- Formulario:
-  - Campo de busca livre: "Descreva o que procura" (ex: "restaurantes veganos com delivery em Porto Alegre")
-  - Pais (opcional)
-  - Cidade (opcional)
-  - Badge **Premium** no botao (somente Premium)
-- Resultados mostram badge **"Web"** laranja
-- Cada lead mostra a fonte/URL de onde foi encontrado
-
-### 4. Estado persistido
-
-- Adicionar campos `webQuery`, `webResults`, `webInsights`, `selectedWebLeads` ao `ProspectingState`
-
-## Detalhes Tecnicos
-
-### Edge Function `generate-leads-web`
-
-```text
-Entrada:
-  query: "academias de crossfit com Instagram ativo em BH"
-  country: "Brasil" (opcional)
-  city: "Belo Horizonte" (opcional)
-  language: "pt-BR"
-
-Passo 1 - Perplexity Search:
-  Modelo: sonar-pro (multi-step com citacoes)
-  Query formatada com contexto de prospeccao
-  Retorna: texto com citacoes [1], [2], etc. + array de URLs
-
-Passo 2 - Gemini extrai leads:
-  Prompt: "Extraia negocios/leads dos resultados abaixo.
-   Para cada um retorne: nome, site, telefone, email, descricao, fonte."
-  Resultado: array de leads estruturados
-
-Passo 3 - Insights de mercado
-
-Saida: { leads: [...], insights: {...} }
-```
-
-### Diferenciacao visual atualizada
-
-| Tipo | Badge | Icone | Cor |
-|------|-------|-------|-----|
-| B2B (Maps) | Maps | Building2 | Azul |
-| Por Interesses | Interesse | Target | Roxo |
-| Busca Web | Web | Globe | Laranja |
-| B2C (Opt-in) | Opt-in | UserCircle | Verde |
-
-### Vantagens sobre Google Maps
-
-- Encontra negocios que NAO estao no Google Maps
-- Pega informacoes de redes sociais (Instagram, LinkedIn, Facebook)
-- Encontra negocios menores, freelancers, profissionais autonomos
-- Busca por contexto especifico (ex: "que fazem delivery", "com avaliacao positiva")
-- Fontes verificaveis com links
-
-## Arquivos a criar/modificar
-
-| Arquivo | Acao |
-|---------|------|
-| `supabase/functions/generate-leads-web/index.ts` | CRIAR - busca real na web via Perplexity + Gemini |
-| `src/lib/ai-api.ts` | MODIFICAR - adicionar `generateLeadsFromWeb()` |
-| `src/pages/Prospecting.tsx` | MODIFICAR - nova aba "Busca Web" com formulario e resultados |
-
-## Passo inicial obrigatorio
-
-Antes de implementar, sera necessario **conectar o Perplexity** ao projeto para disponibilizar a API key nas edge functions.
-
+Sem mudanças no schema do banco (a coluna `lead_type` é `text` e aceita o novo valor).

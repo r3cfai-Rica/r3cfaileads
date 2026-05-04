@@ -75,3 +75,9 @@ verify_jwt = false
 
 [functions.generate-leads-web]
 verify_jwt = false
+
+[functions.run-automation]
+verify_jwt = false
+
+[functions.automation-scheduler]
+verify_jwt = false
