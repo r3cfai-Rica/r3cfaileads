@@ -184,6 +184,41 @@ const Automations: React.FC = () => {
         <p className="text-muted-foreground mt-1">{tt.subtitle}</p>
       </div>
 
+      {isPremium ? (
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-success/30 bg-success/10">
+          <MapPin className="w-5 h-5 text-success shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-success">
+              {language === 'pt-BR' ? 'Google Places API ativa' : 'Google Places API active'}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {language === 'pt-BR'
+                ? 'Seus robôs vão buscar leads reais (endereço, telefone, site).'
+                : 'Your robots will fetch real leads (address, phone, website).'}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-primary/30 bg-primary/10">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-primary shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium">
+                {language === 'pt-BR' ? 'Robôs requerem plano Premium' : 'Robots require Premium plan'}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {language === 'pt-BR'
+                  ? 'Os robôs usam Google Places para entregar leads reais e verificáveis.'
+                  : 'Robots use Google Places to deliver real, verifiable leads.'}
+              </p>
+            </div>
+          </div>
+          <Link to="/plans">
+            <Button variant="gradient" size="sm">{language === 'pt-BR' ? 'Fazer Upgrade' : 'Upgrade'}</Button>
+          </Link>
+        </div>
+      )}
+
       <Card className="border-2 border-dashed border-muted">
         <CardContent className="py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
