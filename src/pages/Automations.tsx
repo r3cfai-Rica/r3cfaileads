@@ -14,8 +14,9 @@ import { CreateBotDialog, BotFormData } from '@/components/automations/CreateBot
 import { RobotRunsDialog } from '@/components/automations/RobotRunsDialog';
 
 const Automations: React.FC = () => {
-  const { folders, language } = useApp();
+  const { folders, language, user } = useApp();
   const queryClient = useQueryClient();
+  const isPremium = user?.plan === 'paid' || user?.role === 'admin';
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [historyRobotId, setHistoryRobotId] = useState<string | null>(null);
