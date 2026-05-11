@@ -192,8 +192,22 @@ export const Prospecting: React.FC = () => {
       webQuery, webCountry, webCity, webResults, webInsights,
       selectedWebLeads: Array.from(selectedWebLeads),
     };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
   }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads, webQuery, webCountry, webCity, webResults, webInsights, selectedWebLeads]);
+
+  // Total unsaved results currently shown on screen
+  const unsavedCount = searchResults.length + interestResults.length + webResults.length + b2cLeads.length;
+
+  // Warn before closing/reloading the tab if there are unsaved results
+  useEffect(() => {
+    if (unsavedCount === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [unsavedCount]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
