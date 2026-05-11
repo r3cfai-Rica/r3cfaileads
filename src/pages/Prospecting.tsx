@@ -116,7 +116,13 @@ export const Prospecting: React.FC = () => {
 
   const loadPersistedState = useCallback((): ProspectingState | null => {
     try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
+      // Migrate from sessionStorage if present
+      const legacy = sessionStorage.getItem(STORAGE_KEY);
+      if (legacy && !localStorage.getItem(STORAGE_KEY)) {
+        localStorage.setItem(STORAGE_KEY, legacy);
+        sessionStorage.removeItem(STORAGE_KEY);
+      }
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.searchResults) {
@@ -186,8 +192,22 @@ export const Prospecting: React.FC = () => {
       webQuery, webCountry, webCity, webResults, webInsights,
       selectedWebLeads: Array.from(selectedWebLeads),
     };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
   }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads, webQuery, webCountry, webCity, webResults, webInsights, selectedWebLeads]);
+
+  // Total unsaved results currently shown on screen
+  const unsavedCount = searchResults.length + interestResults.length + webResults.length + b2cLeads.length;
+
+  // Warn before closing/reloading the tab if there are unsaved results
+  useEffect(() => {
+    if (unsavedCount === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [unsavedCount]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
@@ -209,6 +229,7 @@ export const Prospecting: React.FC = () => {
     setWebResults([]);
     setWebInsights(null);
     setSelectedWebLeads(new Set());
+    localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
@@ -667,7 +688,25 @@ export const Prospecting: React.FC = () => {
         )}
       </div>
 
-      {/* Lead Type Selector */}
+      {/* Unsaved leads warning */}
+      {unsavedCount > 0 && (
+        <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-sm">
+              {language === 'pt-BR'
+                ? `Você tem ${unsavedCount} lead(s) ainda não salvos`
+                : `You have ${unsavedCount} unsaved lead(s)`}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {language === 'pt-BR'
+                ? 'Selecione uma pasta abaixo e clique em "Salvar" para não perder esses resultados. Resultados não salvos podem ser perdidos ao limpar o navegador.'
+                : 'Pick a folder below and click "Save" so you do not lose these results. Unsaved results may be lost if the browser is cleared.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
