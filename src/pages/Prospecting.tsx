@@ -116,7 +116,13 @@ export const Prospecting: React.FC = () => {
 
   const loadPersistedState = useCallback((): ProspectingState | null => {
     try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
+      // Migrate from sessionStorage if present
+      const legacy = sessionStorage.getItem(STORAGE_KEY);
+      if (legacy && !localStorage.getItem(STORAGE_KEY)) {
+        localStorage.setItem(STORAGE_KEY, legacy);
+        sessionStorage.removeItem(STORAGE_KEY);
+      }
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.searchResults) {
