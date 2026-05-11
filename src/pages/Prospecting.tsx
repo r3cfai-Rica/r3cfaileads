@@ -688,7 +688,25 @@ export const Prospecting: React.FC = () => {
         )}
       </div>
 
-      {/* Lead Type Selector */}
+      {/* Unsaved leads warning */}
+      {unsavedCount > 0 && (
+        <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-sm">
+              {language === 'pt-BR'
+                ? `Você tem ${unsavedCount} lead(s) ainda não salvos`
+                : `You have ${unsavedCount} unsaved lead(s)`}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {language === 'pt-BR'
+                ? 'Selecione uma pasta abaixo e clique em "Salvar" para não perder esses resultados. Resultados não salvos podem ser perdidos ao limpar o navegador.'
+                : 'Pick a folder below and click "Save" so you do not lose these results. Unsaved results may be lost if the browser is cleared.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
