@@ -83,7 +83,10 @@ Deno.serve(async (req) => {
           }
 
           for (const conn of connections) {
-            const accessToken = conn.page_access_token;
+            const { data: decrypted } = await supabase.rpc("decrypt_credential", {
+              encrypted_text: conn.page_access_token,
+            });
+            const accessToken = decrypted || conn.page_access_token;
             const leadRes = await fetch(
               `https://graph.facebook.com/v21.0/${leadgenId}?access_token=${accessToken}`
             );
