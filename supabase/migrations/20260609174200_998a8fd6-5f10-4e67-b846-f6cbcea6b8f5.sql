@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.decrypt_credential(text) TO service_role;
