@@ -16,7 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Bot,
-  Inbox,
   HelpCircle,
   Wrench,
   Users,
@@ -35,7 +34,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const navigate = useNavigate();
 
   const automationsLabel = language === 'pt-BR' ? 'Automações AI' : 'AI Automations';
-  const inboxLabel = language === 'pt-BR' ? 'Caixa de Entrada' : 'Inbox';
   const helpLabel = language === 'pt-BR' ? 'Ajuda' : 'Help';
 
   const menuItems = [
@@ -45,7 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
     { icon: Bot, label: automationsLabel, path: '/automations' },
     { icon: Megaphone, label: t.nav.campaigns, path: '/campaigns' },
     { icon: Send, label: t.nav.messaging, path: '/messaging' },
-    { icon: Inbox, label: inboxLabel, path: '/inbox' },
     { icon: Settings, label: t.nav.settings, path: '/settings' },
     { icon: HelpCircle, label: helpLabel, path: '/help' },
   ];
