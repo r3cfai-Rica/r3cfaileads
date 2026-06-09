@@ -1006,6 +1006,10 @@ export type Database = {
           whatsapp_phone_number_id: string
         }[]
       }
+      get_meta_page_access_token: {
+        Args: { _connection_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
