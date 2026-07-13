@@ -20,7 +20,7 @@ interface CreateBotDialogProps {
 
 export interface BotFormData {
   name: string;
-  leadType: 'b2b' | 'trends' | 'b2c';
+  leadType: 'b2b' | 'trends' | 'person' | 'b2c';
   niche: string;
   country: string;
   city: string;
@@ -69,9 +69,10 @@ export const CreateBotDialog: React.FC<CreateBotDialogProps> = ({ open, onOpenCh
     desc: 'Configure um robô para buscar leads automaticamente.',
     name: 'Nome do Robô',
     leadType: 'Tipo de Busca',
-    b2b: 'B2B (Empresas via Google Maps)',
+    b2b: 'B2B – Pessoa Jurídica (Google Maps)',
     trends: 'Tendências (Google Trends + IA)',
-    b2c: 'B2C (em breve)',
+    person: 'B2C – Pessoa Física (Perplexity)',
+    b2c: 'B2C Opt-in / CSV (em breve)',
     niche: 'Nicho/Interesse',
     country: 'País',
     city: 'Cidade/Região',
@@ -99,9 +100,10 @@ export const CreateBotDialog: React.FC<CreateBotDialogProps> = ({ open, onOpenCh
     desc: 'Configure a robot to search for leads automatically.',
     name: 'Robot Name',
     leadType: 'Search Type',
-    b2b: 'B2B (Companies via Google Maps)',
+    b2b: 'B2B – Business (Google Maps)',
     trends: 'Trends (Google Trends + AI)',
-    b2c: 'B2C (coming soon)',
+    person: 'B2C – Individual (Perplexity)',
+    b2c: 'B2C Opt-in / CSV (coming soon)',
     niche: 'Niche/Interest',
     country: 'Country',
     city: 'City/Region',
@@ -172,6 +174,7 @@ export const CreateBotDialog: React.FC<CreateBotDialogProps> = ({ open, onOpenCh
               <SelectContent>
                 <SelectItem value="b2b">{tt.b2b}</SelectItem>
                 <SelectItem value="trends">{tt.trends}</SelectItem>
+                <SelectItem value="person">{tt.person}</SelectItem>
                 <SelectItem value="b2c" disabled>{tt.b2c}</SelectItem>
               </SelectContent>
             </Select>
@@ -181,7 +184,7 @@ export const CreateBotDialog: React.FC<CreateBotDialogProps> = ({ open, onOpenCh
             <Input value={form.niche} onChange={e => setForm(f => ({ ...f, niche: e.target.value }))} placeholder="Ex: Marketing Digital" />
             {touched && errors.niche && <p className="text-xs text-destructive mt-1">{errors.niche}</p>}
           </div>
-          {(form.leadType === 'b2b' || form.leadType === 'trends') && (
+          {(form.leadType === 'b2b' || form.leadType === 'trends' || form.leadType === 'person') && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">{tt.country}</label>
