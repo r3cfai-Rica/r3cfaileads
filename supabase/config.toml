@@ -81,3 +81,6 @@ verify_jwt = false
 
 [functions.automation-scheduler]
 verify_jwt = false
+
+[functions.generate-leads-person]
+verify_jwt = false
