@@ -1178,6 +1178,21 @@ export const Prospecting: React.FC = () => {
             </div>
           </div>
         )
+      ) : leadType === 'person' ? (
+        // Person (B2C via Perplexity) mode
+        (personResults.length > 0 || personInsights) && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {personInsights && renderInsightsPanel(personInsights)}
+            <div className={personInsights ? 'lg:col-span-2' : 'lg:col-span-3'}>
+              {renderLeadsList(
+                personResults, selectedPersonLeads,
+                (id) => { const s = new Set(selectedPersonLeads); s.has(id) ? s.delete(id) : s.add(id); setSelectedPersonLeads(s); },
+                () => { setSelectedPersonLeads(selectedPersonLeads.size === personResults.length ? new Set() : new Set(personResults.map(l => l.id))); },
+                () => handleSaveLeads(personResults, selectedPersonLeads)
+              )}
+            </div>
+          </div>
+        )
       ) : (
         // B2C mode
         b2cLeads.length > 0 && renderLeadsList(
@@ -1189,7 +1204,7 @@ export const Prospecting: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!isSearching && !isSearchingInterest && !isSearchingWeb && searchResults.length === 0 && interestResults.length === 0 && webResults.length === 0 && b2cLeads.length === 0 && canSearch && (
+      {!isSearching && !isSearchingInterest && !isSearchingWeb && !isSearchingPerson && searchResults.length === 0 && interestResults.length === 0 && webResults.length === 0 && personResults.length === 0 && b2cLeads.length === 0 && canSearch && (
         <Card className="py-16">
           <CardContent className="text-center">
             <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
