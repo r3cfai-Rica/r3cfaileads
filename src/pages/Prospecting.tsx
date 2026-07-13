@@ -295,6 +295,14 @@ export const Prospecting: React.FC = () => {
     webPlaceholder: 'Ex: clínicas de estética com Instagram ativo em São Paulo...',
     webSearchButton: 'Buscar na Web',
     webPremium: 'Premium',
+    person: 'Pessoa Física',
+    personTitle: 'Busca por Pessoa Física (Perplexity)',
+    personDesc: 'Encontre profissionais autônomos, criadores e influenciadores reais com presença pública verificável.',
+    personPlaceholder: 'Ex: nutricionistas com atendimento online, coaches de carreira, personal trainers...',
+    personSearchButton: 'Buscar Pessoas',
+    personPremium: 'Premium',
+    b2bLabel: 'Pessoa Jurídica (Google)',
+    personLabel: 'Pessoa Física (Perplexity)',
   } : {
     discoverTitle: 'Discover Potential Clients',
     discoverDesc: 'Search for businesses or consumers interested in your niche.',
@@ -335,6 +343,14 @@ export const Prospecting: React.FC = () => {
     webPlaceholder: 'Ex: crossfit gyms with active Instagram in Austin...',
     webSearchButton: 'Search the Web',
     webPremium: 'Premium',
+    person: 'Individuals',
+    personTitle: 'Individual Search (Perplexity)',
+    personDesc: 'Find real freelancers, creators and influencers with verifiable public presence.',
+    personPlaceholder: 'Ex: online nutritionists, career coaches, personal trainers...',
+    personSearchButton: 'Search People',
+    personPremium: 'Premium',
+    b2bLabel: 'Business (Google)',
+    personLabel: 'Individual (Perplexity)',
   };
 
   const selectedCountry = countries.find(c => c.code === country);
