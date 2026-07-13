@@ -51,7 +51,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { generateLeadsWithAI, generateLeadsByInterest, generateLeadsFromWeb } from '@/lib/ai-api';
+import { generateLeadsWithAI, generateLeadsByInterest, generateLeadsFromWeb, generateLeadsPerson } from '@/lib/ai-api';
 import { useToast } from '@/hooks/use-toast';
 import { useFolders } from '@/hooks/useFolders';
 import { useLeads } from '@/hooks/useLeads';
@@ -68,7 +68,7 @@ interface ProspectingState {
   searchResults: Lead[];
   insights: NicheInsights | null;
   selectedLeads: string[];
-  leadType: 'b2b' | 'b2c' | 'interest' | 'web' | 'both';
+  leadType: 'b2b' | 'b2c' | 'person' | 'interest' | 'web' | 'both';
   excludePublicSector: boolean;
   contactOnly: boolean;
   hideCompetitors: boolean;
@@ -84,6 +84,12 @@ interface ProspectingState {
   webResults: Lead[];
   webInsights: NicheInsights | null;
   selectedWebLeads: string[];
+  personQuery: string;
+  personCountry: string;
+  personCity: string;
+  personResults: Lead[];
+  personInsights: NicheInsights | null;
+  selectedPersonLeads: string[];
 }
 
 const countries = [
@@ -154,7 +160,7 @@ export const Prospecting: React.FC = () => {
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
 
   // New filters
-  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'interest' | 'web' | 'both'>(persistedState?.leadType || 'b2b');
+  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'person' | 'interest' | 'web' | 'both'>(persistedState?.leadType || 'b2b');
   const [excludePublicSector, setExcludePublicSector] = useState(persistedState?.excludePublicSector ?? true);
   const [contactOnly, setContactOnly] = useState(persistedState?.contactOnly ?? true);
   const [hideCompetitors, setHideCompetitors] = useState(persistedState?.hideCompetitors ?? true);
@@ -182,6 +188,15 @@ export const Prospecting: React.FC = () => {
   const [selectedWebLeads, setSelectedWebLeads] = useState<Set<string>>(new Set(persistedState?.selectedWebLeads || []));
   const [isSearchingWeb, setIsSearchingWeb] = useState(false);
 
+  // Person search (Perplexity — B2C Pessoa Física)
+  const [personQuery, setPersonQuery] = useState(persistedState?.personQuery || '');
+  const [personCountry, setPersonCountry] = useState(persistedState?.personCountry || 'BR');
+  const [personCity, setPersonCity] = useState(persistedState?.personCity || '');
+  const [personResults, setPersonResults] = useState<Lead[]>(persistedState?.personResults || []);
+  const [personInsights, setPersonInsights] = useState<NicheInsights | null>(persistedState?.personInsights || null);
+  const [selectedPersonLeads, setSelectedPersonLeads] = useState<Set<string>>(new Set(persistedState?.selectedPersonLeads || []));
+  const [isSearchingPerson, setIsSearchingPerson] = useState(false);
+
   // Persist state
   useEffect(() => {
     const stateToSave: ProspectingState = {
@@ -191,12 +206,14 @@ export const Prospecting: React.FC = () => {
       selectedInterestLeads: Array.from(selectedInterestLeads),
       webQuery, webCountry, webCity, webResults, webInsights,
       selectedWebLeads: Array.from(selectedWebLeads),
+      personQuery, personCountry, personCity, personResults, personInsights,
+      selectedPersonLeads: Array.from(selectedPersonLeads),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads, webQuery, webCountry, webCity, webResults, webInsights, selectedWebLeads]);
+  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads, webQuery, webCountry, webCity, webResults, webInsights, selectedWebLeads, personQuery, personCountry, personCity, personResults, personInsights, selectedPersonLeads]);
 
   // Total unsaved results currently shown on screen
-  const unsavedCount = searchResults.length + interestResults.length + webResults.length + b2cLeads.length;
+  const unsavedCount = searchResults.length + interestResults.length + webResults.length + b2cLeads.length + personResults.length;
 
   // Warn before closing/reloading the tab if there are unsaved results
   useEffect(() => {
