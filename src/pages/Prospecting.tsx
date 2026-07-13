@@ -516,6 +516,57 @@ export const Prospecting: React.FC = () => {
     }
   };
 
+  const handlePersonSearch = async () => {
+    if (!personQuery.trim()) return;
+    if (!canSearch) return;
+    if (user?.plan !== 'paid') {
+      toastHook({
+        title: language === 'pt-BR' ? 'Recurso Premium' : 'Premium Feature',
+        description: language === 'pt-BR' ? 'A busca por Pessoa Física está disponível apenas para usuários Premium.' : 'Individual search is only available for Premium users.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSearchingPerson(true);
+    setPersonResults([]);
+    setPersonInsights(null);
+    setSelectedPersonLeads(new Set());
+
+    try {
+      const selectedCountryData = countries.find(c => c.code === personCountry);
+      const result = await generateLeadsPerson({
+        query: personQuery,
+        country: selectedCountryData?.name,
+        city: personCity || undefined,
+        language: language,
+      });
+
+      setPersonResults(result.leads);
+      setPersonInsights(result.insights);
+
+      if (user) {
+        setUser({ ...user, searchesUsed: user.searchesUsed + 1 });
+      }
+
+      toastHook({
+        title: language === 'pt-BR' ? 'Pessoas encontradas!' : 'People found!',
+        description: language === 'pt-BR'
+          ? `${result.leads.length} leads encontrados para "${personQuery}"`
+          : `${result.leads.length} leads found for "${personQuery}"`,
+      });
+    } catch (error) {
+      console.error('Error in person search:', error);
+      toastHook({
+        title: language === 'pt-BR' ? 'Erro na Busca por Pessoa Física' : 'Individual Search Error',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSearchingPerson(false);
+    }
+  };
+
   const handleSelectLead = (leadId: string) => {
     const newSelected = new Set(selectedLeads);
     if (newSelected.has(leadId)) newSelected.delete(leadId);
