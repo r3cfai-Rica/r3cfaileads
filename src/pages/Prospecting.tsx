@@ -246,6 +246,11 @@ export const Prospecting: React.FC = () => {
     setWebResults([]);
     setWebInsights(null);
     setSelectedWebLeads(new Set());
+    setPersonQuery('');
+    setPersonCity('');
+    setPersonResults([]);
+    setPersonInsights(null);
+    setSelectedPersonLeads(new Set());
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
   }, []);
