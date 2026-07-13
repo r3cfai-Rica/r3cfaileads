@@ -148,6 +148,37 @@ export async function generateLeadsByInterest(params: GenerateLeadsByInterestPar
     insights: data.insights,
   };
 }
+interface GenerateLeadsPersonParams {
+  query: string;
+  country?: string;
+  city?: string;
+  language: 'pt-BR' | 'en-US';
+  profileType?: string;
+}
+
+export async function generateLeadsPerson(params: GenerateLeadsPersonParams): Promise<GenerateLeadsResponse> {
+  const { data, error } = await supabase.functions.invoke('generate-leads-person', {
+    body: params
+  });
+
+  if (error) {
+    console.error('Error calling generate-leads-person:', error);
+    throw new Error(error.message || 'Failed to generate person leads');
+  }
+
+  if (data.error) {
+    throw new Error(data.error);
+  }
+
+  return {
+    leads: data.leads.map((lead: any) => ({
+      ...lead,
+      createdAt: new Date(lead.createdAt),
+    })),
+    insights: data.insights,
+  };
+}
+
 
 interface GenerateLeadsFromWebParams {
   query: string;

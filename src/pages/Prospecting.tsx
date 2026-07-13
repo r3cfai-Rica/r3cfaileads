@@ -51,7 +51,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { generateLeadsWithAI, generateLeadsByInterest, generateLeadsFromWeb } from '@/lib/ai-api';
+import { generateLeadsWithAI, generateLeadsByInterest, generateLeadsFromWeb, generateLeadsPerson } from '@/lib/ai-api';
 import { useToast } from '@/hooks/use-toast';
 import { useFolders } from '@/hooks/useFolders';
 import { useLeads } from '@/hooks/useLeads';
@@ -68,7 +68,7 @@ interface ProspectingState {
   searchResults: Lead[];
   insights: NicheInsights | null;
   selectedLeads: string[];
-  leadType: 'b2b' | 'b2c' | 'interest' | 'web' | 'both';
+  leadType: 'b2b' | 'b2c' | 'person' | 'interest' | 'web' | 'both';
   excludePublicSector: boolean;
   contactOnly: boolean;
   hideCompetitors: boolean;
@@ -84,6 +84,12 @@ interface ProspectingState {
   webResults: Lead[];
   webInsights: NicheInsights | null;
   selectedWebLeads: string[];
+  personQuery: string;
+  personCountry: string;
+  personCity: string;
+  personResults: Lead[];
+  personInsights: NicheInsights | null;
+  selectedPersonLeads: string[];
 }
 
 const countries = [
@@ -154,7 +160,7 @@ export const Prospecting: React.FC = () => {
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
 
   // New filters
-  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'interest' | 'web' | 'both'>(persistedState?.leadType || 'b2b');
+  const [leadType, setLeadType] = useState<'b2b' | 'b2c' | 'person' | 'interest' | 'web' | 'both'>(persistedState?.leadType || 'b2b');
   const [excludePublicSector, setExcludePublicSector] = useState(persistedState?.excludePublicSector ?? true);
   const [contactOnly, setContactOnly] = useState(persistedState?.contactOnly ?? true);
   const [hideCompetitors, setHideCompetitors] = useState(persistedState?.hideCompetitors ?? true);
@@ -182,6 +188,15 @@ export const Prospecting: React.FC = () => {
   const [selectedWebLeads, setSelectedWebLeads] = useState<Set<string>>(new Set(persistedState?.selectedWebLeads || []));
   const [isSearchingWeb, setIsSearchingWeb] = useState(false);
 
+  // Person search (Perplexity — B2C Pessoa Física)
+  const [personQuery, setPersonQuery] = useState(persistedState?.personQuery || '');
+  const [personCountry, setPersonCountry] = useState(persistedState?.personCountry || 'BR');
+  const [personCity, setPersonCity] = useState(persistedState?.personCity || '');
+  const [personResults, setPersonResults] = useState<Lead[]>(persistedState?.personResults || []);
+  const [personInsights, setPersonInsights] = useState<NicheInsights | null>(persistedState?.personInsights || null);
+  const [selectedPersonLeads, setSelectedPersonLeads] = useState<Set<string>>(new Set(persistedState?.selectedPersonLeads || []));
+  const [isSearchingPerson, setIsSearchingPerson] = useState(false);
+
   // Persist state
   useEffect(() => {
     const stateToSave: ProspectingState = {
@@ -191,12 +206,14 @@ export const Prospecting: React.FC = () => {
       selectedInterestLeads: Array.from(selectedInterestLeads),
       webQuery, webCountry, webCity, webResults, webInsights,
       selectedWebLeads: Array.from(selectedWebLeads),
+      personQuery, personCountry, personCity, personResults, personInsights,
+      selectedPersonLeads: Array.from(selectedPersonLeads),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads, webQuery, webCountry, webCity, webResults, webInsights, selectedWebLeads]);
+  }, [searchQuery, country, city, postalCode, searchResults, insights, selectedLeads, leadType, excludePublicSector, contactOnly, hideCompetitors, interestQuery, interestCountry, interestCity, interestResults, interestInsights, selectedInterestLeads, webQuery, webCountry, webCity, webResults, webInsights, selectedWebLeads, personQuery, personCountry, personCity, personResults, personInsights, selectedPersonLeads]);
 
   // Total unsaved results currently shown on screen
-  const unsavedCount = searchResults.length + interestResults.length + webResults.length + b2cLeads.length;
+  const unsavedCount = searchResults.length + interestResults.length + webResults.length + b2cLeads.length + personResults.length;
 
   // Warn before closing/reloading the tab if there are unsaved results
   useEffect(() => {
@@ -229,6 +246,11 @@ export const Prospecting: React.FC = () => {
     setWebResults([]);
     setWebInsights(null);
     setSelectedWebLeads(new Set());
+    setPersonQuery('');
+    setPersonCity('');
+    setPersonResults([]);
+    setPersonInsights(null);
+    setSelectedPersonLeads(new Set());
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
   }, []);
@@ -273,6 +295,14 @@ export const Prospecting: React.FC = () => {
     webPlaceholder: 'Ex: clínicas de estética com Instagram ativo em São Paulo...',
     webSearchButton: 'Buscar na Web',
     webPremium: 'Premium',
+    person: 'Pessoa Física',
+    personTitle: 'Busca por Pessoa Física (Perplexity)',
+    personDesc: 'Encontre profissionais autônomos, criadores e influenciadores reais com presença pública verificável.',
+    personPlaceholder: 'Ex: nutricionistas com atendimento online, coaches de carreira, personal trainers...',
+    personSearchButton: 'Buscar Pessoas',
+    personPremium: 'Premium',
+    b2bLabel: 'Pessoa Jurídica (Google)',
+    personLabel: 'Pessoa Física (Perplexity)',
   } : {
     discoverTitle: 'Discover Potential Clients',
     discoverDesc: 'Search for businesses or consumers interested in your niche.',
@@ -313,6 +343,14 @@ export const Prospecting: React.FC = () => {
     webPlaceholder: 'Ex: crossfit gyms with active Instagram in Austin...',
     webSearchButton: 'Search the Web',
     webPremium: 'Premium',
+    person: 'Individuals',
+    personTitle: 'Individual Search (Perplexity)',
+    personDesc: 'Find real freelancers, creators and influencers with verifiable public presence.',
+    personPlaceholder: 'Ex: online nutritionists, career coaches, personal trainers...',
+    personSearchButton: 'Search People',
+    personPremium: 'Premium',
+    b2bLabel: 'Business (Google)',
+    personLabel: 'Individual (Perplexity)',
   };
 
   const selectedCountry = countries.find(c => c.code === country);
@@ -475,6 +513,57 @@ export const Prospecting: React.FC = () => {
       });
     } finally {
       setIsSearchingWeb(false);
+    }
+  };
+
+  const handlePersonSearch = async () => {
+    if (!personQuery.trim()) return;
+    if (!canSearch) return;
+    if (user?.plan !== 'paid') {
+      toastHook({
+        title: language === 'pt-BR' ? 'Recurso Premium' : 'Premium Feature',
+        description: language === 'pt-BR' ? 'A busca por Pessoa Física está disponível apenas para usuários Premium.' : 'Individual search is only available for Premium users.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSearchingPerson(true);
+    setPersonResults([]);
+    setPersonInsights(null);
+    setSelectedPersonLeads(new Set());
+
+    try {
+      const selectedCountryData = countries.find(c => c.code === personCountry);
+      const result = await generateLeadsPerson({
+        query: personQuery,
+        country: selectedCountryData?.name,
+        city: personCity || undefined,
+        language: language,
+      });
+
+      setPersonResults(result.leads);
+      setPersonInsights(result.insights);
+
+      if (user) {
+        setUser({ ...user, searchesUsed: user.searchesUsed + 1 });
+      }
+
+      toastHook({
+        title: language === 'pt-BR' ? 'Pessoas encontradas!' : 'People found!',
+        description: language === 'pt-BR'
+          ? `${result.leads.length} leads encontrados para "${personQuery}"`
+          : `${result.leads.length} leads found for "${personQuery}"`,
+      });
+    } catch (error) {
+      console.error('Error in person search:', error);
+      toastHook({
+        title: language === 'pt-BR' ? 'Erro na Busca por Pessoa Física' : 'Individual Search Error',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSearchingPerson(false);
     }
   };
 
@@ -729,7 +818,7 @@ export const Prospecting: React.FC = () => {
           <div className="mb-4">
             <label className="text-sm font-medium mb-1.5 block">{tt2.leadTypeLabel}</label>
             <div className="flex flex-wrap gap-2">
-              {(['b2b', 'interest', 'web', 'b2c', 'both'] as const).map(type => (
+              {(['b2b', 'person', 'interest', 'web', 'b2c', 'both'] as const).map(type => (
                 <Button
                   key={type}
                   variant={leadType === type ? 'default' : 'outline'}
@@ -738,12 +827,13 @@ export const Prospecting: React.FC = () => {
                   className="gap-2"
                 >
                   {type === 'b2b' && <Building2 className="w-4 h-4" />}
+                  {type === 'person' && <UserCircle className="w-4 h-4" />}
                   {type === 'interest' && <Target className="w-4 h-4" />}
                   {type === 'web' && <Globe className="w-4 h-4" />}
                   {type === 'b2c' && <UserCircle className="w-4 h-4" />}
                   {type === 'both' && <Sparkles className="w-4 h-4" />}
-                  {type === 'b2b' ? tt2.b2b : type === 'interest' ? tt2.interest : type === 'web' ? tt2.web : type === 'b2c' ? tt2.b2c : tt2.both}
-                  {type === 'web' && <Badge variant="warning" className="text-xs ml-1">{tt2.webPremium}</Badge>}
+                  {type === 'b2b' ? tt2.b2bLabel : type === 'person' ? tt2.personLabel : type === 'interest' ? tt2.interest : type === 'web' ? tt2.web : type === 'b2c' ? tt2.b2c : tt2.both}
+                  {(type === 'web' || type === 'person') && <Badge variant="warning" className="text-xs ml-1">{tt2.webPremium}</Badge>}
                 </Button>
               ))}
             </div>
@@ -922,6 +1012,50 @@ export const Prospecting: React.FC = () => {
             </>
           )}
 
+          {/* Person Search Form (B2C Pessoa Física via Perplexity) */}
+          {leadType === 'person' && (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <UserCircle className="w-5 h-5 text-warning" />
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2">
+                    {tt2.personTitle}
+                    <Badge variant="warning" className="text-xs">{tt2.personPremium}</Badge>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{tt2.personDesc}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative md:col-span-2">
+                  <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder={tt2.personPlaceholder} value={personQuery} onChange={e => setPersonQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handlePersonSearch()} className="pl-10 h-12 text-base" disabled={!canSearch} />
+                </div>
+                <div className="relative">
+                  <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Select value={personCountry} onValueChange={setPersonCountry}>
+                    <SelectTrigger className="pl-10 h-12">
+                      <SelectValue>{countries.find(c => c.code === personCountry) && <span className="flex items-center gap-2"><span>{countries.find(c => c.code === personCountry)!.flag}</span>{countries.find(c => c.code === personCountry)!.name}</span>}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map(c => <SelectItem key={c.code} value={c.code}><span className="flex items-center gap-2"><span>{c.flag}</span>{c.name}</span></SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder={`${tt2.cityPlaceholder} (${language === 'pt-BR' ? 'opcional' : 'optional'})`} value={personCity} onChange={e => setPersonCity(e.target.value)} className="pl-10 h-12" />
+                  </div>
+                  <Button variant="gradient" size="lg" onClick={handlePersonSearch} disabled={isSearchingPerson || !personQuery.trim() || !canSearch} className="h-12 px-6 whitespace-nowrap">
+                    {isSearchingPerson ? <><Loader2 className="w-5 h-5 animate-spin" />{t.prospecting.searching}</> : tt2.personSearchButton}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+
           {/* B2C Section */}
           {(leadType === 'b2c' || leadType === 'both') && (
             <div className={`${leadType === 'both' ? 'mt-6 pt-6 border-t' : ''}`}>
@@ -1044,6 +1178,21 @@ export const Prospecting: React.FC = () => {
             </div>
           </div>
         )
+      ) : leadType === 'person' ? (
+        // Person (B2C via Perplexity) mode
+        (personResults.length > 0 || personInsights) && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {personInsights && renderInsightsPanel(personInsights)}
+            <div className={personInsights ? 'lg:col-span-2' : 'lg:col-span-3'}>
+              {renderLeadsList(
+                personResults, selectedPersonLeads,
+                (id) => { const s = new Set(selectedPersonLeads); s.has(id) ? s.delete(id) : s.add(id); setSelectedPersonLeads(s); },
+                () => { setSelectedPersonLeads(selectedPersonLeads.size === personResults.length ? new Set() : new Set(personResults.map(l => l.id))); },
+                () => handleSaveLeads(personResults, selectedPersonLeads)
+              )}
+            </div>
+          </div>
+        )
       ) : (
         // B2C mode
         b2cLeads.length > 0 && renderLeadsList(
@@ -1055,7 +1204,7 @@ export const Prospecting: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!isSearching && !isSearchingInterest && !isSearchingWeb && searchResults.length === 0 && interestResults.length === 0 && webResults.length === 0 && b2cLeads.length === 0 && canSearch && (
+      {!isSearching && !isSearchingInterest && !isSearchingWeb && !isSearchingPerson && searchResults.length === 0 && interestResults.length === 0 && webResults.length === 0 && personResults.length === 0 && b2cLeads.length === 0 && canSearch && (
         <Card className="py-16">
           <CardContent className="text-center">
             <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
