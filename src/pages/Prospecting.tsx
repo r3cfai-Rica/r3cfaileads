@@ -818,7 +818,7 @@ export const Prospecting: React.FC = () => {
           <div className="mb-4">
             <label className="text-sm font-medium mb-1.5 block">{tt2.leadTypeLabel}</label>
             <div className="flex flex-wrap gap-2">
-              {(['b2b', 'interest', 'web', 'b2c', 'both'] as const).map(type => (
+              {(['b2b', 'person', 'interest', 'web', 'b2c', 'both'] as const).map(type => (
                 <Button
                   key={type}
                   variant={leadType === type ? 'default' : 'outline'}
@@ -827,12 +827,13 @@ export const Prospecting: React.FC = () => {
                   className="gap-2"
                 >
                   {type === 'b2b' && <Building2 className="w-4 h-4" />}
+                  {type === 'person' && <UserCircle className="w-4 h-4" />}
                   {type === 'interest' && <Target className="w-4 h-4" />}
                   {type === 'web' && <Globe className="w-4 h-4" />}
                   {type === 'b2c' && <UserCircle className="w-4 h-4" />}
                   {type === 'both' && <Sparkles className="w-4 h-4" />}
-                  {type === 'b2b' ? tt2.b2b : type === 'interest' ? tt2.interest : type === 'web' ? tt2.web : type === 'b2c' ? tt2.b2c : tt2.both}
-                  {type === 'web' && <Badge variant="warning" className="text-xs ml-1">{tt2.webPremium}</Badge>}
+                  {type === 'b2b' ? tt2.b2bLabel : type === 'person' ? tt2.personLabel : type === 'interest' ? tt2.interest : type === 'web' ? tt2.web : type === 'b2c' ? tt2.b2c : tt2.both}
+                  {(type === 'web' || type === 'person') && <Badge variant="warning" className="text-xs ml-1">{tt2.webPremium}</Badge>}
                 </Button>
               ))}
             </div>
