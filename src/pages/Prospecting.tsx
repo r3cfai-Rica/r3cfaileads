@@ -1012,6 +1012,50 @@ export const Prospecting: React.FC = () => {
             </>
           )}
 
+          {/* Person Search Form (B2C Pessoa Física via Perplexity) */}
+          {leadType === 'person' && (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <UserCircle className="w-5 h-5 text-warning" />
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2">
+                    {tt2.personTitle}
+                    <Badge variant="warning" className="text-xs">{tt2.personPremium}</Badge>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{tt2.personDesc}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative md:col-span-2">
+                  <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder={tt2.personPlaceholder} value={personQuery} onChange={e => setPersonQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handlePersonSearch()} className="pl-10 h-12 text-base" disabled={!canSearch} />
+                </div>
+                <div className="relative">
+                  <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Select value={personCountry} onValueChange={setPersonCountry}>
+                    <SelectTrigger className="pl-10 h-12">
+                      <SelectValue>{countries.find(c => c.code === personCountry) && <span className="flex items-center gap-2"><span>{countries.find(c => c.code === personCountry)!.flag}</span>{countries.find(c => c.code === personCountry)!.name}</span>}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map(c => <SelectItem key={c.code} value={c.code}><span className="flex items-center gap-2"><span>{c.flag}</span>{c.name}</span></SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder={`${tt2.cityPlaceholder} (${language === 'pt-BR' ? 'opcional' : 'optional'})`} value={personCity} onChange={e => setPersonCity(e.target.value)} className="pl-10 h-12" />
+                  </div>
+                  <Button variant="gradient" size="lg" onClick={handlePersonSearch} disabled={isSearchingPerson || !personQuery.trim() || !canSearch} className="h-12 px-6 whitespace-nowrap">
+                    {isSearchingPerson ? <><Loader2 className="w-5 h-5 animate-spin" />{t.prospecting.searching}</> : tt2.personSearchButton}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+
           {/* B2C Section */}
           {(leadType === 'b2c' || leadType === 'both') && (
             <div className={`${leadType === 'both' ? 'mt-6 pt-6 border-t' : ''}`}>
