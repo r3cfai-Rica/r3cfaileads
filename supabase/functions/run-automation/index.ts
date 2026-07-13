@@ -229,9 +229,117 @@ Return ONLY JSON: {"searchTerms": ["term1 ${locationStr}", "term2 ${locationStr}
         }
       }
 
-      // B2C leads can't be automated without external integrations yet
+      // Pessoa Física (B2C real via Perplexity)
+      if (automation.lead_type === 'person') {
+        const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
+        if (!PERPLEXITY_API_KEY) {
+          throw new Error('Busca por Pessoa Física indisponível: PERPLEXITY_API_KEY não configurada.');
+        }
+        const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+        if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured.');
+
+        const locationStr = [automation.city, automation.country].filter(Boolean).join(', ');
+        const maxLeads = automation.max_leads_per_run || 50;
+
+        const perplexityQuery = `Encontre PESSOAS FÍSICAS reais e verificáveis (profissionais autônomos, criadores, influenciadores) relacionadas a "${automation.niche}"${locationStr ? ` em ${locationStr}` : ''}. Liste nome, profissão, redes sociais, email/WhatsApp públicos e cidade. NUNCA invente contato.`;
+
+        const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${PERPLEXITY_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'sonar-pro',
+            messages: [
+              { role: 'system', content: 'You research public profiles of real individuals with verifiable presence. Cite sources. Never fabricate.' },
+              { role: 'user', content: perplexityQuery },
+            ],
+          }),
+        });
+
+        if (!pResp.ok) {
+          const t = await pResp.text();
+          throw new Error(`Perplexity ${pResp.status}: ${t.slice(0, 200)}`);
+        }
+        const pData = await pResp.json();
+        const webContent = pData.choices?.[0]?.message?.content || '';
+        const citations = pData.citations || [];
+
+        const extractPrompt = `Extraia pessoas físicas do texto. Retorne APENAS JSON: {"leads":[{"name":"...","position":"...","location":"...","email":null,"phone":null,"whatsapp":null,"website":"...","sources":["..."]}]}\n\nTEXTO:\n${webContent}\n\nFONTES:\n${citations.map((c: string, i: number) => `[${i + 1}] ${c}`).join('\n')}`;
+
+        const gResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'google/gemini-3-flash-preview',
+            messages: [
+              { role: 'system', content: 'Return only valid JSON. Never fabricate contact.' },
+              { role: 'user', content: extractPrompt },
+            ],
+          }),
+        });
+
+        if (!gResp.ok) throw new Error(`Gemini ${gResp.status}`);
+        const gData = await gResp.json();
+        const content = gData.choices?.[0]?.message?.content || '';
+        const m = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
+        const parsed = JSON.parse(m[1]?.trim() || content.trim());
+        const personLeads = (parsed.leads || []).slice(0, maxLeads);
+
+        leadsFound = personLeads.length;
+
+        if (personLeads.length > 0) {
+          // Deduplication by (name + website) since person leads have no place_id
+          let existingKeys = new Set<string>();
+          if (automation.deduplicate) {
+            const { data: existing } = await supabaseAdmin
+              .from('leads')
+              .select('name, website')
+              .eq('user_id', automation.user_id)
+              .eq('folder_id', automation.folder_id);
+            existingKeys = new Set((existing || []).map((e: any) => `${(e.name || '').toLowerCase()}|${e.website || ''}`));
+          }
+
+          const newLeads = personLeads.filter((l: any) => !existingKeys.has(`${(l.name || '').toLowerCase()}|${l.website || ''}`));
+
+          if (newLeads.length > 0) {
+            const insertData = newLeads.map((l: any) => ({
+              user_id: automation.user_id,
+              name: l.name || 'Unknown',
+              position: l.position || 'Person',
+              location: l.location || '',
+              intent_signal: l.intentSignal || `Matches: ${automation.niche}`,
+              urgency: l.urgency || 'medium',
+              email: l.email || null,
+              phone: l.phone || null,
+              whatsapp: l.whatsapp || null,
+              sources: l.sources || [],
+              is_competitor: false,
+              status: 'new',
+              folder_id: automation.folder_id,
+              website: l.website || null,
+              tags: ['person', 'perplexity'],
+            }));
+
+            const { data: saved, error: saveError } = await supabaseAdmin
+              .from('leads')
+              .insert(insertData)
+              .select('id');
+
+            if (saveError) throw new Error(`Failed to save person leads: ${saveError.message}`);
+            leadsSaved = saved?.length || 0;
+
+            if (automation.folder_id && leadsSaved > 0) {
+              const { data: folder } = await supabaseAdmin.from('folders').select('lead_count').eq('id', automation.folder_id).single();
+              if (folder) {
+                await supabaseAdmin.from('folders').update({ lead_count: folder.lead_count + leadsSaved }).eq('id', automation.folder_id);
+              }
+            }
+          }
+        }
+      }
+
+      // B2C opt-in via CSV/formulários — ainda sem automação
       if (automation.lead_type === 'b2c') {
-        errorMessage = 'B2C ainda não é suportado em robôs. Use Importação CSV ou conecte Meta Lead Ads na Prospecção.';
+        errorMessage = 'B2C Opt-in ainda não é suportado em robôs. Use Importação CSV ou conecte Meta Lead Ads na Prospecção.';
       }
 
     } catch (e) {
